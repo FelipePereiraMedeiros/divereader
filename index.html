@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DiveReader | O Leitor Definitivo para Estudos</title>
-    
+
     <!-- Favicon Temático -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
-    
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
+
     <!-- Motor Exclusivo: PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    
+
     <!-- Biblioteca de Ícones (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -19,22 +21,25 @@
         /* 1. DESIGN SYSTEM & VARIÁVEIS                              */
         /* ========================================================= */
         :root {
-            var(--bg-color): #f3f4f6; 
-            --ui-bg: #ffffff; 
-            --text-color: #1f2937; 
+            var(--bg-color): #f3f4f6;
+            --ui-bg: #ffffff;
+            --text-color: #1f2937;
             --text-muted: #6b7280;
             --border-color: #e5e7eb;
-            --indicator-bg: rgba(0, 0, 0, 0.6); 
-            --indicator-text: #ffffff; 
-            --primary: #0284c7; 
+            --indicator-bg: rgba(0, 0, 0, 0.6);
+            --indicator-text: #ffffff;
+            --primary: #0284c7;
             --primary-hover: #0369a1;
-            --highlight-color: rgba(0, 236, 271, 0.25); /* Amarelo Marca-texto */
-            
-            --radius-sm: 4px; --radius-md: 8px; --radius-pill: 9999px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
-            
+            --highlight-color: rgba(0, 236, 271, 0.25);
+            /* Amarelo Marca-texto */
+
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-pill: 9999px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
             --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             --font-doc: 'Georgia', serif;
         }
@@ -43,169 +48,700 @@
         /* 2. BASE & RESET                                           */
         /* ========================================================= */
         body {
-            background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-ui);
-            margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
-            transition: background-color 0.3s ease, color 0.3s ease; touch-action: pan-x pan-y; 
-            -webkit-font-smoothing: antialiased; overscroll-behavior: none;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-ui);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            touch-action: pan-x pan-y;
+            -webkit-font-smoothing: antialiased;
+            overscroll-behavior: none;
         }
 
-        button, select, input[type="number"] { 
-            padding: 6px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); 
-            cursor: pointer; background: var(--ui-bg); font-size: 13px; font-weight: 500; color: var(--text-color); 
-            display: flex; align-items: center; gap: 4px; transition: all 0.2s ease; outline: none;
+        button,
+        select,
+        input[type="number"] {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            background: var(--ui-bg);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+            outline: none;
         }
-        button:hover:not(:disabled), select:hover { background-color: var(--bg-color); }
-        button:active:not(:disabled) { transform: scale(0.98); }
-        button:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-primary { background-color: var(--primary); color: white; border-color: var(--primary); }
-        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+
+        button:hover:not(:disabled),
+        select:hover {
+            background-color: var(--bg-color);
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
 
         /* ========================================================= */
         /* 3. TOP BAR E CONTROLES                                    */
         /* ========================================================= */
         .controls {
-            background-color: var(--ui-bg); border-bottom: 1px solid var(--border-color); padding: 8px 16px;
-            display: flex; gap: 12px; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm);
-            z-index: 100; max-height: 150px; opacity: 1; transform: translateY(0); overflow: hidden;
+            background-color: var(--ui-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            z-index: 100;
+            max-height: 150px;
+            opacity: 1;
+            transform: translateY(0);
+            overflow: hidden;
+            flex-shrink: 0;
+            /* Impede que o menu seja esmagado pelo Flexbox */
             transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.3s ease, transform 0.4s ease;
         }
-        .controls.hidden { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateY(-20px); border-bottom-color: transparent; }
-        .controls-group { display: flex; align-items: center; gap: 8px; }
-        
-        #file-title { font-weight: 600; font-size: 13px; color: var(--text-muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; }
-        input[type="file"] { display: none; }
-        .file-upload-label { border: 1px dashed var(--border-color); color: var(--primary); font-weight: 600; padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; transition: all 0.2s; }
-        .file-upload-label:hover { background-color: rgba(2, 132, 199, 0.05); border-color: var(--primary); }
 
-        .page-navigation { display: flex; align-items: center; gap: 4px; background: var(--bg-color); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);}
-        .page-navigation button { border: none; background: transparent; padding: 4px; border-radius: var(--radius-sm);}
-        .page-navigation span { font-size: 12px; font-weight: 600; padding: 0 4px;}
-        input[type="number"] { width: 40px; text-align: center; border: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 2px; font-weight: 600; background: transparent;}
-        
-        #btn-highlight.btn-active { background-color: #fef08a; color: #854d0e; border-color: #fde047; }
+        .controls.hidden {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+            transform: translateY(-20px);
+            border-bottom-color: transparent;
+        }
+
+        .controls-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #file-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-muted);
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: none;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-label {
+            border: 1px dashed var(--border-color);
+            color: var(--primary);
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .file-upload-label:hover {
+            background-color: rgba(2, 132, 199, 0.05);
+            border-color: var(--primary);
+        }
+
+        .page-navigation {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-color);
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .page-navigation button {
+            border: none;
+            background: transparent;
+            padding: 4px;
+            border-radius: var(--radius-sm);
+        }
+
+        .page-navigation span {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 0 4px;
+        }
+
+        input[type="number"] {
+            width: 40px;
+            text-align: center;
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 0;
+            padding: 2px;
+            font-weight: 600;
+            background: transparent;
+        }
+
+        #btn-highlight.btn-active {
+            background-color: #fef08a;
+            color: #854d0e;
+            border-color: #fde047;
+        }
 
         /* ========================================================= */
         /* 4. WORKSPACE & PDF VIEWER                                 */
         /* ========================================================= */
-        .main-workspace { display: flex; flex-grow: 1; width: 100%; min-height: 0; overflow: hidden; position: relative; }
-        
-        #book-container { 
-            display: flex; flex-direction: column; flex-grow: 1; height: 100%; padding: 15px; 
-            box-sizing: border-box; overflow-y: auto; overflow-x: auto; background-color: var(--bg-color);
+        .main-workspace {
+            display: flex;
+            flex-grow: 1;
+            width: 100%;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
         }
 
-        #empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 12px; color: var(--text-muted); background: var(--bg-color); z-index: 10; }
-        #empty-state .icon-wrapper { width: 64px; height: 64px; background: var(--ui-bg); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); color: var(--primary); margin-bottom: 8px; }
-        
+        #book-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            height: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            overflow-x: auto;
+            background-color: var(--bg-color);
+        }
+
+        #empty-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+            color: var(--text-muted);
+            background: var(--bg-color);
+            z-index: 10;
+        }
+
+        #empty-state .icon-wrapper {
+            width: 64px;
+            height: 64px;
+            background: var(--ui-bg);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
         /* Sistema Dinâmico do PDF */
-        #pdf-viewer { display: flex; justify-content: center; align-items: center; gap: 10px; margin: auto; transition: transform 0.2s ease; perspective: 2000px; }
-        body.zoomed-mode #pdf-viewer { margin: 0 auto; padding: 20px; perspective: none; }
+        #pdf-viewer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: auto;
+            transition: transform 0.2s ease;
+            perspective: 2000px;
+        }
+
+        body.zoomed-mode #pdf-viewer {
+            margin: 0 auto;
+            padding: 20px;
+            perspective: none;
+        }
 
         /* Estrutura das Camadas da Página */
-        .page-wrapper { position: relative; background: white; box-shadow: var(--shadow-md); border-radius: 4px; overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; }
-        .page-wrapper canvas { display: block; max-width: 100%; height: auto; }
-        
+        .page-wrapper {
+            position: relative;
+            background: white;
+            box-shadow: var(--shadow-md);
+            border-radius: 4px;
+            overflow: hidden;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .page-wrapper canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
         /* Animações de Virada de Página */
-        .flip-next { animation: turnNext 0.4s ease-in forwards; transform-origin: left center; }
-        .flip-prev { animation: turnPrev 0.4s ease-in forwards; transform-origin: right center; }
-        @keyframes turnNext { 0% { transform: rotateY(0deg); filter: brightness(1); } 100% { transform: rotateY(-90deg); filter: brightness(0.5); opacity: 0.2; } }
-        @keyframes turnPrev { 0% { transform: rotateY(0deg); filter: brightness(1); } 100% { transform: rotateY(90deg); filter: brightness(0.5); opacity: 0.2; } }
+        .flip-next {
+            animation: turnNext 0.4s ease-in forwards;
+            transform-origin: left center;
+        }
+
+        .flip-prev {
+            animation: turnPrev 0.4s ease-in forwards;
+            transform-origin: right center;
+        }
+
+        @keyframes turnNext {
+            0% {
+                transform: rotateY(0deg);
+                filter: brightness(1);
+            }
+
+            100% {
+                transform: rotateY(-90deg);
+                filter: brightness(0.5);
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes turnPrev {
+            0% {
+                transform: rotateY(0deg);
+                filter: brightness(1);
+            }
+
+            100% {
+                transform: rotateY(90deg);
+                filter: brightness(0.5);
+                opacity: 0.2;
+            }
+        }
 
         /* Camada do Marca-Texto */
-        .highlight-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-        
-        /* O pointer-events: auto permite clicar no grifo, mesmo a camada pai estando desativada */
-        .highlight-rect { 
-            position: absolute; background-color: var(--highlight-color); mix-blend-mode: multiply; 
-            border-radius: 2px; pointer-events: auto; cursor: pointer; transition: opacity 0.2s;
+        .highlight-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
         }
-        .highlight-rect:hover { opacity: 0.5; /* Indica que é interativo */ }
+
+        /* O pointer-events: auto permite clicar no grifo, mesmo a camada pai estando desativada */
+        .highlight-rect {
+            position: absolute;
+            background-color: var(--highlight-color);
+            mix-blend-mode: multiply;
+            border-radius: 2px;
+            pointer-events: auto;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .highlight-rect:hover {
+            opacity: 0.5;
+            /* Indica que é interativo */
+        }
 
         /* Camada de Texto Nível PDF.js (Invisível, mas Selecionável) */
-        .textLayer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; opacity: 1; line-height: 1.0; z-index: 3; }
-        .textLayer > span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
-        .textLayer ::selection { background: rgba(0, 132, 255, 0.25); }
+        .textLayer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            opacity: 1;
+            line-height: 1.0;
+            z-index: 3;
+        }
+
+        .textLayer > span { 
+            color: transparent; 
+            position: absolute; 
+            white-space: pre; 
+            cursor: text; 
+            transform-origin: 0% 0%; 
+            line-height: 1.0; /* Impede que a caixa de seleção fique mais alta que o texto */
+            display: block; /* Garante que a largura (width) matemática seja respeitada */
+        }
+
+        .textLayer ::selection {
+            background: rgba(0, 132, 255, 0.25);
+        }
 
         /* ========================================================= */
         /* 5. SIDEBAR (Anotações)                                    */
         /* ========================================================= */
-        #sidebar { width: 320px; min-width: 320px; background-color: var(--ui-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: -4px 0 15px rgba(0,0,0,0.03); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-right 0.3s ease; z-index: 500; }
-        #sidebar.hidden { transform: translateX(100%); margin-right: -320px; box-shadow: none;}
-        .sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-weight: 600; display: flex; justify-content: space-between; align-items: center; font-size: 14px;}
-        .sidebar-header button { padding: 4px; border: none; border-radius: var(--radius-pill); }
-        .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-color);}
-        .sidebar-tabs button { flex: 1; border: none; background: transparent; padding: 10px 4px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; border-radius: 0; font-size: 12px;}
-        .sidebar-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--ui-bg);}
-        .tab-content { flex-grow: 1; display: none; flex-direction: column; position: relative; background: var(--ui-bg);}
-        .tab-content.active { display: flex; }
-        
-        #notepad { flex-grow: 1; width: 100%; box-sizing: border-box; padding: 16px; border: none; resize: none; background: transparent; color: var(--text-color); font-family: var(--font-ui); font-size: 14px; line-height: 1.6; outline: none; }
-        #global-view { flex-grow: 1; padding: 16px; overflow-y: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.7; color: var(--text-color); padding-bottom: 60px; font-family: var(--font-doc);}
-        .action-buttons { position: absolute; bottom: 16px; left: 16px; right: 16px; display: flex; gap: 8px; }
-        .action-buttons button { flex: 1; justify-content: center; }
+        #sidebar {
+            width: 320px;
+            min-width: 320px;
+            background-color: var(--ui-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 15px rgba(0, 0, 0, 0.03);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-right 0.3s ease;
+            z-index: 500;
+        }
+
+        #sidebar.hidden {
+            transform: translateX(100%);
+            margin-right: -320px;
+            box-shadow: none;
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .sidebar-header button {
+            padding: 4px;
+            border: none;
+            border-radius: var(--radius-pill);
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-color);
+        }
+
+        .sidebar-tabs button {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px 4px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            font-size: 12px;
+        }
+
+        .sidebar-tabs button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--ui-bg);
+        }
+
+        .tab-content {
+            flex-grow: 1;
+            display: none;
+            flex-direction: column;
+            position: relative;
+            background: var(--ui-bg);
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        #notepad {
+            flex-grow: 1;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px;
+            border: none;
+            resize: none;
+            background: transparent;
+            color: var(--text-color);
+            font-family: var(--font-ui);
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+        }
+
+        #global-view {
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text-color);
+            padding-bottom: 60px;
+            font-family: var(--font-doc);
+        }
+
+        .action-buttons {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background-color: var(--ui-bg);
+            border: 1px solid var(--border-color);
+            padding: 6px;
+            border-radius: var(--radius-pill);
+            box-shadow: var(--shadow-md);
+            z-index: 10;
+        }
+
+        .action-buttons button {
+            flex: none;
+            /* Remove o esticamento para os lados */
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            /* Transforma em botões circulares */
+        }
 
         /* ========================================================= */
         /* 6. OVERLAYS E BARRA DE FOCO                               */
         /* ========================================================= */
-        #floating-focus-bar { position: fixed; bottom: 20px; left: 50%; background-color: var(--ui-bg); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); border-radius: var(--radius-pill); display: none; padding: 4px 6px; z-index: 200; align-items: center; transform: translateX(-50%) translateY(0); opacity: 1; transition: opacity 0.4s ease, transform 0.4s ease; }
-        #floating-focus-bar.visible { display: flex; }
-        #floating-focus-bar.faded { opacity: 0; transform: translateX(-50%) translateY(30px); pointer-events: none; }
-        #floating-focus-bar button { border: none; background: transparent; padding: 6px 12px; font-weight: 600; border-radius: var(--radius-pill); font-size: 13px;}
+        #floating-focus-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            background-color: var(--ui-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+            border-radius: var(--radius-pill);
+            display: none;
+            padding: 4px 6px;
+            z-index: 200;
+            align-items: center;
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
 
-        #drag-overlay { position: fixed; inset: 0; background-color: rgba(2, 132, 199, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; font-weight: bold; border: 8px dashed rgba(255,255,255,0.5); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-        #drag-overlay.active { opacity: 1; pointer-events: all; }
-        #loading-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 10; background: var(--indicator-bg); color: white; padding: 10px 20px; border-radius: var(--radius-pill); font-weight: 500; font-size: 13px; backdrop-filter: blur(4px); box-shadow: var(--shadow-md);}
-        #discreet-indicator { position: fixed; bottom: 20px; left: 20px; background-color: var(--indicator-bg); color: var(--indicator-text); padding: 4px 12px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; z-index: 150; backdrop-filter: blur(4px); letter-spacing: 0.5px;}
+        #floating-focus-bar.visible {
+            display: flex;
+        }
 
-        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
-        .toast { background: var(--text-color); color: var(--ui-bg); padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-lg); transform: translateY(20px); opacity: 0; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); display: flex; align-items: center; gap: 8px;}
-        .toast.show { transform: translateY(0); opacity: 1; }
+        #floating-focus-bar.faded {
+            opacity: 0;
+            transform: translateX(-50%) translateY(30px);
+            pointer-events: none;
+        }
+
+        #floating-focus-bar button {
+            border: none;
+            background: transparent;
+            padding: 6px 12px;
+            font-weight: 600;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+        }
+
+        #drag-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(2, 132, 199, 0.9);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            border: 8px dashed rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        #drag-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #loading-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 10;
+            background: var(--indicator-bg);
+            color: white;
+            padding: 10px 20px;
+            border-radius: var(--radius-pill);
+            font-weight: 500;
+            font-size: 13px;
+            backdrop-filter: blur(4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        #discreet-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: var(--indicator-bg);
+            color: var(--indicator-text);
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 150;
+            backdrop-filter: blur(4px);
+            letter-spacing: 0.5px;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--text-color);
+            color: var(--ui-bg);
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
 
         /* ========================================================= */
         /* 7. TEMAS (Otimizados para PDF Acadêmico)                  */
         /* ========================================================= */
-        .theme-dark { 
-            --bg-color: #111827; --ui-bg: #1f2937; --text-color: #f9fafb; --text-muted: #9ca3af; 
-            --border-color: #374151; --indicator-bg: rgba(255,255,255,0.15); --indicator-text: #ffffff; 
+        .theme-dark {
+            --bg-color: #111827;
+            --ui-bg: #1f2937;
+            --text-color: #f9fafb;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --indicator-bg: rgba(255, 255, 255, 0.15);
+            --indicator-text: #ffffff;
             --highlight-color: rgba(253, 224, 71, 0.15);
         }
-        .theme-dark .page-wrapper canvas { filter: invert(90%) hue-rotate(180deg) contrast(110%); }
-        .theme-dark .highlight-rect { mix-blend-mode: screen; } /* Ajuste de mistura para tema escuro */
 
-        .theme-sepia { 
-            --bg-color: #fdf6e3; --ui-bg: #fcf1d3; --border-color: #e5d8b6; --text-color: #433422; 
-            --text-muted: #8a7b66; --indicator-bg: rgba(67,52,34,0.7);
+        .theme-dark .page-wrapper canvas {
+            filter: invert(90%) hue-rotate(180deg) contrast(110%);
         }
-        .theme-sepia .page-wrapper canvas { filter: sepia(40%) contrast(90%) brightness(95%); }
+
+        .theme-dark .highlight-rect {
+            mix-blend-mode: screen;
+        }
+
+        /* Ajuste de mistura para tema escuro */
+
+        .theme-sepia {
+            --bg-color: #fdf6e3;
+            --ui-bg: #fcf1d3;
+            --border-color: #e5d8b6;
+            --text-color: #433422;
+            --text-muted: #8a7b66;
+            --indicator-bg: rgba(67, 52, 34, 0.7);
+        }
+
+        .theme-sepia .page-wrapper canvas {
+            filter: sepia(40%) contrast(90%) brightness(95%);
+        }
 
         @media (max-width: 800px) {
-            .controls { padding: 10px; justify-content: center; flex-wrap: wrap; max-height: 200px;}
-            #file-title { display: none; } button span.btn-text { display: none; } 
-            #sidebar { position: fixed; top: 0; right: 0; bottom: 0; width: 100% !important; min-width: 100% !important; margin-right: 0 !important; border-left: none;}
+            .controls {
+                padding: 10px;
+                justify-content: center;
+                flex-wrap: wrap;
+                max-height: 200px;
+            }
+
+            #file-title {
+                display: none;
+            }
+
+            button span.btn-text {
+                display: none;
+            }
+
+            #sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 100% !important;
+                min-width: 100% !important;
+                margin-right: 0 !important;
+                border-left: none;
+            }
         }
     </style>
 </head>
+
 <body class="theme-light">
 
     <!-- OVERLAYS & TOASTS -->
-    <div id="drag-overlay"><i data-lucide="file-up" style="width: 36px; height: 36px; margin-right: 12px;"></i> Solte o arquivo para abrir</div>
+    <div id="drag-overlay"><i data-lucide="file-up" style="width: 36px; height: 36px; margin-right: 12px;"></i> Solte o
+        arquivo para abrir</div>
     <div id="toast-container"></div>
-    <div id="loading-msg"><i data-lucide="loader-2" class="lucide-spin" style="width: 16px; height: 16px; margin-right: 8px;"></i> Processando...</div>
+    <div id="loading-msg"><i data-lucide="loader-2" class="lucide-spin"
+            style="width: 16px; height: 16px; margin-right: 8px;"></i> Processando...</div>
     <div id="discreet-indicator">Pág. - / -</div>
 
     <div id="empty-state">
-        <div class="icon-wrapper"><i data-lucide="book-open-check" stroke-width="1.5" style="width: 32px; height: 32px;"></i></div>
+        <div class="icon-wrapper"><i data-lucide="book-open-check" stroke-width="1.5"
+                style="width: 32px; height: 32px;"></i></div>
         <h2>DiveReader Pro</h2>
         <p>A ferramenta definitiva para análise de PDFs. Arraste seu documento de estudo aqui.</p>
     </div>
 
     <!-- BARRA DE FOCO FLUTUANTE -->
     <div id="floating-focus-bar">
-        <button onclick="toggleSidebar()" title="Anotações"><i data-lucide="pen-line" style="width: 16px; height: 16px;"></i></button>
+        <button onclick="toggleSidebar()" title="Anotações"><i data-lucide="pen-line"
+                style="width: 16px; height: 16px;"></i></button>
         <div style="width: 1px; height: 16px; background-color: var(--border-color); margin: 0 4px;"></div>
-        <button onclick="addHighlight()" title="Grifar Seleção"><i data-lucide="highlighter" style="width: 16px; height: 16px;"></i></button>
+        <button onclick="addHighlight()" title="Grifar Seleção"><i data-lucide="highlighter"
+                style="width: 16px; height: 16px;"></i></button>
         <div style="width: 1px; height: 16px; background-color: var(--border-color); margin: 0 4px;"></div>
-        <button onclick="toggleMenu()" title="Sair do Foco"><i data-lucide="maximize" style="width: 16px; height: 16px;"></i></button>
+        <button onclick="toggleMenu()" title="Sair do Foco"><i data-lucide="maximize"
+                style="width: 16px; height: 16px;"></i></button>
     </div>
 
     <!-- MENU SUPERIOR -->
@@ -221,7 +757,7 @@
 
         <div class="controls-group">
             <button id="btn-highlight" onclick="addHighlight()" title="Grifar texto selecionado" disabled>
-                <i data-lucide="highlighter" style="width: 16px; height: 16px;"></i> 
+                <i data-lucide="highlighter" style="width: 16px; height: 16px;"></i>
                 <span class="btn-text">Grifar</span>
             </button>
             <select id="theme-selector" title="Tema" disabled>
@@ -230,19 +766,27 @@
                 <option value="theme-dark">🌙 Noturno</option>
             </select>
             <div style="display: flex; gap: 4px;">
-                <button id="btn-zoom-out" onclick="changeZoom(-0.25)" title="Afastar" disabled><i data-lucide="zoom-out" style="width: 16px; height: 16px;"></i></button>
-                <button id="btn-zoom-in" onclick="changeZoom(0.25)" title="Aproximar" disabled><i data-lucide="zoom-in" style="width: 16px; height: 16px;"></i></button>
+                <button id="btn-zoom-out" onclick="changeZoom(-0.25)" title="Afastar" disabled><i data-lucide="zoom-out"
+                        style="width: 16px; height: 16px;"></i></button>
+                <button id="btn-zoom-in" onclick="changeZoom(0.25)" title="Aproximar" disabled><i data-lucide="zoom-in"
+                        style="width: 16px; height: 16px;"></i></button>
             </div>
         </div>
 
         <div class="controls-group">
             <div class="page-navigation">
-                <button id="btn-prev" onclick="onPrevPage()" disabled><i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i></button>
-                <span><input type="number" id="page-input" value="1" min="1" disabled> / <span id="total-pages">-</span></span>
-                <button id="btn-next" onclick="onNextPage()" disabled><i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i></button>
+                <button id="btn-prev" onclick="onPrevPage()" disabled><i data-lucide="chevron-left"
+                        style="width: 16px; height: 16px;"></i></button>
+                <span><input type="number" id="page-input" value="1" min="1" disabled> / <span
+                        id="total-pages">-</span></span>
+                <button id="btn-next" onclick="onNextPage()" disabled><i data-lucide="chevron-right"
+                        style="width: 16px; height: 16px;"></i></button>
             </div>
-            <button id="btn-toggle-sidebar" onclick="toggleSidebar()" class="btn-primary" title="Meu Caderno" disabled><i data-lucide="pen-line" style="width: 16px; height: 16px;"></i> <span class="btn-text">Caderno</span></button>
-            <button id="btn-toggle-focus" onclick="toggleMenu()" title="Modo Foco" disabled><i data-lucide="minimize" style="width: 16px; height: 16px;"></i> <span class="btn-text">Foco</span></button>
+            <button id="btn-toggle-sidebar" onclick="toggleSidebar()" class="btn-primary" title="Meu Caderno"
+                disabled><i data-lucide="pen-line" style="width: 16px; height: 16px;"></i> <span
+                    class="btn-text">Caderno</span></button>
+            <button id="btn-toggle-focus" onclick="toggleMenu()" title="Modo Foco" disabled><i data-lucide="minimize"
+                    style="width: 16px; height: 16px;"></i> <span class="btn-text">Foco</span></button>
         </div>
     </div>
 
@@ -258,20 +802,29 @@
         <div id="sidebar" class="hidden" style="display: none;">
             <div class="sidebar-header">
                 <span>Meu Caderno de Estudos</span>
-                <button onclick="toggleSidebar()" title="Fechar"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+                <button onclick="toggleSidebar()" title="Fechar"><i data-lucide="x"
+                        style="width: 16px; height: 16px;"></i></button>
             </div>
             <div class="sidebar-tabs">
                 <button id="tab-btn-page" class="active" onclick="switchTab('page')">Nesta Página</button>
                 <button id="tab-btn-global" onclick="switchTab('global')">Fichamento Completo</button>
             </div>
             <div id="tab-page" class="tab-content active">
-                <textarea id="notepad" placeholder="Suas sínteses sobre esta página...\n(Ao grifar, o texto aparecerá aqui automaticamente!)" disabled></textarea>
+                <textarea id="notepad"
+                    placeholder="Suas sínteses sobre esta página...&#10;(Ao grifar, o texto aparecerá aqui automaticamente!)"
+                    disabled></textarea>
             </div>
             <div id="tab-global" class="tab-content">
                 <div id="global-view">Nenhuma anotação ou grifo feito ainda.</div>
                 <div class="action-buttons">
-                    <button class="btn-action" onclick="copyGlobalNotes()"><i data-lucide="copy" style="width: 14px; height: 14px;"></i> Copiar</button>
-                    <button class="btn-action download btn-primary" onclick="downloadTxt()"><i data-lucide="download" style="width: 14px; height: 14px;"></i> Baixar TXT</button>
+                    <!-- O atributo 'title' é quem cria o Tooltip quando o mouse passa por cima -->
+                    <button class="btn-action" onclick="copyGlobalNotes()" title="Copiar Fichamento">
+                        <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
+                    </button>
+                    <button class="btn-action download btn-primary" onclick="downloadNotes()"
+                        title="Baixar Fichamento (.md)">
+                        <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -286,7 +839,7 @@
         // ==========================================
         const AppState = {
             fileName: "Anotacoes", fileKey: null, pdfDoc: null,
-            pageNum: 1, isRendering: false, notesData: {}, highlightsData: {}, 
+            pageNum: 1, isRendering: false, notesData: {}, highlightsData: {},
             zoomLevel: 1.0, focusTimer: null
         };
 
@@ -294,8 +847,8 @@
             indicator: document.getElementById('discreet-indicator'), notepad: document.getElementById('notepad'),
             globalView: document.getElementById('global-view'), floatingBar: document.getElementById('floating-focus-bar'),
             bookContainer: document.getElementById('book-container'), pdfViewer: document.getElementById('pdf-viewer'),
-            emptyState: document.getElementById('empty-state'), fileTitle: document.getElementById('file-title'), 
-            topMenu: document.getElementById('top-menu'), sidebar: document.getElementById('sidebar'), 
+            emptyState: document.getElementById('empty-state'), fileTitle: document.getElementById('file-title'),
+            topMenu: document.getElementById('top-menu'), sidebar: document.getElementById('sidebar'),
             loading: document.getElementById('loading-msg')
         };
 
@@ -308,7 +861,7 @@
             toast.className = 'toast';
             toast.innerHTML = `<i data-lucide="${icon}" style="width: 16px; height: 16px;"></i> ${message}`;
             container.appendChild(toast);
-            lucide.createIcons({root: toast});
+            lucide.createIcons({ root: toast });
             requestAnimationFrame(() => toast.classList.add('show'));
             setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
@@ -330,7 +883,7 @@
 
         // Foco e Menu
         function wakeFocusBar() {
-            if (AppState.zoomLevel > 1.0 || !DOM.floatingBar.classList.contains('visible')) return; 
+            if (AppState.zoomLevel > 1.0 || !DOM.floatingBar.classList.contains('visible')) return;
             DOM.floatingBar.classList.remove('faded');
             clearTimeout(AppState.focusTimer);
             AppState.focusTimer = setTimeout(() => { if (!DOM.floatingBar.matches(':hover')) DOM.floatingBar.classList.add('faded'); }, 4000);
@@ -339,13 +892,13 @@
             if (AppState.zoomLevel > 1.0 || !DOM.floatingBar.classList.contains('visible')) return;
             DOM.floatingBar.classList.add('faded'); clearTimeout(AppState.focusTimer);
         }
-        document.addEventListener('mousemove', wakeFocusBar); 
+        document.addEventListener('mousemove', wakeFocusBar);
         DOM.floatingBar.addEventListener('mouseenter', () => { clearTimeout(AppState.focusTimer); DOM.floatingBar.classList.remove('faded'); });
         DOM.floatingBar.addEventListener('mouseleave', wakeFocusBar);
 
         function toggleMenu() {
             DOM.topMenu.classList.toggle('hidden');
-            if (DOM.topMenu.classList.contains('hidden')) { DOM.floatingBar.classList.add('visible'); wakeFocusBar(); } 
+            if (DOM.topMenu.classList.contains('hidden')) { DOM.floatingBar.classList.add('visible'); wakeFocusBar(); }
             else { DOM.floatingBar.classList.remove('visible', 'faded'); clearTimeout(AppState.focusTimer); }
         }
         function toggleSidebar() { DOM.sidebar.classList.toggle('hidden'); }
@@ -357,18 +910,18 @@
         // ==========================================
         async function handleFile(file) {
             if (!file || file.type !== "application/pdf") return showToast("Por favor, selecione um arquivo PDF.", "file-warning");
-            
+
             AppState.fileName = file.name;
             AppState.fileKey = `dr2_${file.name}_${file.size}`;
-            
+
             DOM.fileTitle.textContent = file.name;
             DOM.fileTitle.style.display = 'block';
             DOM.emptyState.style.display = 'none';
             DOM.bookContainer.style.display = 'flex';
-            DOM.sidebar.style.display = 'flex'; 
+            DOM.sidebar.style.display = 'flex';
 
             ['btn-zoom-out', 'btn-zoom-in', 'btn-toggle-sidebar', 'btn-toggle-focus', 'theme-selector', 'btn-highlight'].forEach(id => document.getElementById(id).disabled = false);
-            
+
             AppState.zoomLevel = 1.0;
             updateBodyMode();
             DOM.topMenu.classList.remove('hidden');
@@ -383,7 +936,7 @@
                 const savedPage = localStorage.getItem(AppState.fileKey + "_page");
                 AppState.pageNum = savedPage ? parseInt(savedPage, 10) : 1;
                 if (!isSinglePageMode() && AppState.pageNum % 2 === 0) AppState.pageNum -= 1;
-                
+
                 // Carregar dados salvos (Notas e Grifos)
                 AppState.notesData = JSON.parse(localStorage.getItem(AppState.fileKey + "_anotacoes") || "{}");
                 AppState.highlightsData = JSON.parse(localStorage.getItem(AppState.fileKey + "_highlights") || "{}");
@@ -394,7 +947,7 @@
 
                 await renderPages(AppState.pageNum);
                 showToast("Documento carregado e pronto para estudo!", "check-circle-2");
-            } catch (error) { 
+            } catch (error) {
                 console.error(error);
                 showToast("Erro ao processar PDF.", "alert-circle");
                 DOM.emptyState.style.display = 'flex';
@@ -415,13 +968,13 @@
             const containerWidth = DOM.bookContainer.clientWidth;
             const containerHeight = DOM.bookContainer.clientHeight;
             // Desconta padding
-            const widthTarget = forceSingle ? containerWidth - 40 : (containerWidth / 2) - 40; 
+            const widthTarget = forceSingle ? containerWidth - 40 : (containerWidth / 2) - 40;
             const heightTarget = containerHeight - 40;
-            
+
             const scaleX = widthTarget / viewport.width;
             const scaleY = heightTarget / viewport.height;
             let baseScale = Math.min(scaleX, scaleY) * 0.98;
-            
+
             return baseScale * AppState.zoomLevel;
         }
 
@@ -455,24 +1008,27 @@
             // Renderiza Visual
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
 
-            // Injeta Texto Selecionável Manualmente (Mais rápido e sem dependências extras)
             const textContent = await page.getTextContent();
-            
+
             if (pdfjsLib.Util && pdfjsLib.Util.transform) {
                 textContent.items.forEach(item => {
                     const span = document.createElement('span');
-                    // Mantém os espaços e quebras de linha corretos do PDF
                     span.textContent = item.str + (item.hasEOL ? '\n' : '');
-                    
-                    // Calcula a posição real do texto aplicando o zoom atual
+
                     const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
                     const fontHeight = Math.sqrt((tx[2] * tx[2]) + (tx[3] * tx[3]));
-                    
+
                     span.style.left = `${tx[4]}px`;
-                    span.style.top = `${tx[5] - fontHeight}px`; // Alinha a altura da fonte
+                    // Subtrai 80% da altura da fonte para compensar a "linha de base" (baseline) do PDF
+                    span.style.top = `${tx[5] - (fontHeight * 0.8)}px`;
                     span.style.fontSize = `${fontHeight}px`;
                     span.style.fontFamily = item.fontName;
-                    
+
+                    // Define a largura exata para impedir que as palavras "escorreguem" horizontalmente
+                    if (item.width > 0) {
+                        span.style.width = `${item.width * viewport.scale}px`;
+                    }
+
                     textLayer.appendChild(span);
                 });
             }
@@ -484,18 +1040,18 @@
                 // Pega a posição (X,Y) percentual do clique
                 const clickX = (e.clientX - rect.left) / rect.width;
                 const clickY = (e.clientY - rect.top) / rect.height;
-                
+
                 const hData = AppState.highlightsData[pageNum] || [];
-                
+
                 // Verifica se o clique ocorreu dentro de algum retângulo salvo
-                const clickedHighlight = hData.find(h => 
+                const clickedHighlight = hData.find(h =>
                     clickX >= h.x && clickX <= (h.x + h.width) &&
                     clickY >= h.y && clickY <= (h.y + h.height)
                 );
 
                 if (clickedHighlight) {
                     // Remove a seleção azul nativa do navegador
-                    window.getSelection().removeAllRanges(); 
+                    window.getSelection().removeAllRanges();
                     // Apaga o grupo inteiro de grifos daquele ID
                     removeHighlightGroup(pageNum, clickedHighlight.id, clickedHighlight, highlightLayer);
                 }
@@ -514,7 +1070,7 @@
 
             document.getElementById('page-input').value = num;
             document.getElementById('btn-prev').disabled = num <= 1;
-            
+
             const singlePage = isSinglePageMode();
             DOM.pdfViewer.innerHTML = ''; // Limpa view antiga
 
@@ -537,7 +1093,7 @@
 
             DOM.indicator.textContent = `Pág. ${indicatorText} / ${AppState.pdfDoc.numPages}`;
             DOM.indicator.style.opacity = '1';
-            setTimeout(() => {if(AppState.zoomLevel <= 1.0) DOM.indicator.style.opacity = '0'}, 2000); 
+            setTimeout(() => { if (AppState.zoomLevel <= 1.0) DOM.indicator.style.opacity = '0' }, 2000);
             AppState.isRendering = false;
         }
 
@@ -552,26 +1108,28 @@
 
             const range = selection.getRangeAt(0);
             const rects = range.getClientRects();
-            const textExtracted = selection.toString().replace(/[\r\n]+/g, ' ').trim(); 
+            const textExtracted = selection.toString().replace(/[\r\n]+/g, ' ').trim();
 
             let container = range.commonAncestorContainer;
             if (container.nodeType === 3) container = container.parentNode;
             const wrapper = container.closest('.page-wrapper');
-            
+
             if (!wrapper) return;
-            
-            const pageNum = parseInt(wrapper.dataset.page);
+
+            // CORREÇÃO: Separando a página visual (amarelo) da página lógica (texto)
+            const highlightPageNum = parseInt(wrapper.dataset.page); // Onde o grifo é desenhado
+            const activeNotePage = AppState.pageNum; // A página "mestra" aberta no Caderno
+
             const wrapperRect = wrapper.getBoundingClientRect();
-            
-            if (!AppState.highlightsData[pageNum]) AppState.highlightsData[pageNum] = [];
-            
-            // ID único para agrupar as várias linhas de um mesmo grifo
-            const highlightId = Date.now().toString(); 
-            
+
+            if (!AppState.highlightsData[highlightPageNum]) AppState.highlightsData[highlightPageNum] = [];
+
+            const highlightId = Date.now().toString();
+
             for (let i = 0; i < rects.length; i++) {
                 const r = rects[i];
-                AppState.highlightsData[pageNum].push({
-                    id: highlightId, // Salva o ID no grupo
+                AppState.highlightsData[highlightPageNum].push({
+                    id: highlightId,
                     x: (r.left - wrapperRect.left) / wrapperRect.width,
                     y: (r.top - wrapperRect.top) / wrapperRect.height,
                     width: r.width / wrapperRect.width,
@@ -580,24 +1138,25 @@
             }
 
             localStorage.setItem(AppState.fileKey + "_highlights", JSON.stringify(AppState.highlightsData));
-            
-            const currentNotes = AppState.notesData[pageNum] || "";
+
+            // O texto extraído agora vai sempre para a aba ativa do caderno, evitando perdas
+            const currentNotes = AppState.notesData[activeNotePage] || "";
             const prefix = currentNotes ? currentNotes + "\n\n" : "";
-            AppState.notesData[pageNum] = prefix + `> "${textExtracted}"`;
+            AppState.notesData[activeNotePage] = prefix + `> "${textExtracted}"`;
             localStorage.setItem(AppState.fileKey + "_anotacoes", JSON.stringify(AppState.notesData));
-            
-            drawHighlights(pageNum, wrapper.querySelector('.highlight-layer'));
-            DOM.notepad.value = AppState.notesData[pageNum];
+
+            drawHighlights(highlightPageNum, wrapper.querySelector('.highlight-layer'));
+            DOM.notepad.value = AppState.notesData[activeNotePage];
             updateGlobalView();
-            
+
             selection.removeAllRanges();
             showToast("Fichado no caderno!", "book-marked");
         }
 
         function drawHighlights(pageNum, layerNode) {
-            layerNode.innerHTML = ''; 
+            layerNode.innerHTML = '';
             const hData = AppState.highlightsData[pageNum] || [];
-            
+
             hData.forEach(h => {
                 const mark = document.createElement('div');
                 mark.className = 'highlight-rect';
@@ -606,7 +1165,7 @@
                 mark.style.width = `${h.width * 100}%`;
                 mark.style.height = `${h.height * 100}%`;
                 mark.title = "Duplo clique para remover";
-                
+
                 layerNode.appendChild(mark);
             });
         }
@@ -620,11 +1179,11 @@
                 const index = AppState.highlightsData[pageNum].indexOf(rectObj);
                 if (index > -1) AppState.highlightsData[pageNum].splice(index, 1);
             }
-            
+
             // Salva o novo estado e redesenha a página
             localStorage.setItem(AppState.fileKey + "_highlights", JSON.stringify(AppState.highlightsData));
             drawHighlights(pageNum, layerNode);
-            
+
             // Substituí o ícone padrão pelo ícone de "borracha" do Lucide
             showToast("Grifo apagado.", "eraser");
         }
@@ -634,8 +1193,8 @@
         // ==========================================
         let noteSaveTimeout;
         DOM.notepad.addEventListener('input', () => {
-            if (!AppState.fileKey) return; 
-            clearTimeout(noteSaveTimeout); 
+            if (!AppState.fileKey) return;
+            clearTimeout(noteSaveTimeout);
             AppState.notesData[AppState.pageNum] = DOM.notepad.value;
             noteSaveTimeout = setTimeout(() => localStorage.setItem(AppState.fileKey + "_anotacoes", JSON.stringify(AppState.notesData)), 800);
         });
@@ -644,30 +1203,57 @@
             if (!AppState.pdfDoc) return;
             let compiled = ""; let hasNotes = false;
             const pages = Object.keys(AppState.notesData).map(Number).sort((a, b) => a - b);
-            
+
             for (let p of pages) {
                 if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
-                    hasNotes = true; 
+                    hasNotes = true;
                     compiled += `[ Página ${p} ]\n${AppState.notesData[p].trim()}\n\n`;
                 }
             }
             DOM.globalView.textContent = hasNotes ? compiled.trim() : "Nenhum fichamento gerado ainda.";
         }
 
-        function copyGlobalNotes() { 
-            updateGlobalView(); 
-            if (DOM.globalView.textContent.includes("Nenhum fichamento")) return; 
-            navigator.clipboard.writeText(DOM.globalView.textContent).then(() => showToast("Fichamento copiado!", "copy-check")); 
+        function copyGlobalNotes() {
+            updateGlobalView();
+            if (DOM.globalView.textContent.includes("Nenhum fichamento")) return;
+            navigator.clipboard.writeText(DOM.globalView.textContent).then(() => showToast("Fichamento copiado!", "copy-check"));
         }
-        
-        function downloadTxt() { 
-            updateGlobalView(); 
-            if (DOM.globalView.textContent.includes("Nenhum fichamento")) return showToast("Não há notas para baixar", "file-warning");
-            const blob = new Blob([DOM.globalView.textContent], { type: "text/plain;charset=utf-8" }); 
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); 
-            link.download = `Fichamento_${AppState.fileName.split('.')[0]}.txt`; 
-            document.body.appendChild(link); link.click(); link.remove(); 
-            showToast("Download iniciado!", "download-cloud");
+
+        function downloadNotes() {
+            if (!AppState.pdfDoc) return;
+
+            const pages = Object.keys(AppState.notesData).map(Number).sort((a, b) => a - b);
+            let hasNotes = false;
+
+            // Cabeçalho Bonito do Documento
+            let markdown = `# 📖 Fichamento de Leitura\n\n`;
+            markdown += `**Documento:** \`${AppState.fileName}\`\n`;
+            markdown += `**Data da Exportação:** ${new Date().toLocaleDateString('pt-BR')}\n\n`;
+            markdown += `---\n\n`;
+
+            // Estrutura das Páginas
+            for (let p of pages) {
+                if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
+                    hasNotes = true;
+                    markdown += `### 📄 Página ${p}\n\n`;
+                    markdown += `${AppState.notesData[p].trim()}\n\n`;
+                    markdown += `---\n\n`;
+                }
+            }
+
+            if (!hasNotes) return showToast("Não há notas para baixar", "file-warning");
+
+            // Gera o arquivo Markdown
+            const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Fichamento_${AppState.fileName.split('.')[0]}.md`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            showToast("Fichamento baixado com sucesso!", "download-cloud");
         }
 
         // ==========================================
@@ -676,7 +1262,7 @@
         function changeZoom(delta) {
             const wasSingle = isSinglePageMode();
             AppState.zoomLevel = Math.max(1.0, Math.min(4.0, AppState.zoomLevel + delta));
-            updateBodyMode(); 
+            updateBodyMode();
 
             if (AppState.zoomLevel > 1.0) {
                 DOM.topMenu.classList.add('hidden');
@@ -701,14 +1287,14 @@
                 // No modo duplo, anima a página da direita. No modo simples, anima a única página.
                 const target = single ? pages[0] : (pages.length > 1 ? pages[1] : pages[0]);
                 if (target) target.classList.add('flip-next');
-                
-                setTimeout(() => { 
-                    AppState.isRendering = false; 
-                    AppState.pageNum += single ? 1 : 2; 
-                    renderPages(AppState.pageNum); 
+
+                setTimeout(() => {
+                    AppState.isRendering = false;
+                    AppState.pageNum += single ? 1 : 2;
+                    renderPages(AppState.pageNum);
                 }, 400);
             } else {
-                AppState.pageNum += single ? 1 : 2; 
+                AppState.pageNum += single ? 1 : 2;
                 renderPages(AppState.pageNum);
             }
         }
@@ -723,16 +1309,16 @@
                 // Anima sempre a página da esquerda (ou a única) para trás
                 const target = pages[0];
                 if (target) target.classList.add('flip-prev');
-                
-                setTimeout(() => { 
-                    AppState.isRendering = false; 
-                    AppState.pageNum -= single ? 1 : 2; 
-                    if (AppState.pageNum < 1) AppState.pageNum = 1; 
-                    renderPages(AppState.pageNum); 
+
+                setTimeout(() => {
+                    AppState.isRendering = false;
+                    AppState.pageNum -= single ? 1 : 2;
+                    if (AppState.pageNum < 1) AppState.pageNum = 1;
+                    renderPages(AppState.pageNum);
                 }, 400);
             } else {
-                AppState.pageNum -= single ? 1 : 2; 
-                if (AppState.pageNum < 1) AppState.pageNum = 1; 
+                AppState.pageNum -= single ? 1 : 2;
+                if (AppState.pageNum < 1) AppState.pageNum = 1;
                 renderPages(AppState.pageNum);
             }
         }
@@ -747,13 +1333,13 @@
         });
 
         // Eventos de Teclado
-       // Eventos de Teclado
+        // Eventos de Teclado
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 if (['+', '=', '-'].includes(e.key)) { e.preventDefault(); changeZoom(e.key === '-' ? -0.25 : 0.25); return; }
             }
             if (!AppState.pdfDoc || ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
-            
+
             if (e.key === 'ArrowLeft') onPrevPage();
             if (e.key === 'ArrowRight') onNextPage();
 
@@ -761,15 +1347,15 @@
             const isAtTop = DOM.bookContainer.scrollTop <= 2;
             const isAtBottom = DOM.bookContainer.scrollTop + DOM.bookContainer.clientHeight >= DOM.bookContainer.scrollHeight - 2;
 
-            if (e.key === 'ArrowUp' && AppState.zoomLevel <= 1.0 && isAtTop) { 
-                if (DOM.topMenu.classList.contains('hidden')) { 
-                    if (DOM.floatingBar.classList.contains('faded')) toggleMenu(); 
-                    else hideFocusBar(); 
+            if (e.key === 'ArrowUp' && AppState.zoomLevel <= 1.0 && isAtTop) {
+                if (DOM.topMenu.classList.contains('hidden')) {
+                    if (DOM.floatingBar.classList.contains('faded')) toggleMenu();
+                    else hideFocusBar();
                 }
             }
-            if (e.key === 'ArrowDown' && AppState.zoomLevel <= 1.0 && isAtBottom) { 
-                if (DOM.topMenu.classList.contains('hidden')) wakeFocusBar(); 
-                else toggleMenu(); 
+            if (e.key === 'ArrowDown' && AppState.zoomLevel <= 1.0 && isAtBottom) {
+                if (DOM.topMenu.classList.contains('hidden')) wakeFocusBar();
+                else toggleMenu();
             }
         });
 
@@ -781,22 +1367,23 @@
                 zoomWheelCD = setTimeout(() => { zoomWheelCD = null; }, 100);
                 changeZoom(e.deltaY < 0 ? 0.25 : -0.25); return;
             }
-            if (!AppState.pdfDoc || AppState.zoomLevel > 1.0) return; 
-            e.preventDefault(); 
+            if (!AppState.pdfDoc || AppState.zoomLevel > 1.0) return;
+            e.preventDefault();
             if (!window.scrollCooldown) {
                 window.scrollCooldown = setTimeout(() => { window.scrollCooldown = null; }, 600);
                 if (e.deltaY > 0) onNextPage(); else if (e.deltaY < 0) onPrevPage();
             }
-        }, {passive: false});
+        }, { passive: false });
 
-        window.addEventListener('resize', () => { 
+        window.addEventListener('resize', () => {
             if (AppState.pdfDoc && !AppState.isRendering) {
                 updateBodyMode();
                 if (!isSinglePageMode() && AppState.pageNum % 2 === 0) AppState.pageNum -= 1;
-                renderPages(AppState.pageNum); 
+                renderPages(AppState.pageNum);
             }
         });
-        
+
     </script>
 </body>
+
 </html>
