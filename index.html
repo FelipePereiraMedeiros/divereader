@@ -1005,8 +1005,8 @@
       </div>
       <h2>DiveReader Pro</h2>
       <p>
-        A ferramenta definitiva para análise de PDFs. Arraste seu documento de
-        estudo aqui.
+        A ferramenta definitiva para estudo de livros em PDFs. Arraste seu
+        documento para cá.
       </p>
     </div>
 
@@ -1042,12 +1042,56 @@
     <!-- MENU SUPERIOR -->
     <div class="controls" id="top-menu">
       <div class="controls-group">
-        <label class="file-upload-label">
+        <label class="file-upload-label" title="Abrir arquivo PDF">
           <i data-lucide="folder-open" style="width: 16px; height: 16px"></i>
           <span class="btn-text">Abrir PDF</span>
           <input type="file" id="file-input" accept=".pdf" />
         </label>
         <span id="file-title">Nenhum arquivo</span>
+
+        <!-- Novos Botões de Backup -->
+        <div
+          style="
+            width: 1px;
+            height: 20px;
+            background-color: var(--border-color);
+            margin: 0 4px;
+            display: none;
+          "
+          id="backup-divider"
+        ></div>
+
+        <button
+          onclick="exportBackup()"
+          title="Exportar Backup dos Estudos (.json)"
+          class="btn-primary"
+          style="
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+          "
+        >
+          <i data-lucide="download-cloud" style="width: 16px; height: 16px"></i>
+        </button>
+
+        <label
+          class="file-upload-label"
+          style="
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            background: transparent;
+          "
+          title="Importar Backup (.json)"
+        >
+          <i data-lucide="upload-cloud" style="width: 16px; height: 16px"></i>
+          <input
+            type="file"
+            id="import-backup"
+            accept=".json"
+            style="display: none"
+          />
+        </label>
       </div>
 
       <div class="controls-group">
@@ -2131,6 +2175,99 @@
       // Inicializa a UI do relógio ao carregar a página
       updatePomodoroUI();
       document.getElementById("pomodoro-text").style.opacity = "0.5"; // Começa opaco (pausado)
+
+      // ==========================================
+      // 9. SISTEMA DE BACKUP (IMPORT / EXPORT)
+      // ==========================================
+
+      function exportBackup() {
+        const backupData = {};
+        let hasData = false;
+
+        // Varre o armazenamento do navegador procurando chaves do DiveReader
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith("dr2_")) {
+            backupData[key] = localStorage.getItem(key);
+            hasData = true;
+          }
+        }
+
+        if (!hasData)
+          return showToast(
+            "Não há dados de estudo para exportar.",
+            "alert-circle",
+          );
+
+        // Cria o arquivo .json e força o download
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], {
+          type: "application/json",
+        });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `DiveReader_Backup_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.json`;
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        showToast("Backup exportado com sucesso!", "save");
+      }
+
+      document
+        .getElementById("import-backup")
+        .addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const data = JSON.parse(event.target.result);
+              let importedCount = 0;
+
+              // Injeta os dados de volta no navegador
+              for (const key in data) {
+                if (key.startsWith("dr2_")) {
+                  localStorage.setItem(key, data[key]);
+                  importedCount++;
+                }
+              }
+
+              if (importedCount > 0) {
+                showToast(
+                  "Backup restaurado! Dados carregados.",
+                  "check-circle-2",
+                );
+
+                // Se houver um PDF aberto no momento, recarrega a página para puxar os grifos novos
+                if (AppState.pdfDoc && AppState.fileKey) {
+                  AppState.notesData = JSON.parse(
+                    localStorage.getItem(AppState.fileKey + "_anotacoes") ||
+                      "{}",
+                  );
+                  AppState.highlightsData = JSON.parse(
+                    localStorage.getItem(AppState.fileKey + "_highlights") ||
+                      "{}",
+                  );
+                  renderPages(AppState.pageNum);
+                }
+              } else {
+                showToast(
+                  "O arquivo não contém dados do DiveReader.",
+                  "x-circle",
+                );
+              }
+            } catch (error) {
+              showToast(
+                "Arquivo de backup inválido ou corrompido.",
+                "alert-triangle",
+              );
+            }
+          };
+          reader.readAsText(file);
+          e.target.value = ""; // Reseta o input para permitir importar o mesmo arquivo de novo se necessário
+        });
     </script>
   </body>
 </html>
