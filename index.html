@@ -1148,22 +1148,61 @@
             const highlightPageNum = parseInt(wrapper.dataset.page); // Onde o grifo é desenhado
             const activeNotePage = AppState.pageNum; // A página "mestra" aberta no Caderno
 
-            const wrapperRect = wrapper.getBoundingClientRect();
-
+           const wrapperRect = wrapper.getBoundingClientRect();
+            
             if (!AppState.highlightsData[highlightPageNum]) AppState.highlightsData[highlightPageNum] = [];
-
-            const highlightId = Date.now().toString();
+            
+            // NOVO: Verificação de "Duplo Grifo" (Colisão)
+            let isAlreadyHighlighted = false;
+            const hData = AppState.highlightsData[highlightPageNum];
 
             for (let i = 0; i < rects.length; i++) {
                 const r = rects[i];
-                AppState.highlightsData[highlightPageNum].push({
-                    id: highlightId,
-                    x: (r.left - wrapperRect.left) / wrapperRect.width,
-                    y: (r.top - wrapperRect.top) / wrapperRect.height,
-                    width: r.width / wrapperRect.width,
-                    height: r.height / wrapperRect.height
-                });
+                const tempX = (r.left - wrapperRect.left) / wrapperRect.width;
+                const tempY = (r.top - wrapperRect.top) / wrapperRect.height;
+
+                // Checa se o ponto inicial do texto selecionado cai dentro de um grifo já salvo
+                // Usamos uma margem de tolerância de 0.01 (1%) para não ser chato com seleções quase iguais
+                isAlreadyHighlighted = hData.some(existing => 
+                    tempX >= existing.x - 0.01 && tempX <= (existing.x + existing.width) + 0.01 &&
+                    tempY >= existing.y - 0.01 && tempY <= (existing.y + existing.height) + 0.01
+                );
+
+                if (isAlreadyHighlighted) break; // Se bateu em um, já cancela tudo
             }
+
+            if (isAlreadyHighlighted) {
+                selection.removeAllRanges();
+                return showToast("Este trecho já foi grifado.", "alert-circle");
+            }
+
+            // Se passou no teste, segue a rotina normal de salvar
+            const highlightId = Date.now().toString(); 
+            const filteredRects = [];
+            
+            for (let i = 0; i < rects.length; i++) {
+                const r = rects[i];
+                
+                // Converte para percentual
+                const x = (r.left - wrapperRect.left) / wrapperRect.width;
+                const y = (r.top - wrapperRect.top) / wrapperRect.height;
+                const width = r.width / wrapperRect.width;
+                const height = r.height / wrapperRect.height;
+
+                // Verifica se já existe um retângulo praticamente idêntico (Filtro Anti-Duplicação)
+                const isDuplicate = filteredRects.some(existing => 
+                    Math.abs(existing.x - x) < 0.005 && 
+                    Math.abs(existing.y - y) < 0.005
+                );
+
+                // Só salva se não for cópia e se não for um retângulo vazio invisível
+                if (!isDuplicate && width > 0 && height > 0) {
+                    filteredRects.push({ id: highlightId, x, y, width, height });
+                }
+            }
+
+            // Joga os retângulos limpos no sistema
+            AppState.highlightsData[highlightPageNum].push(...filteredRects);
 
             localStorage.setItem(AppState.fileKey + "_highlights", JSON.stringify(AppState.highlightsData));
 
