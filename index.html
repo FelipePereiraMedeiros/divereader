@@ -21,25 +21,27 @@
         /* 1. DESIGN SYSTEM & VARIÁVEIS                              */
         /* ========================================================= */
         :root {
-            var(--bg-color): #f3f4f6;
-            --ui-bg: #ffffff;
-            --text-color: #1f2937;
+            /* Cores dos Menus (UI) e Texto */
+            --ui-bg: #ffffff; 
+            --text-color: #1f2937; 
             --text-muted: #6b7280;
             --border-color: #e5e7eb;
-            --indicator-bg: rgba(0, 0, 0, 0.6);
-            --indicator-text: #ffffff;
-            --primary: #0284c7;
+            
+            /* A "Mesa" de fundo e a Folha do PDF */
+            --workspace-bg: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            --page-bg: #ffffff; 
+            
+            --indicator-bg: rgba(0, 0, 0, 0.6); 
+            --indicator-text: #ffffff; 
+            --primary: #0284c7; 
             --primary-hover: #0369a1;
-            --highlight-color: rgba(0, 236, 271, 0.25);
-            /* Amarelo Marca-texto */
-
-            --radius-sm: 4px;
-            --radius-md: 8px;
-            --radius-pill: 9999px;
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-
+            --highlight-color: rgba(253, 224, 71, 0.35); /* Amarelo equilibrado */
+            
+            --radius-sm: 4px; --radius-md: 8px; --radius-pill: 9999px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            
             --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             --font-doc: 'Georgia', serif;
         }
@@ -228,16 +230,25 @@
             position: relative;
         }
 
-        #book-container {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            height: 100%;
-            padding: 15px;
-            box-sizing: border-box;
-            overflow-y: auto;
-            overflow-x: auto;
-            background-color: var(--bg-color);
+        #book-container { 
+            display: flex; flex-direction: column; flex-grow: 1; height: 100%; padding: 15px; 
+            box-sizing: border-box; overflow-y: auto; overflow-x: auto; 
+            
+            /* Aplica a mesa dinâmica do tema e uma leve sombra interna para dar profundidade */
+            background: var(--workspace-bg); 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.03); 
+        }
+
+        /* Estrutura das Camadas da Página */
+        .page-wrapper { 
+            position: relative; 
+            background: var(--page-bg); 
+            /* Sombra mais densa e realista imitando papel empilhado */
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1); 
+            border-radius: 4px; 
+            overflow: hidden; 
+            backface-visibility: hidden; 
+            transform-style: preserve-3d; 
         }
 
         #empty-state {
@@ -282,17 +293,6 @@
             margin: 0 auto;
             padding: 20px;
             perspective: none;
-        }
-
-        /* Estrutura das Camadas da Página */
-        .page-wrapper {
-            position: relative;
-            background: white;
-            box-shadow: var(--shadow-md);
-            border-radius: 4px;
-            overflow: hidden;
-            backface-visibility: hidden;
-            transform-style: preserve-3d;
         }
 
         .page-wrapper canvas {
@@ -523,6 +523,53 @@
         /* ========================================================= */
         /* 6. OVERLAYS E BARRA DE FOCO                               */
         /* ========================================================= */
+        
+        /* Estilos do Widget Pomodoro */
+        #pomodoro-widget {
+            position: fixed; top: 70px; right: 20px; z-index: 150;
+            background: var(--ui-bg); border: 1px solid var(--border-color);
+            padding: 8px 12px; border-radius: var(--radius-pill);
+            box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 10px;
+            cursor: pointer; transition: transform 0.2s, opacity 0.3s;
+        }
+        #pomodoro-widget:hover { transform: scale(1.02); box-shadow: var(--shadow-md); }
+        body.zoomed-mode #pomodoro-widget { opacity: 0.3; } /* Fica discreto no modo foco/zoom */
+        body.zoomed-mode #pomodoro-widget:hover { opacity: 1; }
+
+        .clock-face {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid var(--text-color); position: relative;
+            /* O gradiente cônico cria a "torta" visual do tempo restante */
+            background: conic-gradient(transparent 0deg, var(--highlight-color) 0deg);
+        }
+        .clock-hand {
+            width: 2px; height: 10px; background-color: var(--text-color);
+            position: absolute; bottom: 50%; left: 50%;
+            transform-origin: bottom center; transform: translateX(-50%) rotate(0deg);
+            border-radius: 2px; z-index: 2; transition: transform 1s linear;
+        }
+        .clock-center {
+            width: 4px; height: 4px; background: var(--text-color);
+            border-radius: 50%; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); z-index: 3;
+        }
+        #pomodoro-text { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        /* Estilos do Modal de Alerta */
+        #pomodoro-alert {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+            opacity: 1; transition: opacity 0.3s;
+        }
+        #pomodoro-alert.hidden { opacity: 0; pointer-events: none; }
+        .alert-content {
+            background: var(--ui-bg); padding: 24px; border-radius: var(--radius-md);
+            text-align: center; max-width: 320px; box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color); transform: translateY(0); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #pomodoro-alert.hidden .alert-content { transform: translateY(20px); }
+        .alert-buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
         #floating-focus-bar {
             position: fixed;
             bottom: 20px;
@@ -649,40 +696,50 @@
         }
 
         /* ========================================================= */
-        /* 7. TEMAS (Otimizados para PDF Acadêmico)                  */
+        /* 7. TEMAS (Otimizados para Conforto Visual)                */
         /* ========================================================= */
-        .theme-dark {
-            --bg-color: #111827;
-            --ui-bg: #1f2937;
-            --text-color: #f9fafb;
-            --text-muted: #9ca3af;
-            --border-color: #374151;
-            --indicator-bg: rgba(255, 255, 255, 0.15);
-            --indicator-text: #ffffff;
-            --highlight-color: rgba(253, 224, 71, 0.15);
+        .theme-dark { 
+            /* Cores inspiradas em editores de texto profissionais (Cinza neutro e suave) */
+            --ui-bg: #252526; /* Cor exata da sidebar do VS Code */
+            --text-color: #d4d4d4; /* Cinza claro, nunca branco puro */
+            --text-muted: #858585; 
+            --border-color: #3e3e42; 
+            
+            /* Mesa Noturna (Cinza escuro sólido e flat, sem gradientes) */
+            --workspace-bg: #111111;
+            --page-bg: #1e1e1e; /* Fundo da página alinhado com editores */
+            
+            --indicator-bg: rgba(37, 37, 38, 0.9); 
+            --indicator-text: #cccccc;
+            
+            /* Amarelo de sintaxe de editor, com opacidade suave */
+            --highlight-color: rgba(215, 186, 125, 0.25); 
         }
-
-        .theme-dark .page-wrapper canvas {
-            filter: invert(90%) hue-rotate(180deg) contrast(110%);
+        
+        .theme-dark .page-wrapper canvas { 
+            /* A mágica: esse filtro exato transforma o branco do papel em cinza escuro (#1e1e1e) 
+               e o texto preto em cinza claro macio (#d4d4d4), eliminando a agressividade */
+            filter: invert(92%) hue-rotate(180deg) contrast(85%) brightness(90%); 
         }
+        .theme-dark .highlight-rect { mix-blend-mode: screen; }
 
-        .theme-dark .highlight-rect {
-            mix-blend-mode: screen;
+        .theme-sepia { 
+            --ui-bg: #f4ecd8; 
+            --text-color: #3d3324; 
+            --text-muted: #80735e; 
+            --border-color: #e3d5b1; 
+            
+            /* Mesa Sépia (Madeira Clara Suave) */
+            --workspace-bg: linear-gradient(135deg, #d4c4a8 0%, #bbaa8d 100%);
+            --page-bg: #f4ecd8; 
+            
+            --indicator-bg: rgba(61, 51, 36, 0.8);
+            --highlight-color: rgba(253, 224, 71, 0.25);
         }
-
-        /* Ajuste de mistura para tema escuro */
-
-        .theme-sepia {
-            --bg-color: #fdf6e3;
-            --ui-bg: #fcf1d3;
-            --border-color: #e5d8b6;
-            --text-color: #433422;
-            --text-muted: #8a7b66;
-            --indicator-bg: rgba(67, 52, 34, 0.7);
-        }
-
-        .theme-sepia .page-wrapper canvas {
-            filter: sepia(40%) contrast(90%) brightness(95%);
+        .theme-sepia .page-wrapper canvas { 
+            filter: none; 
+            mix-blend-mode: multiply; 
+            opacity: 0.85; /* Conforto visual: deixa o preto um pouco mais grafite */
         }
 
         @media (max-width: 800px) {
@@ -716,6 +773,29 @@
 </head>
 
 <body class="theme-light">
+
+    <!-- WIDGET POMODORO -->
+    <div id="pomodoro-widget" onclick="togglePomodoro()" title="Clique para Iniciar/Pausar o Pomodoro (25m)">
+        <div class="clock-face" id="clock-face">
+            <div class="clock-hand" id="clock-hand"></div>
+            <div class="clock-center"></div>
+        </div>
+        <span id="pomodoro-text">25:00</span>
+    </div>
+
+    <!-- MODAL DE ALERTA POMODORO -->
+    <div id="pomodoro-alert" class="hidden">
+        <div class="alert-content">
+            <i data-lucide="brain-circuit" style="width: 40px; height: 40px; color: var(--primary); margin-bottom: 12px;"></i>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-color);">Fim do Ciclo!</h3>
+            <p style="margin: 0 0 20px 0; font-size: 14px; color: var(--text-muted);">Hora de fazer uma pausa, esticar as pernas e beber água.</p>
+            <div class="alert-buttons">
+                <button class="btn-primary" onclick="resetPomodoro(5)"><i data-lucide="coffee" style="width: 14px; height: 14px;"></i> Pausa (5m)</button>
+                <button onclick="snoozePomodoro()"><i data-lucide="alarm-clock-plus" style="width: 14px; height: 14px;"></i> Soneca (+5m)</button>
+                <button onclick="resetPomodoro(25)" style="background: transparent; border: none; font-size: 12px; color: var(--text-muted);">Zerar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- OVERLAYS & TOASTS -->
     <div id="drag-overlay"><i data-lucide="file-up" style="width: 36px; height: 36px; margin-right: 12px;"></i> Solte o
@@ -1480,6 +1560,82 @@
                 renderPages(AppState.pageNum);
             }
         });
+
+        // ==========================================
+        // 8. AUXILIAR POMODORO
+        // ==========================================
+        let pomodoroTotal = 20 * 60; // Padrão de 20 minutos
+        let pomodoroRemaining = pomodoroTotal;
+        let pomodoroTimer = null;
+        let isPomodoroRunning = false;
+
+        function updatePomodoroUI() {
+            const mins = Math.floor(pomodoroRemaining / 60).toString().padStart(2, '0');
+            const secs = (pomodoroRemaining % 60).toString().padStart(2, '0');
+            document.getElementById('pomodoro-text').textContent = `${mins}:${secs}`;
+
+            // Calcula o ângulo do ponteiro e da "torta"
+            const fraction = pomodoroRemaining / pomodoroTotal;
+            const deg = (1 - fraction) * 360;
+
+            const hand = document.getElementById('clock-hand');
+            const face = document.getElementById('clock-face');
+
+            hand.style.transform = `translateX(-50%) rotate(${deg}deg)`;
+            // O tempo que já passou fica transparente; o que resta fica preenchido com a cor do grifo
+            face.style.background = `conic-gradient(transparent ${deg}deg, var(--highlight-color) ${deg}deg)`;
+        }
+
+        function togglePomodoro() {
+            if (isPomodoroRunning) {
+                clearInterval(pomodoroTimer);
+                isPomodoroRunning = false;
+                document.getElementById('pomodoro-text').style.opacity = '0.5';
+                showToast("Pomodoro pausado", "pause");
+            } else {
+                isPomodoroRunning = true;
+                document.getElementById('pomodoro-text').style.opacity = '1';
+                showToast("Timer iniciado!", "play");
+                
+                pomodoroTimer = setInterval(() => {
+                    if (pomodoroRemaining > 0) {
+                        pomodoroRemaining--;
+                        updatePomodoroUI();
+                    } else {
+                        clearInterval(pomodoroTimer);
+                        isPomodoroRunning = false;
+                        document.getElementById('pomodoro-alert').classList.remove('hidden');
+                        // Força a recriação dos ícones dentro do modal dinâmico
+                        lucide.createIcons({ root: document.getElementById('pomodoro-alert') }); 
+                    }
+                }, 1000);
+            }
+        }
+
+        function snoozePomodoro() {
+            // Adiciona 5 minutos na conta e retoma o relógio
+            pomodoroRemaining += 5 * 60;
+            pomodoroTotal = Math.max(pomodoroTotal, pomodoroRemaining); // Ajusta o total para o gráfico não quebrar
+            document.getElementById('pomodoro-alert').classList.add('hidden');
+            togglePomodoro(); 
+            showToast("+5 Minutos adicionados", "clock");
+        }
+
+        function resetPomodoro(minutes) {
+            pomodoroTotal = minutes * 60;
+            pomodoroRemaining = pomodoroTotal;
+            updatePomodoroUI();
+            document.getElementById('pomodoro-alert').classList.add('hidden');
+            if(isPomodoroRunning) {
+                clearInterval(pomodoroTimer);
+                isPomodoroRunning = false;
+                document.getElementById('pomodoro-text').style.opacity = '0.5';
+            }
+        }
+
+        // Inicializa a UI do relógio ao carregar a página
+        updatePomodoroUI();
+        document.getElementById('pomodoro-text').style.opacity = '0.5'; // Começa opaco (pausado)
 
     </script>
 </body>
