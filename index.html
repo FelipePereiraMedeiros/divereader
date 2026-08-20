@@ -3,62 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DiveReader | Mergulhe na Leitura</title>
+    <title>DiveReader | O Leitor Definitivo para Estudos</title>
     
     <!-- Favicon Temático -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
     
-    <!-- Bibliotecas Engine -->
+    <!-- Motor Exclusivo: PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/epub.js/0.3.90/epub.min.js"></script>
     
-    <!-- Biblioteca de Ícones Premium (Lucide) -->
+    <!-- Biblioteca de Ícones (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         /* ========================================================= */
-        /* DESIGN SYSTEM (DiveReader Theme)                          */
+        /* 1. DESIGN SYSTEM & VARIÁVEIS                              */
         /* ========================================================= */
         :root {
-            /* Cores base (Tema Claro) */
-            --bg-color: #f3f4f6; 
+            var(--bg-color): #f3f4f6; 
             --ui-bg: #ffffff; 
             --text-color: #1f2937; 
             --text-muted: #6b7280;
             --border-color: #e5e7eb;
             --indicator-bg: rgba(0, 0, 0, 0.6); 
             --indicator-text: #ffffff; 
-            
-            /* Identidade DiveReader (Ocean Blue) */
             --primary: #0284c7; 
             --primary-hover: #0369a1;
+            --highlight-color: rgba(0, 236, 271, 0.25); /* Amarelo Marca-texto */
             
-            /* Estrutura Slim */
-            --radius-sm: 4px;
-            --radius-md: 8px;
-            --radius-pill: 9999px;
+            --radius-sm: 4px; --radius-md: 8px; --radius-pill: 9999px;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
             --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
             
-            /* Tipografia */
             --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             --font-doc: 'Georgia', serif;
         }
 
+        /* ========================================================= */
+        /* 2. BASE & RESET                                           */
+        /* ========================================================= */
         body {
             background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-ui);
             margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
             transition: background-color 0.3s ease, color 0.3s ease; touch-action: pan-x pan-y; 
-            -webkit-font-smoothing: antialiased;
-            overscroll-behavior: none; /* Bloqueia o "puxar para atualizar" do celular e elásticos */
+            -webkit-font-smoothing: antialiased; overscroll-behavior: none;
         }
 
-        /* ========================================================= */
-        /* COMPONENTES GERAIS                                        */
-        /* ========================================================= */
         button, select, input[type="number"] { 
             padding: 6px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); 
             cursor: pointer; background: var(--ui-bg); font-size: 13px; font-weight: 500; color: var(--text-color); 
@@ -67,25 +57,22 @@
         button:hover:not(:disabled), select:hover { background-color: var(--bg-color); }
         button:active:not(:disabled) { transform: scale(0.98); }
         button:disabled { opacity: 0.4; cursor: not-allowed; }
-        
         .btn-primary { background-color: var(--primary); color: white; border-color: var(--primary); }
         .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
 
         /* ========================================================= */
-        /* TOP BAR E CONTROLES                                       */
+        /* 3. TOP BAR E CONTROLES                                    */
         /* ========================================================= */
         .controls {
             background-color: var(--ui-bg); border-bottom: 1px solid var(--border-color); padding: 8px 16px;
             display: flex; gap: 12px; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm);
             z-index: 100; max-height: 150px; opacity: 1; transform: translateY(0); overflow: hidden;
-            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s ease, opacity 0.3s ease, transform 0.4s ease;
+            transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.3s ease, transform 0.4s ease;
         }
         .controls.hidden { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateY(-20px); border-bottom-color: transparent; }
-
         .controls-group { display: flex; align-items: center; gap: 8px; }
         
         #file-title { font-weight: 600; font-size: 13px; color: var(--text-muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; }
-        
         input[type="file"] { display: none; }
         .file-upload-label { border: 1px dashed var(--border-color); color: var(--primary); font-weight: 600; padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; transition: all 0.2s; }
         .file-upload-label:hover { background-color: rgba(2, 132, 199, 0.05); border-color: var(--primary); }
@@ -94,152 +81,129 @@
         .page-navigation button { border: none; background: transparent; padding: 4px; border-radius: var(--radius-sm);}
         .page-navigation span { font-size: 12px; font-weight: 600; padding: 0 4px;}
         input[type="number"] { width: 40px; text-align: center; border: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 2px; font-weight: 600; background: transparent;}
-        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        #btn-highlight.btn-active { background-color: #fef08a; color: #854d0e; border-color: #fde047; }
 
         /* ========================================================= */
-        /* BARRA FLUTUANTE DE FOCO                                   */
-        /* ========================================================= */
-        #floating-focus-bar {
-            position: fixed; bottom: 20px; left: 50%; background-color: var(--ui-bg); border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-lg); border-radius: var(--radius-pill); display: none; padding: 4px 6px; z-index: 200; align-items: center;
-            transform: translateX(-50%) translateY(0); opacity: 1; transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-        #floating-focus-bar.visible { display: flex; }
-        #floating-focus-bar.faded { opacity: 0; transform: translateX(-50%) translateY(30px); pointer-events: none; }
-        #floating-focus-bar button { border: none; background: transparent; padding: 6px 12px; font-weight: 600; border-radius: var(--radius-pill); font-size: 13px;}
-
-        /* ========================================================= */
-        /* WORKSPACE & VIEWERS                                       */
+        /* 4. WORKSPACE & PDF VIEWER                                 */
         /* ========================================================= */
         .main-workspace { display: flex; flex-grow: 1; width: 100%; min-height: 0; overflow: hidden; position: relative; }
         
-        /* CORREÇÃO DO BUG AQUI: overflow: hidden no modo normal impede a folga 3D */
-        #book-container { display: flex; justify-content: center; align-items: center; flex-grow: 1; height: 100%; padding: 15px; box-sizing: border-box; perspective: 2000px; transition: width 0.3s ease; overflow: hidden; }
+        #book-container { 
+            display: flex; flex-direction: column; flex-grow: 1; height: 100%; padding: 15px; 
+            box-sizing: border-box; overflow-y: auto; overflow-x: auto; background-color: var(--bg-color);
+        }
 
-        /* Libera o Scroll APENAS no Modo Zoom */
-        body.zoomed-mode #book-container { display: block !important; padding: 0; overflow: auto; }
-
-        /* Empty State DiveReader */
         #empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 12px; color: var(--text-muted); background: var(--bg-color); z-index: 10; }
         #empty-state .icon-wrapper { width: 64px; height: 64px; background: var(--ui-bg); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: var(--shadow-sm); color: var(--primary); margin-bottom: 8px; }
-        #empty-state h2 { margin: 0; font-size: 22px; color: var(--text-color); font-weight: 700; letter-spacing: -0.5px;}
-        #empty-state p { margin: 0; font-size: 14px; max-width: 290px; line-height: 1.5;}
+        
+        /* Sistema Dinâmico do PDF */
+        #pdf-viewer { display: flex; justify-content: center; align-items: center; gap: 10px; margin: auto; transition: transform 0.2s ease; perspective: 2000px; }
+        body.zoomed-mode #pdf-viewer { margin: 0 auto; padding: 20px; perspective: none; }
 
-        /* Canvas (PDF/CBZ) */
-        #canvas-viewer { display: none; justify-content: center; align-items: center; width: 100%; height: 100%; perspective: 2000px; }
-        canvas { max-height: 100%; max-width: 48%; object-fit: contain; box-shadow: var(--shadow-md); background-color: white; backface-visibility: hidden; transform-style: preserve-3d; }
-        #page-left { transform-origin: right center; border-right: 1px solid rgba(0,0,0,0.1); border-radius: 4px 0 0 4px;}
-        #page-right { transform-origin: left center; border-left: 1px solid rgba(0,0,0,0.1); border-radius: 0 4px 4px 0;}
-        .flip-next { animation: turnNext 0.4s ease-in forwards; }
-        .flip-prev { animation: turnPrev 0.4s ease-in forwards; }
+        /* Estrutura das Camadas da Página */
+        .page-wrapper { position: relative; background: white; box-shadow: var(--shadow-md); border-radius: 4px; overflow: hidden; backface-visibility: hidden; transform-style: preserve-3d; }
+        .page-wrapper canvas { display: block; max-width: 100%; height: auto; }
+        
+        /* Animações de Virada de Página */
+        .flip-next { animation: turnNext 0.4s ease-in forwards; transform-origin: left center; }
+        .flip-prev { animation: turnPrev 0.4s ease-in forwards; transform-origin: right center; }
         @keyframes turnNext { 0% { transform: rotateY(0deg); filter: brightness(1); } 100% { transform: rotateY(-90deg); filter: brightness(0.5); opacity: 0.2; } }
         @keyframes turnPrev { 0% { transform: rotateY(0deg); filter: brightness(1); } 100% { transform: rotateY(90deg); filter: brightness(0.5); opacity: 0.2; } }
 
-        /* Zoom Mode Canvas */
-        #canvas-viewer.zoomed { display: block !important; width: 100% !important; height: auto !important; padding: 20px; box-sizing: border-box; perspective: none !important; }
-        #canvas-viewer.zoomed canvas { max-width: 100% !important; max-height: none !important; margin: 0 auto; border-radius: 4px;}
-
-        /* Single Page Mode */
-        .single-page-mode #page-left { display: none !important; }
-        .single-page-mode #page-right { transform-origin: left center !important; border-left: none; max-width: 100%; border-radius: 4px;}
-        .single-page-mode #page-right.flip-prev { transform-origin: right center !important; }
-        .single-page-mode #text-content { column-width: calc(100vw - 40px) !important; column-gap: 20px !important; }
-
-        /* Text (TXT/MD) & EPUB */
-        #text-viewer { display: none; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; overflow: hidden; background-color: var(--ui-bg); box-shadow: var(--shadow-md); border-radius: var(--radius-sm); margin: 0 auto; max-width: 1200px;}
-        #text-content { height: 100%; column-fill: auto; word-wrap: break-word; text-align: justify; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: left; line-height: 1.7; font-size: 15px; column-width: calc(50vw - 40px); column-gap: 40px; font-family: var(--font-doc);}
-        #text-content img { max-width: 100%; height: auto; border-radius: var(--radius-sm); }
-        #epub-viewer { display: none; width: 100%; height: 100%; background-color: var(--ui-bg); overflow: hidden; box-shadow: var(--shadow-md); border-radius: var(--radius-sm); max-width: 1200px; margin: 0 auto;}
-
-        /* ========================================================= */
-        /* SIDEBAR (Anotações)                                       */
-        /* ========================================================= */
-        #sidebar { width: 300px; min-width: 300px; background-color: var(--ui-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: -4px 0 15px rgba(0,0,0,0.03); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-right 0.3s ease; z-index: 500; }
-        #sidebar.hidden { transform: translateX(100%); margin-right: -300px; box-shadow: none;}
+        /* Camada do Marca-Texto */
+        .highlight-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
         
+        /* O pointer-events: auto permite clicar no grifo, mesmo a camada pai estando desativada */
+        .highlight-rect { 
+            position: absolute; background-color: var(--highlight-color); mix-blend-mode: multiply; 
+            border-radius: 2px; pointer-events: auto; cursor: pointer; transition: opacity 0.2s;
+        }
+        .highlight-rect:hover { opacity: 0.5; /* Indica que é interativo */ }
+
+        /* Camada de Texto Nível PDF.js (Invisível, mas Selecionável) */
+        .textLayer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; opacity: 1; line-height: 1.0; z-index: 3; }
+        .textLayer > span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+        .textLayer ::selection { background: rgba(0, 132, 255, 0.25); }
+
+        /* ========================================================= */
+        /* 5. SIDEBAR (Anotações)                                    */
+        /* ========================================================= */
+        #sidebar { width: 320px; min-width: 320px; background-color: var(--ui-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: -4px 0 15px rgba(0,0,0,0.03); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-right 0.3s ease; z-index: 500; }
+        #sidebar.hidden { transform: translateX(100%); margin-right: -320px; box-shadow: none;}
         .sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-weight: 600; display: flex; justify-content: space-between; align-items: center; font-size: 14px;}
         .sidebar-header button { padding: 4px; border: none; border-radius: var(--radius-pill); }
-        
         .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-color);}
         .sidebar-tabs button { flex: 1; border: none; background: transparent; padding: 10px 4px; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid transparent; border-radius: 0; font-size: 12px;}
         .sidebar-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--ui-bg);}
-        
         .tab-content { flex-grow: 1; display: none; flex-direction: column; position: relative; background: var(--ui-bg);}
         .tab-content.active { display: flex; }
         
         #notepad { flex-grow: 1; width: 100%; box-sizing: border-box; padding: 16px; border: none; resize: none; background: transparent; color: var(--text-color); font-family: var(--font-ui); font-size: 14px; line-height: 1.6; outline: none; }
-        #notepad::placeholder { color: #9ca3af; }
-        
         #global-view { flex-grow: 1; padding: 16px; overflow-y: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.7; color: var(--text-color); padding-bottom: 60px; font-family: var(--font-doc);}
-        
         .action-buttons { position: absolute; bottom: 16px; left: 16px; right: 16px; display: flex; gap: 8px; }
-        .action-buttons button { flex: 1; justify-content: center;}
+        .action-buttons button { flex: 1; justify-content: center; }
 
         /* ========================================================= */
-        /* FEEDBACKS & OVERLAYS                                      */
+        /* 6. OVERLAYS E BARRA DE FOCO                               */
         /* ========================================================= */
-        #drag-overlay { position: fixed; inset: 0; background-color: rgba(2, 132, 199, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; font-weight: bold; border: 8px dashed rgba(255,255,255,0.5); box-sizing: border-box; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        #floating-focus-bar { position: fixed; bottom: 20px; left: 50%; background-color: var(--ui-bg); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); border-radius: var(--radius-pill); display: none; padding: 4px 6px; z-index: 200; align-items: center; transform: translateX(-50%) translateY(0); opacity: 1; transition: opacity 0.4s ease, transform 0.4s ease; }
+        #floating-focus-bar.visible { display: flex; }
+        #floating-focus-bar.faded { opacity: 0; transform: translateX(-50%) translateY(30px); pointer-events: none; }
+        #floating-focus-bar button { border: none; background: transparent; padding: 6px 12px; font-weight: 600; border-radius: var(--radius-pill); font-size: 13px;}
+
+        #drag-overlay { position: fixed; inset: 0; background-color: rgba(2, 132, 199, 0.9); z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; font-weight: bold; border: 8px dashed rgba(255,255,255,0.5); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         #drag-overlay.active { opacity: 1; pointer-events: all; }
-
         #loading-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; z-index: 10; background: var(--indicator-bg); color: white; padding: 10px 20px; border-radius: var(--radius-pill); font-weight: 500; font-size: 13px; backdrop-filter: blur(4px); box-shadow: var(--shadow-md);}
-        
         #discreet-indicator { position: fixed; bottom: 20px; left: 20px; background-color: var(--indicator-bg); color: var(--indicator-text); padding: 4px 12px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; z-index: 150; backdrop-filter: blur(4px); letter-spacing: 0.5px;}
 
-        /* Toast Notifications */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
         .toast { background: var(--text-color); color: var(--ui-bg); padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-lg); transform: translateY(20px); opacity: 0; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); display: flex; align-items: center; gap: 8px;}
         .toast.show { transform: translateY(0); opacity: 1; }
 
         /* ========================================================= */
-        /* TEMAS DE CORES                                            */
+        /* 7. TEMAS (Otimizados para PDF Acadêmico)                  */
         /* ========================================================= */
-        .theme-light canvas:not(.flip-next):not(.flip-prev) { filter: none; }
-        .theme-dark { --bg-color: #111827; --ui-bg: #1f2937; --text-color: #f9fafb; --text-muted: #9ca3af; --border-color: #374151; --indicator-bg: rgba(255,255,255,0.15); --indicator-text: #ffffff; --primary: #38bdf8;}
-        .theme-dark canvas, .theme-dark img { filter: invert(90%) hue-rotate(180deg) contrast(110%); }
-        .theme-sepia { --bg-color: #fdf6e3; --ui-bg: #fcf1d3; --border-color: #e5d8b6; --text-color: #433422; --text-muted: #8a7b66; --indicator-bg: rgba(67,52,34,0.7); --primary: #b4854d;}
-        .theme-sepia canvas, .theme-sepia img { filter: sepia(40%) contrast(90%) brightness(95%); }
+        .theme-dark { 
+            --bg-color: #111827; --ui-bg: #1f2937; --text-color: #f9fafb; --text-muted: #9ca3af; 
+            --border-color: #374151; --indicator-bg: rgba(255,255,255,0.15); --indicator-text: #ffffff; 
+            --highlight-color: rgba(253, 224, 71, 0.15);
+        }
+        .theme-dark .page-wrapper canvas { filter: invert(90%) hue-rotate(180deg) contrast(110%); }
+        .theme-dark .highlight-rect { mix-blend-mode: screen; } /* Ajuste de mistura para tema escuro */
 
-        /* ========================================================= */
-        /* MOBILE RESPONSIVE                                         */
-        /* ========================================================= */
+        .theme-sepia { 
+            --bg-color: #fdf6e3; --ui-bg: #fcf1d3; --border-color: #e5d8b6; --text-color: #433422; 
+            --text-muted: #8a7b66; --indicator-bg: rgba(67,52,34,0.7);
+        }
+        .theme-sepia .page-wrapper canvas { filter: sepia(40%) contrast(90%) brightness(95%); }
+
         @media (max-width: 800px) {
-            .controls { padding: 10px; justify-content: center; }
-            .controls.hidden { padding-top: 0; padding-bottom: 0; }
-            .controls-group { width: 100%; justify-content: center; }
-            #file-title { display: none; }
-            button span.btn-text { display: none; } 
-            
-            #discreet-indicator { bottom: 16px; left: 16px; font-size: 10px;}
-            #floating-focus-bar { bottom: 16px; }
+            .controls { padding: 10px; justify-content: center; flex-wrap: wrap; max-height: 200px;}
+            #file-title { display: none; } button span.btn-text { display: none; } 
             #sidebar { position: fixed; top: 0; right: 0; bottom: 0; width: 100% !important; min-width: 100% !important; margin-right: 0 !important; border-left: none;}
-            #sidebar.hidden { transform: translateX(100%); }
         }
     </style>
 </head>
 <body class="theme-light">
 
-    <!-- OVERLAYS -->
-    <div id="drag-overlay">
-        <i data-lucide="file-up" style="width: 36px; height: 36px; margin-right: 12px;"></i>
-        Solte o arquivo para abrir
-    </div>
-    
+    <!-- OVERLAYS & TOASTS -->
+    <div id="drag-overlay"><i data-lucide="file-up" style="width: 36px; height: 36px; margin-right: 12px;"></i> Solte o arquivo para abrir</div>
     <div id="toast-container"></div>
     <div id="loading-msg"><i data-lucide="loader-2" class="lucide-spin" style="width: 16px; height: 16px; margin-right: 8px;"></i> Processando...</div>
     <div id="discreet-indicator">Pág. - / -</div>
 
-    <!-- TELA INICIAL DIVEREADER -->
     <div id="empty-state">
-        <div class="icon-wrapper">
-            <i data-lucide="waves" stroke-width="1.5" style="width: 32px; height: 32px;"></i>
-        </div>
-        <h2>DiveReader</h2>
-        <p>Arraste seu PDF, EPUB, TXT ou CBZ aqui, ou clique acima para abrir e <b>mergulhar</b> nos seus estudos.</p>
+        <div class="icon-wrapper"><i data-lucide="book-open-check" stroke-width="1.5" style="width: 32px; height: 32px;"></i></div>
+        <h2>DiveReader Pro</h2>
+        <p>A ferramenta definitiva para análise de PDFs. Arraste seu documento de estudo aqui.</p>
     </div>
 
-    <!-- BARRA FLUTUANTE MODO FOCO -->
+    <!-- BARRA DE FOCO FLUTUANTE -->
     <div id="floating-focus-bar">
         <button onclick="toggleSidebar()" title="Anotações"><i data-lucide="pen-line" style="width: 16px; height: 16px;"></i></button>
+        <div style="width: 1px; height: 16px; background-color: var(--border-color); margin: 0 4px;"></div>
+        <button onclick="addHighlight()" title="Grifar Seleção"><i data-lucide="highlighter" style="width: 16px; height: 16px;"></i></button>
         <div style="width: 1px; height: 16px; background-color: var(--border-color); margin: 0 4px;"></div>
         <button onclick="toggleMenu()" title="Sair do Foco"><i data-lucide="maximize" style="width: 16px; height: 16px;"></i></button>
     </div>
@@ -249,22 +213,25 @@
         <div class="controls-group">
             <label class="file-upload-label">
                 <i data-lucide="folder-open" style="width: 16px; height: 16px;"></i>
-                <span class="btn-text">Abrir Arquivo</span>
-                <input type="file" id="file-input" accept=".pdf, .txt, .md, .epub, .cbz, .zip, image/*" />
+                <span class="btn-text">Abrir PDF</span>
+                <input type="file" id="file-input" accept=".pdf" />
             </label>
             <span id="file-title">Nenhum arquivo</span>
         </div>
 
         <div class="controls-group">
+            <button id="btn-highlight" onclick="addHighlight()" title="Grifar texto selecionado" disabled>
+                <i data-lucide="highlighter" style="width: 16px; height: 16px;"></i> 
+                <span class="btn-text">Grifar</span>
+            </button>
             <select id="theme-selector" title="Tema" disabled>
                 <option value="theme-light">☀️ Claro</option>
                 <option value="theme-sepia">📖 Sépia</option>
                 <option value="theme-dark">🌙 Noturno</option>
             </select>
-            
             <div style="display: flex; gap: 4px;">
-                <button id="btn-zoom-out" onclick="changeZoom(-0.3)" title="Afastar (Ctrl -)" disabled><i data-lucide="zoom-out" style="width: 16px; height: 16px;"></i></button>
-                <button id="btn-zoom-in" onclick="changeZoom(0.3)" title="Aproximar (Ctrl +)" disabled><i data-lucide="zoom-in" style="width: 16px; height: 16px;"></i></button>
+                <button id="btn-zoom-out" onclick="changeZoom(-0.25)" title="Afastar" disabled><i data-lucide="zoom-out" style="width: 16px; height: 16px;"></i></button>
+                <button id="btn-zoom-in" onclick="changeZoom(0.25)" title="Aproximar" disabled><i data-lucide="zoom-in" style="width: 16px; height: 16px;"></i></button>
             </div>
         </div>
 
@@ -274,37 +241,34 @@
                 <span><input type="number" id="page-input" value="1" min="1" disabled> / <span id="total-pages">-</span></span>
                 <button id="btn-next" onclick="onNextPage()" disabled><i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i></button>
             </div>
-            <button id="btn-toggle-sidebar" onclick="toggleSidebar()" class="btn-primary" title="Minhas Notas" disabled><i data-lucide="pen-line" style="width: 16px; height: 16px;"></i> <span class="btn-text">Notas</span></button>
+            <button id="btn-toggle-sidebar" onclick="toggleSidebar()" class="btn-primary" title="Meu Caderno" disabled><i data-lucide="pen-line" style="width: 16px; height: 16px;"></i> <span class="btn-text">Caderno</span></button>
             <button id="btn-toggle-focus" onclick="toggleMenu()" title="Modo Foco" disabled><i data-lucide="minimize" style="width: 16px; height: 16px;"></i> <span class="btn-text">Foco</span></button>
         </div>
     </div>
 
-    <!-- WORKSPACE E LEITORES -->
+    <!-- WORKSPACE & LEITOR -->
     <div class="main-workspace">
         <div id="book-container" style="display: none;">
-            <div id="canvas-viewer">
-                <canvas id="page-left" style="display: none;"></canvas>
-                <canvas id="page-right" style="display: none;"></canvas>
+            <div id="pdf-viewer">
+                <!-- Páginas geradas dinamicamente -->
             </div>
-            <div id="text-viewer"><div id="text-content"></div></div>
-            <div id="epub-viewer"></div>
         </div>
 
         <!-- SIDEBAR DE ANOTAÇÕES -->
         <div id="sidebar" class="hidden" style="display: none;">
             <div class="sidebar-header">
-                <span>Meu Caderno</span>
+                <span>Meu Caderno de Estudos</span>
                 <button onclick="toggleSidebar()" title="Fechar"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
             </div>
             <div class="sidebar-tabs">
                 <button id="tab-btn-page" class="active" onclick="switchTab('page')">Nesta Página</button>
-                <button id="tab-btn-global" onclick="switchTab('global')">Caderno Todo</button>
+                <button id="tab-btn-global" onclick="switchTab('global')">Fichamento Completo</button>
             </div>
             <div id="tab-page" class="tab-content active">
-                <textarea id="notepad" placeholder="Suas notas sobre esta página... Salva automaticamente!" disabled></textarea>
+                <textarea id="notepad" placeholder="Suas sínteses sobre esta página...\n(Ao grifar, o texto aparecerá aqui automaticamente!)" disabled></textarea>
             </div>
             <div id="tab-global" class="tab-content">
-                <div id="global-view">Nenhuma anotação feita ainda.</div>
+                <div id="global-view">Nenhuma anotação ou grifo feito ainda.</div>
                 <div class="action-buttons">
                     <button class="btn-action" onclick="copyGlobalNotes()"><i data-lucide="copy" style="width: 14px; height: 14px;"></i> Copiar</button>
                     <button class="btn-action download btn-primary" onclick="downloadTxt()"><i data-lucide="download" style="width: 14px; height: 14px;"></i> Baixar TXT</button>
@@ -314,33 +278,29 @@
     </div>
 
     <script>
-        // Inicializa os Ícones Lucide
         lucide.createIcons();
-
-        // Configuração do Worker do PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         // ==========================================
         // 1. STATE MANAGEMENT
         // ==========================================
         const AppState = {
-            fileType: null, fileName: "Anotacoes", fileKey: null, content: null,
-            pdfDoc: null, epubBook: null, epubRendition: null,
-            pageNum: 1, isRendering: false, notesData: {}, zoomLevel: 1.0, focusTimer: null
+            fileName: "Anotacoes", fileKey: null, pdfDoc: null,
+            pageNum: 1, isRendering: false, notesData: {}, highlightsData: {}, 
+            zoomLevel: 1.0, focusTimer: null
         };
 
         const DOM = {
-            canvasLeft: document.getElementById('page-left'), ctxLeft: document.getElementById('page-left').getContext('2d'),
-            canvasRight: document.getElementById('page-right'), ctxRight: document.getElementById('page-right').getContext('2d'),
             indicator: document.getElementById('discreet-indicator'), notepad: document.getElementById('notepad'),
             globalView: document.getElementById('global-view'), floatingBar: document.getElementById('floating-focus-bar'),
-            bookContainer: document.getElementById('book-container'), emptyState: document.getElementById('empty-state'),
-            fileTitle: document.getElementById('file-title'), topMenu: document.getElementById('top-menu'),
-            sidebar: document.getElementById('sidebar'), loading: document.getElementById('loading-msg')
+            bookContainer: document.getElementById('book-container'), pdfViewer: document.getElementById('pdf-viewer'),
+            emptyState: document.getElementById('empty-state'), fileTitle: document.getElementById('file-title'), 
+            topMenu: document.getElementById('top-menu'), sidebar: document.getElementById('sidebar'), 
+            loading: document.getElementById('loading-msg')
         };
 
         // ==========================================
-        // 2. UI & UX HELPERS 
+        // 2. UI HELPERS & MODOS
         // ==========================================
         function showToast(message, icon = "info") {
             const container = document.getElementById('toast-container');
@@ -349,13 +309,11 @@
             toast.innerHTML = `<i data-lucide="${icon}" style="width: 16px; height: 16px;"></i> ${message}`;
             container.appendChild(toast);
             lucide.createIcons({root: toast});
-            
             requestAnimationFrame(() => toast.classList.add('show'));
             setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        function isMobile() { return window.innerWidth <= 800; }
-        function isSinglePageMode() { return window.innerWidth <= 800 || AppState.zoomLevel > 1.0; }
+        function isSinglePageMode() { return window.innerWidth <= 900 || AppState.zoomLevel > 1.0; }
 
         function updateBodyMode() {
             document.body.classList.toggle('single-page-mode', isSinglePageMode());
@@ -370,9 +328,7 @@
             if (tab === 'global') updateGlobalView();
         }
 
-        // ==========================================
-        // 3. FOCO PROFUNDO & MENUS LATERAIS
-        // ==========================================
+        // Foco e Menu
         function wakeFocusBar() {
             if (AppState.zoomLevel > 1.0 || !DOM.floatingBar.classList.contains('visible')) return; 
             DOM.floatingBar.classList.remove('faded');
@@ -388,247 +344,194 @@
         DOM.floatingBar.addEventListener('mouseleave', wakeFocusBar);
 
         function toggleMenu() {
-            if (AppState.zoomLevel > 1.0) return; 
             DOM.topMenu.classList.toggle('hidden');
             if (DOM.topMenu.classList.contains('hidden')) { DOM.floatingBar.classList.add('visible'); wakeFocusBar(); } 
             else { DOM.floatingBar.classList.remove('visible', 'faded'); clearTimeout(AppState.focusTimer); }
-            setTimeout(() => { if (AppState.pdfDoc && !AppState.isRendering) renderPages(AppState.pageNum); }, 400);
         }
-        
-        function toggleSidebar() {
-            if (AppState.zoomLevel > 1.0) return; 
-            DOM.sidebar.classList.toggle('hidden');
-            setTimeout(() => { 
-                if (['txt', 'md'].includes(AppState.fileType)) updateTextPagination();
-                if (AppState.pdfDoc && !AppState.isRendering) renderPages(AppState.pageNum); 
-            }, 400);
-        }
+        function toggleSidebar() { DOM.sidebar.classList.toggle('hidden'); }
 
-        document.getElementById('theme-selector').addEventListener('change', (e) => {
-            document.body.className = e.target.value;
-            if (AppState.epubRendition && AppState.fileType === 'epub') {
-                const themeMap = {'theme-dark': 'dark', 'theme-sepia': 'sepia', 'theme-light': 'light'};
-                AppState.epubRendition.themes.select(themeMap[e.target.value]);
-            }
-        });
+        document.getElementById('theme-selector').addEventListener('change', (e) => document.body.className = e.target.value);
 
         // ==========================================
-        // 4. SISTEMA DE ARQUIVOS E RENDERIZAÇÃO
+        // 3. CARREGAMENTO E RENDERIZAÇÃO PDF (TEXT LAYER)
         // ==========================================
         async function handleFile(file) {
-            if (!file) return;
+            if (!file || file.type !== "application/pdf") return showToast("Por favor, selecione um arquivo PDF.", "file-warning");
             
             AppState.fileName = file.name;
-            AppState.fileKey = `dr1_${file.name}_${file.size}`;
-            AppState.fileType = file.name.split('.').pop().toLowerCase();
+            AppState.fileKey = `dr2_${file.name}_${file.size}`;
             
-            // UI Transition DiveReader
             DOM.fileTitle.textContent = file.name;
             DOM.fileTitle.style.display = 'block';
             DOM.emptyState.style.display = 'none';
             DOM.bookContainer.style.display = 'flex';
             DOM.sidebar.style.display = 'flex'; 
 
-            ['btn-zoom-out', 'btn-zoom-in', 'btn-toggle-sidebar', 'btn-toggle-focus', 'theme-selector'].forEach(id => {
-                document.getElementById(id).disabled = false;
-            });
+            ['btn-zoom-out', 'btn-zoom-in', 'btn-toggle-sidebar', 'btn-toggle-focus', 'theme-selector', 'btn-highlight'].forEach(id => document.getElementById(id).disabled = false);
             
             AppState.zoomLevel = 1.0;
             updateBodyMode();
-            document.getElementById('canvas-viewer').classList.remove('zoomed');
-            document.getElementById('text-content').style.fontSize = "15px";
             DOM.topMenu.classList.remove('hidden');
             DOM.floatingBar.classList.remove('visible');
-
             DOM.loading.style.display = 'flex';
-            document.getElementById('canvas-viewer').style.display = 'none';
-            document.getElementById('text-viewer').style.display = 'none';
-            document.getElementById('epub-viewer').style.display = 'none';
             document.getElementById('page-input').disabled = true;
 
             try {
                 const arrayBuffer = await file.arrayBuffer();
-
-                if (AppState.fileType === 'pdf') {
-                    document.getElementById('canvas-viewer').style.display = 'flex';
-                    AppState.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                } else if (['cbz', 'zip'].includes(AppState.fileType)) {
-                    document.getElementById('canvas-viewer').style.display = 'flex';
-                    const zip = await JSZip.loadAsync(arrayBuffer);
-                    const imgFiles = Object.keys(zip.files).filter(n => n.match(/\.(jpg|jpeg|png|webp|gif)$/i));
-                    imgFiles.sort(new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'}).compare);
-                    
-                    AppState.content = [];
-                    for (let name of imgFiles) { const blob = await zip.files[name].async("blob"); AppState.content.push(URL.createObjectURL(blob)); }
-                    AppState.pdfDoc = { numPages: AppState.content.length };
-                } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(AppState.fileType)) {
-                    document.getElementById('canvas-viewer').style.display = 'flex';
-                    AppState.content = [URL.createObjectURL(file)];
-                    AppState.pdfDoc = { numPages: 1 };
-                } else if (['txt', 'md'].includes(AppState.fileType)) {
-                    document.getElementById('text-viewer').style.display = 'block';
-                    let text = await file.text();
-                    if (AppState.fileType === 'md') text = marked.parse(text); 
-                    else text = `<div style="white-space: pre-wrap;">${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
-                    document.getElementById('text-content').innerHTML = text;
-                    await new Promise(r => setTimeout(r, 100)); 
-                    updateTextPagination();
-                } else if (AppState.fileType === 'epub') {
-                    document.getElementById('epub-viewer').style.display = 'block';
-                    document.getElementById('epub-viewer').innerHTML = ''; 
-                    AppState.epubBook = ePub(arrayBuffer);
-                    AppState.epubRendition = AppState.epubBook.renderTo("epub-viewer", { width: "100%", height: "100%", spread: "none" });
-                    
-                    AppState.epubRendition.themes.register("dark", { "body": { "background": "#111827", "color": "#f9fafb" }});
-                    AppState.epubRendition.themes.register("sepia", { "body": { "background": "#fdf6e3", "color": "#433422" }});
-                    AppState.epubRendition.themes.register("light", { "body": { "background": "#ffffff", "color": "#1f2937" }});
-                    
-                    await AppState.epubRendition.display();
-                    await AppState.epubBook.ready;
-                    const locations = await AppState.epubBook.locations.generate(1024);
-                    AppState.pdfDoc = { numPages: locations.length || 1 };
-                } else {
-                    throw new Error("Formato não suportado");
-                }
+                AppState.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
                 const savedPage = localStorage.getItem(AppState.fileKey + "_page");
                 AppState.pageNum = savedPage ? parseInt(savedPage, 10) : 1;
+                if (!isSinglePageMode() && AppState.pageNum % 2 === 0) AppState.pageNum -= 1;
                 
-                if (!isSinglePageMode() && AppState.pageNum % 2 === 0 && !['txt', 'md', 'epub'].includes(AppState.fileType)) AppState.pageNum -= 1;
-                if (AppState.pageNum > AppState.pdfDoc.numPages) AppState.pageNum = 1;
-
+                // Carregar dados salvos (Notas e Grifos)
                 AppState.notesData = JSON.parse(localStorage.getItem(AppState.fileKey + "_anotacoes") || "{}");
+                AppState.highlightsData = JSON.parse(localStorage.getItem(AppState.fileKey + "_highlights") || "{}");
+
                 DOM.notepad.disabled = false;
                 document.getElementById('page-input').disabled = false;
                 document.getElementById('total-pages').textContent = AppState.pdfDoc.numPages;
 
-                document.getElementById('theme-selector').dispatchEvent(new Event('change'));
-                renderPages(AppState.pageNum);
-                showToast("Arquivo carregado com sucesso!", "check-circle-2");
-
+                await renderPages(AppState.pageNum);
+                showToast("Documento carregado e pronto para estudo!", "check-circle-2");
             } catch (error) { 
-                showToast("Formato não suportado ou arquivo corrompido.", "alert-circle");
+                console.error(error);
+                showToast("Erro ao processar PDF.", "alert-circle");
                 DOM.emptyState.style.display = 'flex';
                 DOM.bookContainer.style.display = 'none';
-                DOM.sidebar.style.display = 'none';
             }
             DOM.loading.style.display = 'none';
         }
 
         document.getElementById('file-input').addEventListener('change', (e) => handleFile(e.target.files[0]));
 
+        // Drag and Drop
         const dragOverlay = document.getElementById('drag-overlay');
         document.addEventListener('dragover', (e) => { e.preventDefault(); dragOverlay.classList.add('active'); });
         document.addEventListener('dragleave', (e) => { if (e.clientX === 0 || e.clientY === 0) dragOverlay.classList.remove('active'); });
         document.addEventListener('drop', (e) => { e.preventDefault(); dragOverlay.classList.remove('active'); if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]); });
 
-        function updateTextPagination() {
-            if (!['txt', 'md'].includes(AppState.fileType)) return;
-            const content = document.getElementById('text-content');
-            const viewer = document.getElementById('text-viewer');
-            void content.offsetHeight; 
-            const colsPerPage = isSinglePageMode() ? 1 : 2;
-            const views = Math.ceil(content.scrollWidth / viewer.clientWidth);
-            AppState.pdfDoc = { numPages: views * colsPerPage };
-            document.getElementById('total-pages').textContent = AppState.pdfDoc.numPages;
+        function getScale(viewport, forceSingle) {
+            const containerWidth = DOM.bookContainer.clientWidth;
+            const containerHeight = DOM.bookContainer.clientHeight;
+            // Desconta padding
+            const widthTarget = forceSingle ? containerWidth - 40 : (containerWidth / 2) - 40; 
+            const heightTarget = containerHeight - 40;
+            
+            const scaleX = widthTarget / viewport.width;
+            const scaleY = heightTarget / viewport.height;
+            let baseScale = Math.min(scaleX, scaleY) * 0.98;
+            
+            return baseScale * AppState.zoomLevel;
         }
 
-        function getScale(viewport, forceSingle = false) {
-            const container = DOM.bookContainer;
-            const heightScale = container.clientHeight / viewport.height;
-            const widthScale = (container.clientWidth / (forceSingle ? 1 : 2)) / viewport.width;
-            let baseScale = Math.min(heightScale, widthScale) * 0.95;
-            let finalScale = baseScale * AppState.zoomLevel;
+        // Construtor da Página com Text Layer
+        async function buildPageWrapper(pageNum, forceSingle) {
+            const page = await AppState.pdfDoc.getPage(pageNum);
+            const scale = getScale(page.getViewport({ scale: 1 }), forceSingle);
+            const viewport = page.getViewport({ scale: scale });
 
-            if (AppState.zoomLevel > 1.0) {
-                const maxScale = (container.clientWidth - 40) / viewport.width;
-                if (finalScale > maxScale) {
-                    finalScale = maxScale;
-                    AppState.zoomLevel = maxScale / baseScale;
-                }
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-wrapper';
+            wrapper.style.width = `${viewport.width}px`;
+            wrapper.style.height = `${viewport.height}px`;
+            wrapper.dataset.page = pageNum;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            wrapper.appendChild(canvas);
+
+            const highlightLayer = document.createElement('div');
+            highlightLayer.className = 'highlight-layer';
+            wrapper.appendChild(highlightLayer);
+
+            const textLayer = document.createElement('div');
+            textLayer.className = 'textLayer';
+            textLayer.style.width = `${viewport.width}px`;
+            textLayer.style.height = `${viewport.height}px`;
+            wrapper.appendChild(textLayer);
+
+            // Renderiza Visual
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+
+            // Injeta Texto Selecionável Manualmente (Mais rápido e sem dependências extras)
+            const textContent = await page.getTextContent();
+            
+            if (pdfjsLib.Util && pdfjsLib.Util.transform) {
+                textContent.items.forEach(item => {
+                    const span = document.createElement('span');
+                    // Mantém os espaços e quebras de linha corretos do PDF
+                    span.textContent = item.str + (item.hasEOL ? '\n' : '');
+                    
+                    // Calcula a posição real do texto aplicando o zoom atual
+                    const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                    const fontHeight = Math.sqrt((tx[2] * tx[2]) + (tx[3] * tx[3]));
+                    
+                    span.style.left = `${tx[4]}px`;
+                    span.style.top = `${tx[5] - fontHeight}px`; // Alinha a altura da fonte
+                    span.style.fontSize = `${fontHeight}px`;
+                    span.style.fontFamily = item.fontName;
+                    
+                    textLayer.appendChild(span);
+                });
             }
-            return finalScale;
-        }
 
-        function drawToCanvas(pageNumber, canvas, ctx, forceSingle) {
-            return new Promise(async (resolve) => {
-                if (AppState.fileType === 'pdf') {
-                    const page = await AppState.pdfDoc.getPage(pageNumber);
-                    const viewport = page.getViewport({ scale: getScale(page.getViewport({ scale: 1 }), forceSingle) });
-                    canvas.height = viewport.height; canvas.width = viewport.width;
-                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-                    resolve();
-                } else {
-                    const img = new Image();
-                    img.onload = () => {
-                        const scale = getScale({width: img.width, height: img.height}, forceSingle);
-                        canvas.width = img.width * scale; canvas.height = img.height * scale;
-                        ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height); 
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve();
-                    };
-                    img.src = AppState.content[pageNumber - 1];
+            drawHighlights(pageNum, highlightLayer);
+
+            textLayer.addEventListener('dblclick', (e) => {
+                const rect = textLayer.getBoundingClientRect();
+                // Pega a posição (X,Y) percentual do clique
+                const clickX = (e.clientX - rect.left) / rect.width;
+                const clickY = (e.clientY - rect.top) / rect.height;
+                
+                const hData = AppState.highlightsData[pageNum] || [];
+                
+                // Verifica se o clique ocorreu dentro de algum retângulo salvo
+                const clickedHighlight = hData.find(h => 
+                    clickX >= h.x && clickX <= (h.x + h.width) &&
+                    clickY >= h.y && clickY <= (h.y + h.height)
+                );
+
+                if (clickedHighlight) {
+                    // Remove a seleção azul nativa do navegador
+                    window.getSelection().removeAllRanges(); 
+                    // Apaga o grupo inteiro de grifos daquele ID
+                    removeHighlightGroup(pageNum, clickedHighlight.id, clickedHighlight, highlightLayer);
                 }
             });
+
+            return wrapper;
         }
 
         async function renderPages(num) {
             if (!AppState.pdfDoc) return;
             AppState.isRendering = true;
-            if (AppState.fileKey) localStorage.setItem(AppState.fileKey + "_page", num);
+            localStorage.setItem(AppState.fileKey + "_page", num);
 
             DOM.notepad.value = AppState.notesData[num] || "";
-            if (document.getElementById('tab-global').classList.contains('active')) updateGlobalView();
+            updateGlobalView();
 
             document.getElementById('page-input').value = num;
             document.getElementById('btn-prev').disabled = num <= 1;
             
             const singlePage = isSinglePageMode();
-            let indicatorText = `${num}`;
-
-            if (AppState.fileType === 'epub') {
-                document.getElementById('btn-next').disabled = num >= AppState.pdfDoc.numPages;
-                const percentage = Math.min((num - 1) / AppState.pdfDoc.numPages, 1);
-                const cfi = AppState.epubBook.locations.cfiFromPercentage(percentage);
-                if (cfi) await AppState.epubRendition.display(cfi);
-                else if (num === 1) await AppState.epubRendition.display();
-                DOM.indicator.textContent = `Pág. ${num} / ${AppState.pdfDoc.numPages}`;
-                AppState.isRendering = false;
-                return;
-            }
-
-            if (['txt', 'md'].includes(AppState.fileType)) {
-                const colsPerPage = singlePage ? 1 : 2;
-                document.getElementById('btn-next').disabled = num >= AppState.pdfDoc.numPages - (singlePage ? 0 : 1);
-                if (!singlePage && num + 1 <= AppState.pdfDoc.numPages) indicatorText += ` & ${num + 1}`;
-                const viewWidth = document.getElementById('text-viewer').clientWidth;
-                document.getElementById('text-content').style.transform = `translateX(${- Math.floor((num - 1) / colsPerPage) * viewWidth}px)`;
-                DOM.indicator.textContent = `Pág. ${indicatorText} / ${AppState.pdfDoc.numPages}`;
-                AppState.isRendering = false;
-                return;
-            }
+            DOM.pdfViewer.innerHTML = ''; // Limpa view antiga
 
             if (AppState.zoomLevel > 1.0) { DOM.bookContainer.scrollTop = 0; DOM.bookContainer.scrollLeft = 0; }
 
+            let indicatorText = `${num}`;
+
             if (singlePage) {
                 document.getElementById('btn-next').disabled = num >= AppState.pdfDoc.numPages;
-                DOM.canvasLeft.style.display = 'none'; 
-                if (num <= AppState.pdfDoc.numPages) {
-                    await drawToCanvas(num, DOM.canvasRight, DOM.ctxRight, true);
-                    DOM.canvasRight.style.display = 'block'; 
-                }
+                const wrapper = await buildPageWrapper(num, true);
+                DOM.pdfViewer.appendChild(wrapper);
             } else {
                 document.getElementById('btn-next').disabled = num >= AppState.pdfDoc.numPages - 1;
-                if (num <= AppState.pdfDoc.numPages) {
-                    await drawToCanvas(num, DOM.canvasLeft, DOM.ctxLeft, false);
-                    DOM.canvasLeft.style.display = 'inline-block';
-                }
+                DOM.pdfViewer.appendChild(await buildPageWrapper(num, false));
                 if (num + 1 <= AppState.pdfDoc.numPages) {
-                    await drawToCanvas(num + 1, DOM.canvasRight, DOM.ctxRight, false);
-                    DOM.canvasRight.style.display = 'inline-block';
+                    DOM.pdfViewer.appendChild(await buildPageWrapper(num + 1, false));
                     indicatorText += ` & ${num + 1}`;
-                } else {
-                    DOM.canvasRight.style.display = 'none';
                 }
             }
 
@@ -639,17 +542,102 @@
         }
 
         // ==========================================
-        // 5. ANOTAÇÕES (NOTAS LOCAIS)
+        // 4. SISTEMA DE GRIFO E WORKFLOW ACADÊMICO
+        // ==========================================
+        function addHighlight() {
+            const selection = window.getSelection();
+            if (selection.isCollapsed || !selection.toString().trim()) {
+                return showToast("Selecione um texto antes de grifar.", "mouse-pointer-click");
+            }
+
+            const range = selection.getRangeAt(0);
+            const rects = range.getClientRects();
+            const textExtracted = selection.toString().replace(/[\r\n]+/g, ' ').trim(); 
+
+            let container = range.commonAncestorContainer;
+            if (container.nodeType === 3) container = container.parentNode;
+            const wrapper = container.closest('.page-wrapper');
+            
+            if (!wrapper) return;
+            
+            const pageNum = parseInt(wrapper.dataset.page);
+            const wrapperRect = wrapper.getBoundingClientRect();
+            
+            if (!AppState.highlightsData[pageNum]) AppState.highlightsData[pageNum] = [];
+            
+            // ID único para agrupar as várias linhas de um mesmo grifo
+            const highlightId = Date.now().toString(); 
+            
+            for (let i = 0; i < rects.length; i++) {
+                const r = rects[i];
+                AppState.highlightsData[pageNum].push({
+                    id: highlightId, // Salva o ID no grupo
+                    x: (r.left - wrapperRect.left) / wrapperRect.width,
+                    y: (r.top - wrapperRect.top) / wrapperRect.height,
+                    width: r.width / wrapperRect.width,
+                    height: r.height / wrapperRect.height
+                });
+            }
+
+            localStorage.setItem(AppState.fileKey + "_highlights", JSON.stringify(AppState.highlightsData));
+            
+            const currentNotes = AppState.notesData[pageNum] || "";
+            const prefix = currentNotes ? currentNotes + "\n\n" : "";
+            AppState.notesData[pageNum] = prefix + `> "${textExtracted}"`;
+            localStorage.setItem(AppState.fileKey + "_anotacoes", JSON.stringify(AppState.notesData));
+            
+            drawHighlights(pageNum, wrapper.querySelector('.highlight-layer'));
+            DOM.notepad.value = AppState.notesData[pageNum];
+            updateGlobalView();
+            
+            selection.removeAllRanges();
+            showToast("Fichado no caderno!", "book-marked");
+        }
+
+        function drawHighlights(pageNum, layerNode) {
+            layerNode.innerHTML = ''; 
+            const hData = AppState.highlightsData[pageNum] || [];
+            
+            hData.forEach(h => {
+                const mark = document.createElement('div');
+                mark.className = 'highlight-rect';
+                mark.style.left = `${h.x * 100}%`;
+                mark.style.top = `${h.y * 100}%`;
+                mark.style.width = `${h.width * 100}%`;
+                mark.style.height = `${h.height * 100}%`;
+                mark.title = "Duplo clique para remover";
+                
+                layerNode.appendChild(mark);
+            });
+        }
+
+        function removeHighlightGroup(pageNum, id, rectObj, layerNode) {
+            if (id) {
+                // Remove todas as linhas (retângulos) que pertencem ao mesmo ID
+                AppState.highlightsData[pageNum] = AppState.highlightsData[pageNum].filter(h => h.id !== id);
+            } else {
+                // Fallback de segurança caso você clique em um grifo antigo (sem ID salvo)
+                const index = AppState.highlightsData[pageNum].indexOf(rectObj);
+                if (index > -1) AppState.highlightsData[pageNum].splice(index, 1);
+            }
+            
+            // Salva o novo estado e redesenha a página
+            localStorage.setItem(AppState.fileKey + "_highlights", JSON.stringify(AppState.highlightsData));
+            drawHighlights(pageNum, layerNode);
+            
+            // Substituí o ícone padrão pelo ícone de "borracha" do Lucide
+            showToast("Grifo apagado.", "eraser");
+        }
+
+        // ==========================================
+        // 5. BLOCO DE NOTAS / FICHAMENTO
         // ==========================================
         let noteSaveTimeout;
         DOM.notepad.addEventListener('input', () => {
             if (!AppState.fileKey) return; 
             clearTimeout(noteSaveTimeout); 
             AppState.notesData[AppState.pageNum] = DOM.notepad.value;
-            
-            noteSaveTimeout = setTimeout(() => {
-                localStorage.setItem(AppState.fileKey + "_anotacoes", JSON.stringify(AppState.notesData));
-            }, 800);
+            noteSaveTimeout = setTimeout(() => localStorage.setItem(AppState.fileKey + "_anotacoes", JSON.stringify(AppState.notesData)), 800);
         });
 
         function updateGlobalView() {
@@ -660,82 +648,92 @@
             for (let p of pages) {
                 if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
                     hasNotes = true; 
-                    compiled += `------- Pág. ${p} -------\n\n${AppState.notesData[p].trim()}\n\n\n`;
+                    compiled += `[ Página ${p} ]\n${AppState.notesData[p].trim()}\n\n`;
                 }
             }
-            DOM.globalView.textContent = hasNotes ? compiled.trim() : "Nenhuma anotação feita neste documento ainda.";
+            DOM.globalView.textContent = hasNotes ? compiled.trim() : "Nenhum fichamento gerado ainda.";
         }
 
         function copyGlobalNotes() { 
             updateGlobalView(); 
-            if (DOM.globalView.textContent.includes("Nenhuma anotação")) return; 
-            navigator.clipboard.writeText(DOM.globalView.textContent).then(() => showToast("Notas copiadas com sucesso!", "copy-check")); 
+            if (DOM.globalView.textContent.includes("Nenhum fichamento")) return; 
+            navigator.clipboard.writeText(DOM.globalView.textContent).then(() => showToast("Fichamento copiado!", "copy-check")); 
         }
         
         function downloadTxt() { 
             updateGlobalView(); 
-            if (DOM.globalView.textContent.includes("Nenhuma anotação")) return showToast("Não há notas para baixar", "file-warning");
+            if (DOM.globalView.textContent.includes("Nenhum fichamento")) return showToast("Não há notas para baixar", "file-warning");
             const blob = new Blob([DOM.globalView.textContent], { type: "text/plain;charset=utf-8" }); 
             const link = document.createElement("a"); link.href = URL.createObjectURL(blob); 
-            link.download = `${AppState.fileName.split('.')[0]}-Anotacoes.txt`; 
+            link.download = `Fichamento_${AppState.fileName.split('.')[0]}.txt`; 
             document.body.appendChild(link); link.click(); link.remove(); 
             showToast("Download iniciado!", "download-cloud");
         }
 
         // ==========================================
-        // 6. GESTOS, ZOOM E CONTROLES
+        // 6. NAVEGAÇÃO E ZOOM
         // ==========================================
         function changeZoom(delta) {
             const wasSingle = isSinglePageMode();
             AppState.zoomLevel = Math.max(1.0, Math.min(4.0, AppState.zoomLevel + delta));
             updateBodyMode(); 
 
-            const viewer = document.getElementById('canvas-viewer');
             if (AppState.zoomLevel > 1.0) {
-                viewer.classList.add('zoomed');
                 DOM.topMenu.classList.add('hidden');
-                DOM.floatingBar.classList.remove('visible'); DOM.floatingBar.classList.add('faded');
+                DOM.floatingBar.classList.add('faded');
                 DOM.sidebar.classList.add('hidden');
-                clearTimeout(AppState.focusTimer);
-                DOM.indicator.style.opacity = '1'; 
             } else {
-                viewer.classList.remove('zoomed');
                 DOM.floatingBar.classList.add('visible'); wakeFocusBar();
-                setTimeout(() => DOM.indicator.style.opacity = '0', 2000);
             }
 
-            if (AppState.fileType === 'epub' && AppState.epubRendition) AppState.epubRendition.themes.fontSize((100 * AppState.zoomLevel) + "%");
-            else if (['txt', 'md'].includes(AppState.fileType)) { document.getElementById('text-content').style.fontSize = (15 * AppState.zoomLevel) + "px"; updateTextPagination(); }
-
-            if (wasSingle && !isSinglePageMode() && !['txt', 'md', 'epub'].includes(AppState.fileType) && AppState.pageNum % 2 === 0) AppState.pageNum -= 1;
+            if (wasSingle && !isSinglePageMode() && AppState.pageNum % 2 === 0) AppState.pageNum -= 1;
             renderPages(AppState.pageNum);
         }
 
         function onNextPage() {
             if (!AppState.pdfDoc || AppState.isRendering) return;
             const single = isSinglePageMode();
-            if (single && AppState.pageNum >= AppState.pdfDoc.numPages) return;
-            if (!single && AppState.pageNum >= AppState.pdfDoc.numPages - (['txt','md','epub'].includes(AppState.fileType) ? 0 : 1)) return;
+            if (AppState.pageNum >= AppState.pdfDoc.numPages - (single ? 0 : 1)) return;
 
             AppState.isRendering = true;
-            if (!['txt', 'md', 'epub'].includes(AppState.fileType) && AppState.zoomLevel <= 1.0) {
-                DOM.canvasRight.classList.add('flip-next');
-                setTimeout(() => { AppState.isRendering = false; AppState.pageNum += single ? 1 : 2; renderPages(AppState.pageNum).then(() => DOM.canvasRight.classList.remove('flip-next')); }, 400);
+            if (AppState.zoomLevel <= 1.0) {
+                const pages = DOM.pdfViewer.children;
+                // No modo duplo, anima a página da direita. No modo simples, anima a única página.
+                const target = single ? pages[0] : (pages.length > 1 ? pages[1] : pages[0]);
+                if (target) target.classList.add('flip-next');
+                
+                setTimeout(() => { 
+                    AppState.isRendering = false; 
+                    AppState.pageNum += single ? 1 : 2; 
+                    renderPages(AppState.pageNum); 
+                }, 400);
             } else {
-                AppState.pageNum += single ? 1 : 2; renderPages(AppState.pageNum);
+                AppState.pageNum += single ? 1 : 2; 
+                renderPages(AppState.pageNum);
             }
         }
 
         function onPrevPage() {
             if (AppState.pageNum <= 1 || AppState.isRendering) return;
-            AppState.isRendering = true;
             const single = isSinglePageMode();
-            if (!['txt', 'md', 'epub'].includes(AppState.fileType) && AppState.zoomLevel <= 1.0) {
-                const target = single ? DOM.canvasRight : DOM.canvasLeft;
-                target.classList.add('flip-prev');
-                setTimeout(() => { AppState.isRendering = false; AppState.pageNum -= single ? 1 : 2; renderPages(AppState.pageNum).then(() => target.classList.remove('flip-prev')); }, 400);
+
+            AppState.isRendering = true;
+            if (AppState.zoomLevel <= 1.0) {
+                const pages = DOM.pdfViewer.children;
+                // Anima sempre a página da esquerda (ou a única) para trás
+                const target = pages[0];
+                if (target) target.classList.add('flip-prev');
+                
+                setTimeout(() => { 
+                    AppState.isRendering = false; 
+                    AppState.pageNum -= single ? 1 : 2; 
+                    if (AppState.pageNum < 1) AppState.pageNum = 1; 
+                    renderPages(AppState.pageNum); 
+                }, 400);
             } else {
-                AppState.pageNum -= single ? 1 : 2; if (AppState.pageNum < 1) AppState.pageNum = 1; renderPages(AppState.pageNum);
+                AppState.pageNum -= single ? 1 : 2; 
+                if (AppState.pageNum < 1) AppState.pageNum = 1; 
+                renderPages(AppState.pageNum);
             }
         }
 
@@ -744,74 +742,46 @@
             let tp = parseInt(e.target.value, 10);
             if (isNaN(tp) || tp < 1) tp = 1;
             if (tp > AppState.pdfDoc.numPages) tp = AppState.pdfDoc.numPages;
-            if (!isSinglePageMode() && tp % 2 === 0 && !['txt', 'md', 'epub'].includes(AppState.fileType)) tp -= 1;
+            if (!isSinglePageMode() && tp % 2 === 0) tp -= 1;
             renderPages(AppState.pageNum = tp);
         });
 
+        // Eventos de Teclado
+       // Eventos de Teclado
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
-                if (['+', '=', '-'].includes(e.key)) { e.preventDefault(); changeZoom(e.key === '-' ? -0.3 : 0.3); return; }
+                if (['+', '=', '-'].includes(e.key)) { e.preventDefault(); changeZoom(e.key === '-' ? -0.25 : 0.25); return; }
             }
-            if (!AppState.pdfDoc || ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) {
-                if (e.key === 'Enter' && document.activeElement.id === 'page-input') document.activeElement.blur(); return; 
-            }
+            if (!AppState.pdfDoc || ['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+            
             if (e.key === 'ArrowLeft') onPrevPage();
             if (e.key === 'ArrowRight') onNextPage();
-            
+
+            // Setas Cima e Baixo para os Menus
             const isAtTop = DOM.bookContainer.scrollTop <= 2;
             const isAtBottom = DOM.bookContainer.scrollTop + DOM.bookContainer.clientHeight >= DOM.bookContainer.scrollHeight - 2;
 
             if (e.key === 'ArrowUp' && AppState.zoomLevel <= 1.0 && isAtTop) { 
-                if (DOM.topMenu.classList.contains('hidden')) { if (DOM.floatingBar.classList.contains('faded')) toggleMenu(); else hideFocusBar(); }
+                if (DOM.topMenu.classList.contains('hidden')) { 
+                    if (DOM.floatingBar.classList.contains('faded')) toggleMenu(); 
+                    else hideFocusBar(); 
+                }
             }
             if (e.key === 'ArrowDown' && AppState.zoomLevel <= 1.0 && isAtBottom) { 
-                if (DOM.topMenu.classList.contains('hidden')) wakeFocusBar(); else toggleMenu(); 
+                if (DOM.topMenu.classList.contains('hidden')) wakeFocusBar(); 
+                else toggleMenu(); 
             }
         });
 
-        let initialPinchDist = null, lastZTime = 0, dragStartY = 0, dragStartX = 0;
-        document.addEventListener('touchstart', e => { 
-            if (e.touches.length === 2) initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            else if (e.touches.length === 1) { dragStartY = e.touches[0].clientY; dragStartX = e.touches[0].clientX; }
-        }, {passive: true});
-        
-        document.addEventListener('touchmove', e => {
-            if (e.touches.length === 2 && initialPinchDist) {
-                const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                const now = Date.now();
-                if (now - lastZTime > 150) { 
-                    if (dist - initialPinchDist > 40) { changeZoom(0.3); initialPinchDist = dist; lastZTime = now; } 
-                    else if (dist - initialPinchDist < -40) { changeZoom(-0.3); initialPinchDist = dist; lastZTime = now; }
-                }
-                return; 
-            }
-
-            if (e.touches.length === 1 && AppState.zoomLevel <= 1.0 && !e.target.closest('#sidebar')) {
-                let diffY = dragStartY - e.touches[0].clientY, diffX = Math.abs(dragStartX - e.touches[0].clientX);
-                const isAtTop = DOM.bookContainer.scrollTop <= 2, isAtBottom = DOM.bookContainer.scrollTop + DOM.bookContainer.clientHeight >= DOM.bookContainer.scrollHeight - 2;
-                if (Math.abs(diffY) > 40 && Math.abs(diffY) > diffX) { 
-                    if (diffY > 0 && isAtBottom) { if (DOM.topMenu.classList.contains('hidden')) wakeFocusBar(); else toggleMenu(); dragStartY = e.touches[0].clientY; } 
-                    else if (diffY < 0 && isAtTop) { if (DOM.topMenu.classList.contains('hidden')) { if (DOM.floatingBar.classList.contains('faded')) toggleMenu(); else hideFocusBar(); } dragStartY = e.touches[0].clientY; }
-                }
-            }
-        }, {passive: true});
-
-        document.addEventListener('touchend', e => {
-            if (e.touches.length < 2) initialPinchDist = null;
-            if (AppState.pdfDoc && !AppState.isRendering && e.changedTouches.length === 1 && (AppState.zoomLevel <= 1.0 || ['txt', 'md', 'epub'].includes(AppState.fileType))) {
-                if (dragStartX - e.changedTouches[0].screenX > 50) onNextPage(); 
-                if (e.changedTouches[0].screenX - dragStartX > 50) onPrevPage(); 
-            }
-        }, {passive: true});
-
+        // Eventos de Scroll de Roda (Mouse)
         let zoomWheelCD;
         DOM.bookContainer.addEventListener('wheel', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault(); if (zoomWheelCD) return;
                 zoomWheelCD = setTimeout(() => { zoomWheelCD = null; }, 100);
-                changeZoom(e.deltaY < 0 ? 0.3 : -0.3); return;
+                changeZoom(e.deltaY < 0 ? 0.25 : -0.25); return;
             }
-            if (!AppState.pdfDoc || (AppState.zoomLevel > 1.0 && !['txt', 'md', 'epub'].includes(AppState.fileType))) return; 
+            if (!AppState.pdfDoc || AppState.zoomLevel > 1.0) return; 
             e.preventDefault(); 
             if (!window.scrollCooldown) {
                 window.scrollCooldown = setTimeout(() => { window.scrollCooldown = null; }, 600);
@@ -822,8 +792,7 @@
         window.addEventListener('resize', () => { 
             if (AppState.pdfDoc && !AppState.isRendering) {
                 updateBodyMode();
-                if (['txt', 'md'].includes(AppState.fileType)) updateTextPagination();
-                if (!isSinglePageMode() && AppState.pageNum % 2 === 0 && !['txt', 'md', 'epub'].includes(AppState.fileType)) AppState.pageNum -= 1;
+                if (!isSinglePageMode() && AppState.pageNum % 2 === 0) AppState.pageNum -= 1;
                 renderPages(AppState.pageNum); 
             }
         });
