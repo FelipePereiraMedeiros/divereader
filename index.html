@@ -1057,6 +1057,34 @@
                 }
             });
 
+            // NOVO: Detecção de Duplo Toque (Mobile/Tablet) para apagar grifos
+            let lastTap = 0;
+            textLayer.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                
+                // Se tocou 2x em menos de 400ms com apenas 1 dedo
+                if (tapLength < 400 && tapLength > 0 && e.changedTouches.length === 1) {
+                    const rect = textLayer.getBoundingClientRect();
+                    const touch = e.changedTouches[0];
+                    const clickX = (touch.clientX - rect.left) / rect.width;
+                    const clickY = (touch.clientY - rect.top) / rect.height;
+
+                    const hData = AppState.highlightsData[pageNum] || [];
+                    const clickedHighlight = hData.find(h =>
+                        clickX >= h.x && clickX <= (h.x + h.width) &&
+                        clickY >= h.y && clickY <= (h.y + h.height)
+                    );
+
+                    if (clickedHighlight) {
+                        window.getSelection().removeAllRanges();
+                        removeHighlightGroup(pageNum, clickedHighlight.id, clickedHighlight, highlightLayer);
+                        e.preventDefault(); // Evita o zoom nativo indesejado do celular
+                    }
+                }
+                lastTap = currentTime;
+            });
+
             return wrapper;
         }
 
@@ -1333,7 +1361,6 @@
         });
 
         // Eventos de Teclado
-        // Eventos de Teclado
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 if (['+', '=', '-'].includes(e.key)) { e.preventDefault(); changeZoom(e.key === '-' ? -0.25 : 0.25); return; }
@@ -1374,6 +1401,38 @@
                 if (e.deltaY > 0) onNextPage(); else if (e.deltaY < 0) onPrevPage();
             }
         }, { passive: false });
+
+        // ==========================================
+        // 7. GESTOS MOBILE (SWIPE)
+        // ==========================================
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        DOM.bookContainer.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, {passive: true});
+
+        DOM.bookContainer.addEventListener('touchend', e => {
+            // Só executa se for 1 dedo e se o clique NÃO for na barra lateral
+            if (e.changedTouches.length === 1 && !e.target.closest('#sidebar')) {
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                const diffX = touchStartX - touchEndX;
+                const diffY = touchStartY - touchEndY;
+
+                // Bloqueio de Segurança: Se o usuário estiver selecionando texto, não vira a página
+                if (window.getSelection().toString().trim().length > 0) return;
+
+                // Se o movimento horizontal for maior que 60 pixels e maior que o vertical
+                if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
+                    if (diffX > 0) onNextPage(); // Deslizou para a esquerda
+                    else onPrevPage(); // Deslizou para a direita
+                }
+            }
+        }, {passive: true});
 
         window.addEventListener('resize', () => {
             if (AppState.pdfDoc && !AppState.isRendering) {
