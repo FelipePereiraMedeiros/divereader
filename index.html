@@ -1,18 +1,14 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>DiveReader | O Leitor Definitivo para Estudos</title>
 
     <!-- Favicon Temático -->
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>"
-    />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>" />
 
     <!-- Motor Exclusivo: PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -21,2253 +17,2246 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-      /* ========================================================= */
-      /* 1. DESIGN SYSTEM & VARIÁVEIS                              */
-      /* ========================================================= */
-      :root {
-        /* Cores dos Menus (UI) e Texto */
-        --ui-bg: #ffffff;
-        --text-color: #1f2937;
-        --text-muted: #6b7280;
-        --border-color: #e5e7eb;
+        /* ========================================================= */
+        /* 1. DESIGN SYSTEM & VARIÁVEIS                              */
+        /* ========================================================= */
+        :root {
+            /* Cores dos Menus (UI) e Texto */
+            --ui-bg: #ffffff;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
 
-        /* A "Mesa" de fundo e a Folha do PDF */
-        --workspace-bg: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-        --page-bg: #ffffff;
+            /* A "Mesa" de fundo e a Folha do PDF */
+            --workspace-bg: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            --page-bg: #ffffff;
 
-        --indicator-bg: rgba(0, 0, 0, 0.6);
-        --indicator-text: #ffffff;
-        --primary: #0284c7;
-        --primary-hover: #0369a1;
-        --highlight-color: rgba(253, 224, 71, 0.35); /* Amarelo equilibrado */
+            --indicator-bg: rgba(0, 0, 0, 0.6);
+            --indicator-text: #ffffff;
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --highlight-color: rgba(253, 224, 71, 0.35);
+            /* Amarelo equilibrado */
 
-        --radius-sm: 4px;
-        --radius-md: 8px;
-        --radius-pill: 9999px;
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-        --shadow-md:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-pill: 9999px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md:
+                0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 
-        --font-ui:
-          system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        --font-doc: "Georgia", serif;
-      }
-
-      /* ========================================================= */
-      /* 2. BASE & RESET                                           */
-      /* ========================================================= */
-      body {
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        font-family: var(--font-ui);
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
-        transition:
-          background-color 0.3s ease,
-          color 0.3s ease;
-        touch-action: pan-x pan-y;
-        -webkit-font-smoothing: antialiased;
-        overscroll-behavior: none;
-      }
-
-      button,
-      select,
-      input[type="number"] {
-        padding: 6px 12px;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-        background: var(--ui-bg);
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--text-color);
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        transition: all 0.2s ease;
-        outline: none;
-      }
-
-      button:hover:not(:disabled),
-      select:hover {
-        background-color: var(--bg-color);
-      }
-
-      button:active:not(:disabled) {
-        transform: scale(0.98);
-      }
-
-      button:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-
-      .btn-primary {
-        background-color: var(--primary);
-        color: white;
-        border-color: var(--primary);
-      }
-
-      .btn-primary:hover:not(:disabled) {
-        background-color: var(--primary-hover);
-      }
-
-      /* ========================================================= */
-      /* 3. TOP BAR E CONTROLES                                    */
-      /* ========================================================= */
-      .controls {
-        background-color: var(--ui-bg);
-        border-bottom: 1px solid var(--border-color);
-        padding: 8px 16px;
-        display: flex;
-        gap: 12px;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: var(--shadow-sm);
-        z-index: 100;
-        max-height: 150px;
-        opacity: 1;
-        transform: translateY(0);
-        overflow: hidden;
-        flex-shrink: 0;
-        /* Impede que o menu seja esmagado pelo Flexbox */
-        transition:
-          max-height 0.4s ease,
-          padding 0.4s ease,
-          opacity 0.3s ease,
-          transform 0.4s ease;
-      }
-
-      .controls.hidden {
-        max-height: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        opacity: 0;
-        transform: translateY(-20px);
-        border-bottom-color: transparent;
-      }
-
-      .controls-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      #file-title {
-        font-weight: 600;
-        font-size: 13px;
-        color: var(--text-muted);
-        max-width: 200px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: none;
-      }
-
-      input[type="file"] {
-        display: none;
-      }
-
-      .file-upload-label {
-        border: 1px dashed var(--border-color);
-        color: var(--primary);
-        font-weight: 600;
-        padding: 6px 12px;
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13px;
-        transition: all 0.2s;
-      }
-
-      .file-upload-label:hover {
-        background-color: rgba(2, 132, 199, 0.05);
-        border-color: var(--primary);
-      }
-
-      .page-navigation {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        background: var(--bg-color);
-        padding: 4px;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border-color);
-      }
-
-      .page-navigation button {
-        border: none;
-        background: transparent;
-        padding: 4px;
-        border-radius: var(--radius-sm);
-      }
-
-      .page-navigation span {
-        font-size: 12px;
-        font-weight: 600;
-        padding: 0 4px;
-      }
-
-      input[type="number"] {
-        width: 40px;
-        text-align: center;
-        border: none;
-        border-bottom: 1px solid var(--border-color);
-        border-radius: 0;
-        padding: 2px;
-        font-weight: 600;
-        background: transparent;
-      }
-
-      #btn-highlight.btn-active {
-        background-color: #fef08a;
-        color: #854d0e;
-        border-color: #fde047;
-      }
-
-      /* ========================================================= */
-      /* 4. WORKSPACE & PDF VIEWER                                 */
-      /* ========================================================= */
-      .main-workspace {
-        display: flex;
-        flex-grow: 1;
-        width: 100%;
-        min-height: 0;
-        overflow: hidden;
-        position: relative;
-      }
-
-      #book-container {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        height: 100%;
-        padding: 15px;
-        box-sizing: border-box;
-        overflow-y: auto;
-        overflow-x: auto;
-
-        /* Aplica a mesa dinâmica do tema e uma leve sombra interna para dar profundidade */
-        background: var(--workspace-bg);
-        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.03);
-      }
-
-      /* Estrutura das Camadas da Página */
-      .page-wrapper {
-        position: relative;
-        background: var(--page-bg);
-        /* Sombra mais densa e realista imitando papel empilhado */
-        box-shadow:
-          0 10px 25px -5px rgba(0, 0, 0, 0.15),
-          0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        border-radius: 4px;
-        overflow: hidden;
-        backface-visibility: hidden;
-        transform-style: preserve-3d;
-      }
-
-      #empty-state {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        gap: 12px;
-        color: var(--text-muted);
-        background: var(--bg-color);
-        z-index: 10;
-      }
-
-      #empty-state .icon-wrapper {
-        width: 64px;
-        height: 64px;
-        background: var(--ui-bg);
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        box-shadow: var(--shadow-sm);
-        color: var(--primary);
-        margin-bottom: 8px;
-      }
-
-      /* Sistema Dinâmico do PDF */
-      #pdf-viewer {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 10px;
-        margin: auto;
-        transition: transform 0.2s ease;
-        perspective: 2000px;
-      }
-
-      body.zoomed-mode #pdf-viewer {
-        margin: 0 auto;
-        padding: 20px;
-        perspective: none;
-      }
-
-      .page-wrapper canvas {
-        display: block;
-        max-width: 100%;
-        height: auto;
-      }
-
-      /* Animações de Virada de Página */
-      .flip-next {
-        animation: turnNext 0.4s ease-in forwards;
-        transform-origin: left center;
-      }
-
-      .flip-prev {
-        animation: turnPrev 0.4s ease-in forwards;
-        transform-origin: right center;
-      }
-
-      @keyframes turnNext {
-        0% {
-          transform: rotateY(0deg);
-          filter: brightness(1);
+            --font-ui:
+                system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                sans-serif;
+            --font-doc: "Georgia", serif;
         }
 
-        100% {
-          transform: rotateY(-90deg);
-          filter: brightness(0.5);
-          opacity: 0.2;
+        /* ========================================================= */
+        /* 2. BASE & RESET                                           */
+        /* ========================================================= */
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-ui);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            transition:
+                background-color 0.3s ease,
+                color 0.3s ease;
+            touch-action: pan-x pan-y;
+            -webkit-font-smoothing: antialiased;
+            overscroll-behavior: none;
         }
-      }
 
-      @keyframes turnPrev {
-        0% {
-          transform: rotateY(0deg);
-          filter: brightness(1);
+        button,
+        select,
+        input[type="number"] {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            background: var(--ui-bg);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+            outline: none;
         }
 
-        100% {
-          transform: rotateY(90deg);
-          filter: brightness(0.5);
-          opacity: 0.2;
+        button:hover:not(:disabled),
+        select:hover {
+            background-color: var(--bg-color);
         }
-      }
 
-      /* Camada do Marca-Texto */
-      .highlight-layer {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 2;
-      }
+        button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
 
-      /* O pointer-events: auto permite clicar no grifo, mesmo a camada pai estando desativada */
-      .highlight-rect {
-        position: absolute;
-        background-color: var(--highlight-color);
-        mix-blend-mode: multiply;
-        border-radius: 2px;
-        pointer-events: auto;
-        cursor: pointer;
-        transition: opacity 0.2s;
-      }
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
 
-      .highlight-rect:hover {
-        opacity: 0.5;
-        /* Indica que é interativo */
-      }
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
 
-      /* Camada de Texto Nível PDF.js (Invisível, mas Selecionável) */
-      .textLayer {
-        position: absolute;
-        left: 0;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        overflow: hidden;
-        opacity: 1;
-        line-height: 1;
-        z-index: 3;
-      }
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
 
-      .textLayer > span {
-        color: transparent;
-        position: absolute;
-        white-space: pre;
-        cursor: text;
-        transform-origin: 0% 0%;
-        line-height: 1; /* Impede que a caixa de seleção fique mais alta que o texto */
-        display: block; /* Garante que a largura (width) matemática seja respeitada */
-      }
-
-      .textLayer ::selection {
-        background: rgba(0, 132, 255, 0.25);
-      }
-
-      /* ========================================================= */
-      /* 5. SIDEBAR (Anotações)                                    */
-      /* ========================================================= */
-      #sidebar {
-        width: 320px;
-        min-width: 320px;
-        background-color: var(--ui-bg);
-        border-left: 1px solid var(--border-color);
-        display: flex;
-        flex-direction: column;
-        box-shadow: -4px 0 15px rgba(0, 0, 0, 0.03);
-        transition:
-          transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-          margin-right 0.3s ease;
-        z-index: 500;
-      }
-
-      #sidebar.hidden {
-        transform: translateX(100%);
-        margin-right: -320px;
-        box-shadow: none;
-      }
-
-      .sidebar-header {
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border-color);
-        font-weight: 600;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 14px;
-      }
-
-      .sidebar-header button {
-        padding: 4px;
-        border: none;
-        border-radius: var(--radius-pill);
-      }
-
-      .sidebar-tabs {
-        display: flex;
-        border-bottom: 1px solid var(--border-color);
-        background: var(--bg-color);
-      }
-
-      .sidebar-tabs button {
-        flex: 1;
-        border: none;
-        background: transparent;
-        padding: 10px 4px;
-        font-weight: 600;
-        color: var(--text-muted);
-        border-bottom: 2px solid transparent;
-        border-radius: 0;
-        font-size: 12px;
-      }
-
-      .sidebar-tabs button.active {
-        color: var(--primary);
-        border-bottom-color: var(--primary);
-        background: var(--ui-bg);
-      }
-
-      .tab-content {
-        flex-grow: 1;
-        display: none;
-        flex-direction: column;
-        position: relative;
-        background: var(--ui-bg);
-        min-height: 0;
-        overflow: hidden;
-      }
-
-      .tab-content.active {
-        display: flex;
-      }
-
-      #notepad {
-        flex-grow: 1;
-        width: 100%;
-        box-sizing: border-box;
-        padding: 16px;
-        border: none;
-        resize: none;
-        background: transparent;
-        color: var(--text-color);
-        font-family: var(--font-ui);
-        font-size: 14px;
-        line-height: 1.6;
-        outline: none;
-      }
-
-      #global-view {
-        flex-grow: 1;
-        padding: 16px;
-        overflow-y: auto;
-        white-space: pre-wrap;
-        font-size: 13px;
-        line-height: 1.7;
-        color: var(--text-color);
-        padding-bottom: 60px;
-        font-family: var(--font-doc);
-      }
-
-      .action-buttons {
-        position: absolute;
-        bottom: 16px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 8px;
-        background-color: var(--ui-bg);
-        border: 1px solid var(--border-color);
-        padding: 6px;
-        border-radius: var(--radius-pill);
-        box-shadow: var(--shadow-md);
-        z-index: 10;
-      }
-
-      .action-buttons button {
-        flex: none;
-        /* Remove o esticamento para os lados */
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        border-radius: 50%;
-        /* Transforma em botões circulares */
-      }
-
-      /* ========================================================= */
-      /* 6. OVERLAYS E BARRA DE FOCO                               */
-      /* ========================================================= */
-
-      /* Container Principal do Pomodoro */
-      #pomodoro-container {
-        position: fixed;
-        top: 70px;
-        right: 20px;
-        z-index: 150;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 6px;
-      }
-      body.zoomed-mode #pomodoro-container {
-        opacity: 0.3;
-        transition: opacity 0.3s;
-      }
-      body.zoomed-mode #pomodoro-container:hover {
-        opacity: 1;
-      }
-
-      /* Estilos do Widget Pomodoro */
-      #pomodoro-widget {
-        background: var(--ui-bg);
-        border: 1px solid var(--border-color);
-        padding: 8px 12px;
-        border-radius: var(--radius-pill);
-        box-shadow: var(--shadow-sm);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-        transition:
-          transform 0.2s,
-          opacity 0.3s;
-      }
-      #pomodoro-widget:hover {
-        transform: scale(1.02);
-        box-shadow: var(--shadow-md);
-      }
-
-      /* Estilos dos Mini Controles */
-      #pomodoro-controls {
-        display: flex;
-        gap: 6px;
-        justify-content: center;
-        width: 100%;
-        opacity: 1;
-        transform: translateY(0);
-        pointer-events: all;
-        transition:
-          opacity 0.3s ease,
-          transform 0.3s ease;
-      }
-      #pomodoro-controls.faded {
-        /* Classe que esconde os botões */
-        opacity: 0;
-        transform: translateY(-10px);
-        pointer-events: none;
-      }
-      #pomodoro-controls button {
-        background: var(--ui-bg);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-pill);
-        padding: 4px 8px;
-        font-size: 11px;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-        box-shadow: var(--shadow-sm);
-        color: var(--text-color);
-        min-width: 32px;
-        justify-content: center;
-      }
-      .clock-face {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        border: 2px solid var(--text-color);
-        position: relative;
-        /* Trocamos a variável do grifo por um vermelho pastel suave (#ff8787) */
-        background: conic-gradient(transparent 0deg, #ff8787 0deg);
-      }
-      .clock-hand {
-        width: 2px;
-        height: 10px;
-        background-color: var(--text-color);
-        position: absolute;
-        bottom: 50%;
-        left: 50%;
-        transform-origin: bottom center;
-        transform: translateX(-50%) rotate(0deg);
-        border-radius: 2px;
-        z-index: 2;
-        transition: transform 1s linear;
-      }
-      .clock-center {
-        width: 4px;
-        height: 4px;
-        background: var(--text-color);
-        border-radius: 50%;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 3;
-      }
-      #pomodoro-text {
-        font-size: 13px;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
-      }
-
-      /* Estilos do Modal de Alerta */
-      #pomodoro-alert {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(2px);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        opacity: 1;
-        transition: opacity 0.3s;
-      }
-      #pomodoro-alert.hidden {
-        opacity: 0;
-        pointer-events: none;
-      }
-      .alert-content {
-        background: var(--ui-bg);
-        padding: 24px;
-        border-radius: var(--radius-md);
-        text-align: center;
-        max-width: 320px;
-        box-shadow: var(--shadow-lg);
-        border: 1px solid var(--border-color);
-        transform: translateY(0);
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      }
-      #pomodoro-alert.hidden .alert-content {
-        transform: translateY(20px);
-      }
-      .alert-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: center;
-      }
-
-      #floating-focus-bar {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        background-color: var(--ui-bg);
-        border: 1px solid var(--border-color);
-        box-shadow: var(--shadow-lg);
-        border-radius: var(--radius-pill);
-        display: none;
-        padding: 4px 6px;
-        z-index: 200;
-        align-items: center;
-        transform: translateX(-50%) translateY(0);
-        opacity: 1;
-        transition:
-          opacity 0.4s ease,
-          transform 0.4s ease;
-      }
-
-      #floating-focus-bar.visible {
-        display: flex;
-      }
-
-      #floating-focus-bar.faded {
-        opacity: 0;
-        transform: translateX(-50%) translateY(30px);
-        pointer-events: none;
-      }
-
-      #floating-focus-bar button {
-        border: none;
-        background: transparent;
-        padding: 6px 12px;
-        font-weight: 600;
-        border-radius: var(--radius-pill);
-        font-size: 13px;
-      }
-
-      #drag-overlay {
-        position: fixed;
-        inset: 0;
-        background-color: rgba(2, 132, 199, 0.9);
-        z-index: 9999;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-size: 24px;
-        font-weight: bold;
-        border: 8px dashed rgba(255, 255, 255, 0.5);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s;
-      }
-
-      #drag-overlay.active {
-        opacity: 1;
-        pointer-events: all;
-      }
-
-      #loading-msg {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: none;
-        z-index: 10;
-        background: var(--indicator-bg);
-        color: white;
-        padding: 10px 20px;
-        border-radius: var(--radius-pill);
-        font-weight: 500;
-        font-size: 13px;
-        backdrop-filter: blur(4px);
-        box-shadow: var(--shadow-md);
-      }
-
-      #discreet-indicator {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        background-color: var(--indicator-bg);
-        color: var(--indicator-text);
-        padding: 4px 12px;
-        border-radius: var(--radius-pill);
-        font-size: 11px;
-        font-weight: 600;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        pointer-events: none;
-        z-index: 150;
-        backdrop-filter: blur(4px);
-        letter-spacing: 0.5px;
-      }
-
-      #toast-container {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        pointer-events: none;
-      }
-
-      .toast {
-        background: var(--text-color);
-        color: var(--ui-bg);
-        padding: 10px 16px;
-        border-radius: var(--radius-sm);
-        font-size: 13px;
-        font-weight: 500;
-        box-shadow: var(--shadow-lg);
-        transform: translateY(20px);
-        opacity: 0;
-        transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .toast.show {
-        transform: translateY(0);
-        opacity: 1;
-      }
-
-      /* ========================================================= */
-      /* 7. TEMAS (Otimizados para Conforto Visual)                */
-      /* ========================================================= */
-      .theme-dark {
-        /* Cores inspiradas em editores de texto profissionais (Cinza neutro e suave) */
-        --ui-bg: #252526; /* Cor exata da sidebar do VS Code */
-        --text-color: #d4d4d4; /* Cinza claro, nunca branco puro */
-        --text-muted: #858585;
-        --border-color: #3e3e42;
-
-        /* Mesa Noturna (Cinza escuro sólido e flat, sem gradientes) */
-        --workspace-bg: #111111;
-        --page-bg: #1e1e1e; /* Fundo da página alinhado com editores */
-
-        --indicator-bg: rgba(37, 37, 38, 0.9);
-        --indicator-text: #cccccc;
-
-        /* Amarelo de sintaxe de editor, com opacidade suave */
-        --highlight-color: rgba(215, 186, 125, 0.25);
-      }
-
-      .theme-dark .page-wrapper canvas {
-        /* A mágica: esse filtro exato transforma o branco do papel em cinza escuro (#1e1e1e) 
-               e o texto preto em cinza claro macio (#d4d4d4), eliminando a agressividade */
-        filter: invert(92%) hue-rotate(180deg) contrast(85%) brightness(90%);
-      }
-      .theme-dark .highlight-rect {
-        mix-blend-mode: screen;
-      }
-
-      .theme-sepia {
-        --ui-bg: #f4ecd8;
-        --text-color: #3d3324;
-        --text-muted: #80735e;
-        --border-color: #e3d5b1;
-
-        /* Mesa Sépia (Madeira Clara Suave) */
-        --workspace-bg: linear-gradient(135deg, #d4c4a8 0%, #bbaa8d 100%);
-        --page-bg: #f4ecd8;
-
-        --indicator-bg: rgba(61, 51, 36, 0.8);
-        --highlight-color: rgba(253, 224, 71, 0.25);
-      }
-      .theme-sepia .page-wrapper canvas {
-        filter: none;
-        mix-blend-mode: multiply;
-        opacity: 0.85; /* Conforto visual: deixa o preto um pouco mais grafite */
-      }
-
-      @media (max-width: 800px) {
+        /* ========================================================= */
+        /* 3. TOP BAR E CONTROLES                                    */
+        /* ========================================================= */
         .controls {
-          padding: 10px;
-          justify-content: center;
-          flex-wrap: wrap;
-          max-height: 200px;
+            background-color: var(--ui-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            z-index: 100;
+            max-height: 150px;
+            opacity: 1;
+            transform: translateY(0);
+            overflow: hidden;
+            flex-shrink: 0;
+            /* Impede que o menu seja esmagado pelo Flexbox */
+            transition:
+                max-height 0.4s ease,
+                padding 0.4s ease,
+                opacity 0.3s ease,
+                transform 0.4s ease;
+        }
+
+        .controls.hidden {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            opacity: 0;
+            transform: translateY(-20px);
+            border-bottom-color: transparent;
+        }
+
+        .controls-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         #file-title {
-          display: none;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-muted);
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: none;
         }
 
-        button span.btn-text {
-          display: none;
+        input[type="file"] {
+            display: none;
         }
 
+        .file-upload-label {
+            border: 1px dashed var(--border-color);
+            color: var(--primary);
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .file-upload-label:hover {
+            background-color: rgba(2, 132, 199, 0.05);
+            border-color: var(--primary);
+        }
+
+        .page-navigation {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg-color);
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .page-navigation button {
+            border: none;
+            background: transparent;
+            padding: 4px;
+            border-radius: var(--radius-sm);
+        }
+
+        .page-navigation span {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 0 4px;
+        }
+
+        input[type="number"] {
+            width: 40px;
+            text-align: center;
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            border-radius: 0;
+            padding: 2px;
+            font-weight: 600;
+            background: transparent;
+        }
+
+        #btn-highlight.btn-active {
+            background-color: #fef08a;
+            color: #854d0e;
+            border-color: #fde047;
+        }
+
+        /* Sistema de Cores do Marca-texto */
+        .color-picker {
+            display: flex;
+            gap: 6px;
+            padding-left: 8px;
+            margin-left: 4px;
+            border-left: 1px solid var(--border-color);
+            align-items: center;
+        }
+
+        .color-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            padding: 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .color-btn.active {
+            transform: scale(1.25);
+            border-color: var(--text-color) !important;
+        }
+
+        .color-btn:hover:not(.active) {
+            transform: scale(1.1);
+        }
+
+        /* ========================================================= */
+        /* 4. WORKSPACE & PDF VIEWER                                 */
+        /* ========================================================= */
+        .main-workspace {
+            display: flex;
+            flex-grow: 1;
+            width: 100%;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #book-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            height: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            overflow-x: auto;
+
+            /* Aplica a mesa dinâmica do tema e uma leve sombra interna para dar profundidade */
+            background: var(--workspace-bg);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Estrutura das Camadas da Página */
+        .page-wrapper {
+            position: relative;
+            background: var(--page-bg);
+            /* Sombra mais densa e realista imitando papel empilhado */
+            box-shadow:
+                0 10px 25px -5px rgba(0, 0, 0, 0.15),
+                0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+        }
+
+        #empty-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+            color: var(--text-muted);
+            background: var(--bg-color);
+            z-index: 10;
+        }
+
+        #empty-state .icon-wrapper {
+            width: 64px;
+            height: 64px;
+            background: var(--ui-bg);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        /* Sistema Dinâmico do PDF */
+        #pdf-viewer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: auto;
+            transition: transform 0.2s ease;
+            perspective: 2000px;
+        }
+
+        body.zoomed-mode #pdf-viewer {
+            margin: 0 auto;
+            padding: 20px;
+            perspective: none;
+        }
+
+        .page-wrapper canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Animações de Virada de Página */
+        .flip-next {
+            animation: turnNext 0.4s ease-in forwards;
+            transform-origin: left center;
+        }
+
+        .flip-prev {
+            animation: turnPrev 0.4s ease-in forwards;
+            transform-origin: right center;
+        }
+
+        @keyframes turnNext {
+            0% {
+                transform: rotateY(0deg);
+                filter: brightness(1);
+            }
+
+            100% {
+                transform: rotateY(-90deg);
+                filter: brightness(0.5);
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes turnPrev {
+            0% {
+                transform: rotateY(0deg);
+                filter: brightness(1);
+            }
+
+            100% {
+                transform: rotateY(90deg);
+                filter: brightness(0.5);
+                opacity: 0.2;
+            }
+        }
+
+        /* Camada do Marca-Texto */
+        .highlight-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* O pointer-events: auto permite clicar no grifo, mesmo a camada pai estando desativada */
+        .highlight-rect {
+            position: absolute;
+            background-color: var(--highlight-color);
+            mix-blend-mode: multiply;
+            border-radius: 2px;
+            pointer-events: auto;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .highlight-rect:hover {
+            opacity: 0.5;
+            /* Indica que é interativo */
+        }
+
+        /* Camada de Texto Nível PDF.js (Invisível, mas Selecionável) */
+        .textLayer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            opacity: 1;
+            line-height: 1;
+            z-index: 3;
+        }
+
+        .textLayer>span {
+            color: transparent;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+            line-height: 1;
+            /* Impede que a caixa de seleção fique mais alta que o texto */
+            display: block;
+            /* Garante que a largura (width) matemática seja respeitada */
+        }
+
+        .textLayer ::selection {
+            background: rgba(0, 132, 255, 0.25);
+        }
+
+        /* ========================================================= */
+        /* 5. SIDEBAR (Anotações)                                    */
+        /* ========================================================= */
         #sidebar {
-          position: fixed;
-          top: 0;
-          right: 0;
-          bottom: 0;
-          width: 100% !important;
-          min-width: 100% !important;
-          margin-right: 0 !important;
-          border-left: none;
+            width: 320px;
+            min-width: 320px;
+            background-color: var(--ui-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 15px rgba(0, 0, 0, 0.03);
+            transition:
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                margin-right 0.3s ease;
+            z-index: 500;
         }
-      }
-    </style>
-  </head>
 
-  <body class="theme-light">
+        #sidebar.hidden {
+            transform: translateX(100%);
+            margin-right: -320px;
+            box-shadow: none;
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .sidebar-header button {
+            padding: 4px;
+            border: none;
+            border-radius: var(--radius-pill);
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-color);
+        }
+
+        .sidebar-tabs button {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px 4px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            font-size: 12px;
+        }
+
+        .sidebar-tabs button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--ui-bg);
+        }
+
+        .tab-content {
+            flex-grow: 1;
+            display: none;
+            flex-direction: column;
+            position: relative;
+            background: var(--ui-bg);
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        #notepad {
+            flex-grow: 1;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px;
+            border: none;
+            resize: none;
+            background: transparent;
+            color: var(--text-color);
+            font-family: var(--font-ui);
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+        }
+
+        #global-view {
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text-color);
+            padding-bottom: 60px;
+            font-family: var(--font-doc);
+        }
+
+        .action-buttons {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background-color: var(--ui-bg);
+            border: 1px solid var(--border-color);
+            padding: 6px;
+            border-radius: var(--radius-pill);
+            box-shadow: var(--shadow-md);
+            z-index: 10;
+        }
+
+        .action-buttons button {
+            flex: none;
+            /* Remove o esticamento para os lados */
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            /* Transforma em botões circulares */
+        }
+
+        /* ========================================================= */
+        /* 6. OVERLAYS E BARRA DE FOCO                               */
+        /* ========================================================= */
+
+        /* Container Principal do Pomodoro */
+        #pomodoro-container {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 150;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        body.zoomed-mode #pomodoro-container {
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        body.zoomed-mode #pomodoro-container:hover {
+            opacity: 1;
+        }
+
+        /* Estilos do Widget Pomodoro */
+        #pomodoro-widget {
+            background: var(--ui-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: var(--radius-pill);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition:
+                transform 0.2s,
+                opacity 0.3s;
+        }
+
+        #pomodoro-widget:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Estilos dos Mini Controles */
+        #pomodoro-controls {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+            transition:
+                opacity 0.3s ease,
+                transform 0.3s ease;
+        }
+
+        #pomodoro-controls.faded {
+            /* Classe que esconde os botões */
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+        }
+
+        #pomodoro-controls button {
+            background: var(--ui-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            box-shadow: var(--shadow-sm);
+            color: var(--text-color);
+            min-width: 32px;
+            justify-content: center;
+        }
+
+        .clock-face {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--text-color);
+            position: relative;
+            /* Trocamos a variável do grifo por um vermelho pastel suave (#ff8787) */
+            background: conic-gradient(transparent 0deg, #ff8787 0deg);
+        }
+
+        .clock-hand {
+            width: 2px;
+            height: 10px;
+            background-color: var(--text-color);
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+            border-radius: 2px;
+            z-index: 2;
+            transition: transform 1s linear;
+        }
+
+        .clock-center {
+            width: 4px;
+            height: 4px;
+            background: var(--text-color);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+        }
+
+        #pomodoro-text {
+            font-size: 13px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Estilos do Modal de Alerta */
+        #pomodoro-alert {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        #pomodoro-alert.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .alert-content {
+            background: var(--ui-bg);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            text-align: center;
+            max-width: 320px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            transform: translateY(0);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #pomodoro-alert.hidden .alert-content {
+            transform: translateY(20px);
+        }
+
+        .alert-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        #floating-focus-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            background-color: var(--ui-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+            border-radius: var(--radius-pill);
+            display: none;
+            padding: 4px 6px;
+            z-index: 200;
+            align-items: center;
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+            transition:
+                opacity 0.4s ease,
+                transform 0.4s ease;
+        }
+
+        #floating-focus-bar.visible {
+            display: flex;
+        }
+
+        #floating-focus-bar.faded {
+            opacity: 0;
+            transform: translateX(-50%) translateY(30px);
+            pointer-events: none;
+        }
+
+        #floating-focus-bar button {
+            border: none;
+            background: transparent;
+            padding: 6px 12px;
+            font-weight: 600;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+        }
+
+        #drag-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(2, 132, 199, 0.9);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            border: 8px dashed rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        #drag-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #loading-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 10;
+            background: var(--indicator-bg);
+            color: white;
+            padding: 10px 20px;
+            border-radius: var(--radius-pill);
+            font-weight: 500;
+            font-size: 13px;
+            backdrop-filter: blur(4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        #discreet-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: var(--indicator-bg);
+            color: var(--indicator-text);
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 150;
+            backdrop-filter: blur(4px);
+            letter-spacing: 0.5px;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--text-color);
+            color: var(--ui-bg);
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* ========================================================= */
+        /* 7. TEMAS (Otimizados para Conforto Visual)                */
+        /* ========================================================= */
+        .theme-dark {
+            /* Cores inspiradas em editores de texto profissionais (Cinza neutro e suave) */
+            --ui-bg: #252526;
+            /* Cor exata da sidebar do VS Code */
+            --text-color: #d4d4d4;
+            /* Cinza claro, nunca branco puro */
+            --text-muted: #858585;
+            --border-color: #3e3e42;
+
+            /* Mesa Noturna (Cinza escuro sólido e flat, sem gradientes) */
+            --workspace-bg: #111111;
+            --page-bg: #1e1e1e;
+            /* Fundo da página alinhado com editores */
+
+            --indicator-bg: rgba(37, 37, 38, 0.9);
+            --indicator-text: #cccccc;
+
+            /* Amarelo de sintaxe de editor, com opacidade suave */
+            --highlight-color: rgba(215, 186, 125, 0.25);
+        }
+
+        .theme-dark .page-wrapper canvas {
+            /* A mágica: esse filtro exato transforma o branco do papel em cinza escuro (#1e1e1e) 
+               e o texto preto em cinza claro macio (#d4d4d4), eliminando a agressividade */
+            filter: invert(92%) hue-rotate(180deg) contrast(85%) brightness(90%);
+        }
+
+        .theme-dark .highlight-rect {
+            mix-blend-mode: screen;
+        }
+
+        .theme-sepia {
+            --ui-bg: #f4ecd8;
+            --text-color: #3d3324;
+            --text-muted: #80735e;
+            --border-color: #e3d5b1;
+
+            /* Mesa Sépia (Madeira Clara Suave) */
+            --workspace-bg: linear-gradient(135deg, #d4c4a8 0%, #bbaa8d 100%);
+            --page-bg: #f4ecd8;
+
+            --indicator-bg: rgba(61, 51, 36, 0.8);
+            --highlight-color: rgba(253, 224, 71, 0.25);
+        }
+
+        .theme-sepia .page-wrapper canvas {
+            filter: none;
+            mix-blend-mode: multiply;
+            opacity: 0.85;
+            /* Conforto visual: deixa o preto um pouco mais grafite */
+        }
+
+        @media (max-width: 800px) {
+            .controls {
+                padding: 10px;
+                justify-content: center;
+                flex-wrap: wrap;
+                max-height: 200px;
+            }
+
+            #file-title {
+                display: none;
+            }
+
+            button span.btn-text {
+                display: none;
+            }
+
+            #sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 100% !important;
+                min-width: 100% !important;
+                margin-right: 0 !important;
+                border-left: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="theme-light">
     <!-- WIDGET POMODORO -->
     <div id="pomodoro-container">
-      <!-- O Relógio (Cápsula) -->
-      <div
-        id="pomodoro-widget"
-        onclick="togglePomodoro()"
-        title="Clique para Iniciar/Pausar (25m)"
-      >
-        <div class="clock-face" id="clock-face">
-          <div class="clock-hand" id="clock-hand"></div>
-          <div class="clock-center"></div>
+        <!-- O Relógio (Cápsula) -->
+        <div id="pomodoro-widget" onclick="togglePomodoro()" title="Clique para Iniciar/Pausar (25m)">
+            <div class="clock-face" id="clock-face">
+                <div class="clock-hand" id="clock-hand"></div>
+                <div class="clock-center"></div>
+            </div>
+            <span id="pomodoro-text">25:00</span>
         </div>
-        <span id="pomodoro-text">25:00</span>
-      </div>
 
-      <!-- Mini Controles (Somente Visíveis Pausado) -->
-      <div id="pomodoro-controls">
-        <button onclick="adjustPomodoro(-5)" title="Remover 5 min">-5</button>
-        <button onclick="resetPomodoro(25)" title="Zerar Pomodoro">
-          <i data-lucide="rotate-ccw" style="width: 12px; height: 12px"></i>
-        </button>
-        <button onclick="adjustPomodoro(5)" title="Adicionar 5 min">+5</button>
-      </div>
+        <!-- Mini Controles (Somente Visíveis Pausado) -->
+        <div id="pomodoro-controls">
+            <button onclick="adjustPomodoro(-5)" title="Remover 5 min">-5</button>
+            <button onclick="resetPomodoro(25)" title="Zerar Pomodoro">
+                <i data-lucide="rotate-ccw" style="width: 12px; height: 12px"></i>
+            </button>
+            <button onclick="adjustPomodoro(5)" title="Adicionar 5 min">+5</button>
+        </div>
     </div>
 
     <!-- MODAL DE ALERTA POMODORO -->
     <div id="pomodoro-alert" class="hidden">
-      <div class="alert-content">
-        <i
-          data-lucide="brain-circuit"
-          style="
+        <div class="alert-content">
+            <i data-lucide="brain-circuit" style="
             width: 40px;
             height: 40px;
             color: var(--primary);
             margin-bottom: 12px;
-          "
-        ></i>
-        <h3 style="margin: 0 0 8px 0; color: var(--text-color)">
-          Fim do Ciclo!
-        </h3>
-        <p
-          style="margin: 0 0 20px 0; font-size: 14px; color: var(--text-muted)"
-        >
-          Hora de fazer uma pausa, esticar as pernas e beber água.
-        </p>
-        <div class="alert-buttons">
-          <button class="btn-primary" onclick="resetPomodoro(5)">
-            <i data-lucide="coffee" style="width: 14px; height: 14px"></i> Pausa
-            (5m)
-          </button>
-          <button onclick="snoozePomodoro()">
-            <i
-              data-lucide="alarm-clock-plus"
-              style="width: 14px; height: 14px"
-            ></i>
-            Soneca (+5m)
-          </button>
-          <button
-            onclick="resetPomodoro(25)"
-            style="
+          "></i>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-color)">
+                Fim do Ciclo!
+            </h3>
+            <p style="margin: 0 0 20px 0; font-size: 14px; color: var(--text-muted)">
+                Hora de fazer uma pausa, esticar as pernas e beber água.
+            </p>
+            <div class="alert-buttons">
+                <button class="btn-primary" onclick="resetPomodoro(5)">
+                    <i data-lucide="coffee" style="width: 14px; height: 14px"></i> Pausa
+                    (5m)
+                </button>
+                <button onclick="snoozePomodoro()">
+                    <i data-lucide="alarm-clock-plus" style="width: 14px; height: 14px"></i>
+                    Soneca (+5m)
+                </button>
+                <button onclick="resetPomodoro(25)" style="
               background: transparent;
               border: none;
               font-size: 12px;
               color: var(--text-muted);
-            "
-          >
-            Zerar
-          </button>
+            ">
+                    Zerar
+                </button>
+            </div>
         </div>
-      </div>
     </div>
 
     <!-- OVERLAYS & TOASTS -->
     <div id="drag-overlay">
-      <i
-        data-lucide="file-up"
-        style="width: 36px; height: 36px; margin-right: 12px"
-      ></i>
-      Solte o arquivo para abrir
+        <i data-lucide="file-up" style="width: 36px; height: 36px; margin-right: 12px"></i>
+        Solte o arquivo para abrir
     </div>
     <div id="toast-container"></div>
     <div id="loading-msg">
-      <i
-        data-lucide="loader-2"
-        class="lucide-spin"
-        style="width: 16px; height: 16px; margin-right: 8px"
-      ></i>
-      Processando...
+        <i data-lucide="loader-2" class="lucide-spin" style="width: 16px; height: 16px; margin-right: 8px"></i>
+        Processando...
     </div>
     <div id="discreet-indicator">Pág. - / -</div>
 
     <div id="empty-state">
-      <div class="icon-wrapper">
-        <i
-          data-lucide="book-open-check"
-          stroke-width="1.5"
-          style="width: 32px; height: 32px"
-        ></i>
-      </div>
-      <h2>DiveReader Pro</h2>
-      <p>
-        A ferramenta definitiva para estudo de livros em PDFs. Arraste seu
-        documento para cá.
-      </p>
+        <div class="icon-wrapper">
+            <i data-lucide="book-open-check" stroke-width="1.5" style="width: 32px; height: 32px"></i>
+        </div>
+        <h2>DiveReader Pro</h2>
+        <p>
+            A ferramenta definitiva para estudo de livros em PDFs. Arraste seu
+            documento para cá.
+        </p>
     </div>
 
     <!-- BARRA DE FOCO FLUTUANTE -->
     <div id="floating-focus-bar">
-      <button onclick="toggleSidebar()" title="Anotações">
-        <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
-      </button>
-      <div
-        style="
+        <button onclick="toggleSidebar()" title="Anotações">
+            <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
+        </button>
+        <div style="
           width: 1px;
           height: 16px;
           background-color: var(--border-color);
           margin: 0 4px;
-        "
-      ></div>
-      <button onclick="addHighlight()" title="Grifar Seleção">
-        <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
-      </button>
-      <div
-        style="
+        "></div>
+        <button onclick="addHighlight()" title="Grifar Seleção">
+            <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
+        </button>
+        <div style="
           width: 1px;
           height: 16px;
           background-color: var(--border-color);
           margin: 0 4px;
-        "
-      ></div>
-      <button onclick="toggleMenu()" title="Sair do Foco">
-        <i data-lucide="maximize" style="width: 16px; height: 16px"></i>
-      </button>
+        "></div>
+        <button onclick="toggleMenu()" title="Sair do Foco">
+            <i data-lucide="maximize" style="width: 16px; height: 16px"></i>
+        </button>
     </div>
 
     <!-- MENU SUPERIOR -->
     <div class="controls" id="top-menu">
-      <div class="controls-group">
-        <label class="file-upload-label" title="Abrir arquivo PDF">
-          <i data-lucide="folder-open" style="width: 16px; height: 16px"></i>
-          <span class="btn-text">Abrir PDF</span>
-          <input type="file" id="file-input" accept=".pdf" />
-        </label>
-        <span id="file-title">Nenhum arquivo</span>
+        <div class="controls-group">
+            <label class="file-upload-label" title="Abrir arquivo PDF">
+                <i data-lucide="folder-open" style="width: 16px; height: 16px"></i>
+                <span class="btn-text">Abrir PDF</span>
+                <input type="file" id="file-input" accept=".pdf" />
+            </label>
+            <span id="file-title">Nenhum arquivo</span>
 
-        <!-- Novos Botões de Backup -->
-        <div
-          style="
+            <!-- Novos Botões de Backup -->
+            <div style="
             width: 1px;
             height: 20px;
             background-color: var(--border-color);
             margin: 0 4px;
             display: none;
-          "
-          id="backup-divider"
-        ></div>
+          " id="backup-divider"></div>
 
-        <button
-          onclick="exportBackup()"
-          title="Exportar Backup dos Estudos (.json)"
-          class="btn-primary"
-          style="
+            <button onclick="exportBackup()" title="Exportar Backup dos Estudos (.json)" class="btn-primary" style="
             background: transparent;
             color: var(--text-muted);
             border: 1px solid var(--border-color);
-          "
-        >
-          <i data-lucide="download-cloud" style="width: 16px; height: 16px"></i>
-        </button>
+          ">
+                <i data-lucide="download-cloud" style="width: 16px; height: 16px"></i>
+            </button>
 
-        <label
-          class="file-upload-label"
-          style="
+            <label class="file-upload-label" style="
             padding: 6px;
             border: 1px solid var(--border-color);
             color: var(--text-muted);
             background: transparent;
-          "
-          title="Importar Backup (.json)"
-        >
-          <i data-lucide="upload-cloud" style="width: 16px; height: 16px"></i>
-          <input
-            type="file"
-            id="import-backup"
-            accept=".json"
-            style="display: none"
-          />
-        </label>
-      </div>
-
-      <div class="controls-group">
-        <button
-          id="btn-highlight"
-          onclick="addHighlight()"
-          title="Grifar texto selecionado"
-          disabled
-        >
-          <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
-          <span class="btn-text">Grifar</span>
-        </button>
-        <select id="theme-selector" title="Tema" disabled>
-          <option value="theme-light">☀️ Claro</option>
-          <option value="theme-sepia">📖 Sépia</option>
-          <option value="theme-dark">🌙 Noturno</option>
-        </select>
-        <div style="display: flex; gap: 4px">
-          <button
-            id="btn-zoom-out"
-            onclick="changeZoom(-0.25)"
-            title="Afastar"
-            disabled
-          >
-            <i data-lucide="zoom-out" style="width: 16px; height: 16px"></i>
-          </button>
-          <button
-            id="btn-zoom-in"
-            onclick="changeZoom(0.25)"
-            title="Aproximar"
-            disabled
-          >
-            <i data-lucide="zoom-in" style="width: 16px; height: 16px"></i>
-          </button>
+          " title="Importar Backup (.json)">
+                <i data-lucide="upload-cloud" style="width: 16px; height: 16px"></i>
+                <input type="file" id="import-backup" accept=".json" style="display: none" />
+            </label>
         </div>
-      </div>
 
-      <div class="controls-group">
-        <div class="page-navigation">
-          <button id="btn-prev" onclick="onPrevPage()" disabled>
-            <i data-lucide="chevron-left" style="width: 16px; height: 16px"></i>
-          </button>
-          <span
-            ><input type="number" id="page-input" value="1" min="1" disabled />
-            / <span id="total-pages">-</span></span
-          >
-          <button id="btn-next" onclick="onNextPage()" disabled>
-            <i
-              data-lucide="chevron-right"
-              style="width: 16px; height: 16px"
-            ></i>
-          </button>
+        <div class="controls-group">
+            <button id="btn-highlight" onclick="addHighlight()" title="Grifar texto selecionado" disabled>
+                <i data-lucide="highlighter" style="width: 16px; height: 16px;"></i>
+                <span class="btn-text">Grifar</span>
+            </button>
+            <!-- NOVO: Paleta de Cores -->
+            <div class="color-picker" id="color-picker" style="display: none;">
+                <button class="color-btn active" style="background-color: #fef08a; border-color: #fde047;"
+                    onclick="setHighlightColor('rgba(253, 224, 71, 0.35)', this)" title="Amarelo (Citações)"></button>
+                <button class="color-btn" style="background-color: #bbf7d0; border-color: #86efac;"
+                    onclick="setHighlightColor('rgba(74, 222, 128, 0.35)', this)" title="Verde (Conceitos)"></button>
+                <button class="color-btn" style="background-color: #bfdbfe; border-color: #93c5fd;"
+                    onclick="setHighlightColor('rgba(96, 165, 250, 0.35)', this)" title="Azul (Estrutura)"></button>
+                <button class="color-btn" style="background-color: #fbcfe8; border-color: #f9a8d4;"
+                    onclick="setHighlightColor('rgba(244, 114, 182, 0.35)', this)" title="Rosa (Revisar)"></button>
+            </div>
+            <select id="theme-selector" title="Tema" disabled>
+                <option value="theme-light">☀️ Claro</option>
+                <option value="theme-sepia">📖 Sépia</option>
+                <option value="theme-dark">🌙 Noturno</option>
+            </select>
+            <div style="display: flex; gap: 4px">
+                <button id="btn-zoom-out" onclick="changeZoom(-0.25)" title="Afastar" disabled>
+                    <i data-lucide="zoom-out" style="width: 16px; height: 16px"></i>
+                </button>
+                <button id="btn-zoom-in" onclick="changeZoom(0.25)" title="Aproximar" disabled>
+                    <i data-lucide="zoom-in" style="width: 16px; height: 16px"></i>
+                </button>
+            </div>
         </div>
-        <button
-          id="btn-toggle-sidebar"
-          onclick="toggleSidebar()"
-          class="btn-primary"
-          title="Meu Caderno"
-          disabled
-        >
-          <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
-          <span class="btn-text">Caderno</span>
-        </button>
-        <button
-          id="btn-toggle-focus"
-          onclick="toggleMenu()"
-          title="Modo Foco"
-          disabled
-        >
-          <i data-lucide="minimize" style="width: 16px; height: 16px"></i>
-          <span class="btn-text">Foco</span>
-        </button>
-      </div>
+
+        <div class="controls-group">
+            <div class="page-navigation">
+                <button id="btn-prev" onclick="onPrevPage()" disabled>
+                    <i data-lucide="chevron-left" style="width: 16px; height: 16px"></i>
+                </button>
+                <span><input type="number" id="page-input" value="1" min="1" disabled />
+                    / <span id="total-pages">-</span></span>
+                <button id="btn-next" onclick="onNextPage()" disabled>
+                    <i data-lucide="chevron-right" style="width: 16px; height: 16px"></i>
+                </button>
+            </div>
+            <button id="btn-toggle-sidebar" onclick="toggleSidebar()" class="btn-primary" title="Meu Caderno" disabled>
+                <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
+                <span class="btn-text">Caderno</span>
+            </button>
+            <button id="btn-toggle-focus" onclick="toggleMenu()" title="Modo Foco" disabled>
+                <i data-lucide="minimize" style="width: 16px; height: 16px"></i>
+                <span class="btn-text">Foco</span>
+            </button>
+        </div>
     </div>
 
     <!-- WORKSPACE & LEITOR -->
     <div class="main-workspace">
-      <div id="book-container" style="display: none">
-        <div id="pdf-viewer">
-          <!-- Páginas geradas dinamicamente -->
+        <div id="book-container" style="display: none">
+            <div id="pdf-viewer">
+                <!-- Páginas geradas dinamicamente -->
+            </div>
         </div>
-      </div>
 
-      <!-- SIDEBAR DE ANOTAÇÕES -->
-      <div id="sidebar" class="hidden" style="display: none">
-        <div class="sidebar-header">
-          <span>Meu Caderno de Estudos</span>
-          <button onclick="toggleSidebar()" title="Fechar">
-            <i data-lucide="x" style="width: 16px; height: 16px"></i>
-          </button>
+        <!-- SIDEBAR DE ANOTAÇÕES -->
+        <div id="sidebar" class="hidden" style="display: none">
+            <div class="sidebar-header">
+                <span>Meu Caderno de Estudos</span>
+                <button onclick="toggleSidebar()" title="Fechar">
+                    <i data-lucide="x" style="width: 16px; height: 16px"></i>
+                </button>
+            </div>
+            <div class="sidebar-tabs">
+                <button id="tab-btn-page" class="active" onclick="switchTab('page')">
+                    Nesta Página
+                </button>
+                <button id="tab-btn-global" onclick="switchTab('global')">
+                    Fichamento Completo
+                </button>
+            </div>
+            <div id="tab-page" class="tab-content active">
+                <textarea id="notepad"
+                    placeholder="Suas sínteses sobre esta página...&#10;(Ao grifar, o texto aparecerá aqui automaticamente!)"
+                    disabled></textarea>
+            </div>
+            <div id="tab-global" class="tab-content">
+                <div id="global-view">Nenhuma anotação ou grifo feito ainda.</div>
+                <div class="action-buttons">
+                    <!-- O atributo 'title' é quem cria o Tooltip quando o mouse passa por cima -->
+                    <button class="btn-action" onclick="copyGlobalNotes()" title="Copiar Fichamento">
+                        <i data-lucide="copy" style="width: 16px; height: 16px"></i>
+                    </button>
+                    <button class="btn-action download btn-primary" onclick="downloadNotes()"
+                        title="Baixar Fichamento (.md)">
+                        <i data-lucide="download" style="width: 16px; height: 16px"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="sidebar-tabs">
-          <button id="tab-btn-page" class="active" onclick="switchTab('page')">
-            Nesta Página
-          </button>
-          <button id="tab-btn-global" onclick="switchTab('global')">
-            Fichamento Completo
-          </button>
-        </div>
-        <div id="tab-page" class="tab-content active">
-          <textarea
-            id="notepad"
-            placeholder="Suas sínteses sobre esta página...&#10;(Ao grifar, o texto aparecerá aqui automaticamente!)"
-            disabled
-          ></textarea>
-        </div>
-        <div id="tab-global" class="tab-content">
-          <div id="global-view">Nenhuma anotação ou grifo feito ainda.</div>
-          <div class="action-buttons">
-            <!-- O atributo 'title' é quem cria o Tooltip quando o mouse passa por cima -->
-            <button
-              class="btn-action"
-              onclick="copyGlobalNotes()"
-              title="Copiar Fichamento"
-            >
-              <i data-lucide="copy" style="width: 16px; height: 16px"></i>
-            </button>
-            <button
-              class="btn-action download btn-primary"
-              onclick="downloadNotes()"
-              title="Baixar Fichamento (.md)"
-            >
-              <i data-lucide="download" style="width: 16px; height: 16px"></i>
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <script>
-      lucide.createIcons();
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+        lucide.createIcons();
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
-      // ==========================================
-      // 1. STATE MANAGEMENT
-      // ==========================================
-      const AppState = {
-        fileName: "Anotacoes",
-        fileKey: null,
-        pdfDoc: null,
-        pageNum: 1,
-        isRendering: false,
-        notesData: {},
-        highlightsData: {},
-        zoomLevel: 1.0,
-        focusTimer: null,
-      };
+        // ==========================================
+        // 1. STATE MANAGEMENT
+        // ==========================================
+        const AppState = {
+            fileName: "Anotacoes",
+            fileKey: null,
+            pdfDoc: null,
+            pageNum: 1,
+            isRendering: false,
+            notesData: {},
+            highlightsData: {},
+            currentHighlightColor: "rgba(253, 224, 71, 0.35)",
+            zoomLevel: 1.0,
+            focusTimer: null,
+        };
 
-      const DOM = {
-        indicator: document.getElementById("discreet-indicator"),
-        notepad: document.getElementById("notepad"),
-        globalView: document.getElementById("global-view"),
-        floatingBar: document.getElementById("floating-focus-bar"),
-        bookContainer: document.getElementById("book-container"),
-        pdfViewer: document.getElementById("pdf-viewer"),
-        emptyState: document.getElementById("empty-state"),
-        fileTitle: document.getElementById("file-title"),
-        topMenu: document.getElementById("top-menu"),
-        sidebar: document.getElementById("sidebar"),
-        loading: document.getElementById("loading-msg"),
-      };
+        const DOM = {
+            indicator: document.getElementById("discreet-indicator"),
+            notepad: document.getElementById("notepad"),
+            globalView: document.getElementById("global-view"),
+            floatingBar: document.getElementById("floating-focus-bar"),
+            bookContainer: document.getElementById("book-container"),
+            pdfViewer: document.getElementById("pdf-viewer"),
+            emptyState: document.getElementById("empty-state"),
+            fileTitle: document.getElementById("file-title"),
+            topMenu: document.getElementById("top-menu"),
+            sidebar: document.getElementById("sidebar"),
+            loading: document.getElementById("loading-msg"),
+        };
 
-      // ==========================================
-      // 2. UI HELPERS & MODOS
-      // ==========================================
-      function showToast(message, icon = "info") {
-        const container = document.getElementById("toast-container");
-        const toast = document.createElement("div");
-        toast.className = "toast";
-        toast.innerHTML = `<i data-lucide="${icon}" style="width: 16px; height: 16px;"></i> ${message}`;
-        container.appendChild(toast);
-        lucide.createIcons({ root: toast });
-        requestAnimationFrame(() => toast.classList.add("show"));
-        setTimeout(() => {
-          toast.classList.remove("show");
-          setTimeout(() => toast.remove(), 300);
-        }, 3000);
-      }
+        function setHighlightColor(colorRGBA, btnElement) {
+            AppState.currentHighlightColor = colorRGBA;
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+        }
 
-      function isSinglePageMode() {
-        return window.innerWidth <= 900 || AppState.zoomLevel > 1.0;
-      }
+        // ==========================================
+        // 2. UI HELPERS & MODOS
+        // ==========================================
+        function showToast(message, icon = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = "toast";
+            toast.innerHTML = `<i data-lucide="${icon}" style="width: 16px; height: 16px;"></i> ${message}`;
+            container.appendChild(toast);
+            lucide.createIcons({ root: toast });
+            requestAnimationFrame(() => toast.classList.add("show"));
+            setTimeout(() => {
+                toast.classList.remove("show");
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
-      function updateBodyMode() {
-        document.body.classList.toggle("single-page-mode", isSinglePageMode());
-        document.body.classList.toggle("zoomed-mode", AppState.zoomLevel > 1.0);
-      }
+        function isSinglePageMode() {
+            return window.innerWidth <= 900 || AppState.zoomLevel > 1.0;
+        }
 
-      function switchTab(tab) {
-        document
-          .querySelectorAll(".sidebar-tabs button")
-          .forEach((b) => b.classList.remove("active"));
-        document
-          .querySelectorAll(".tab-content")
-          .forEach((c) => c.classList.remove("active"));
-        document.getElementById(`tab-btn-${tab}`).classList.add("active");
-        document.getElementById(`tab-${tab}`).classList.add("active");
-        if (tab === "global") updateGlobalView();
-      }
+        function updateBodyMode() {
+            document.body.classList.toggle("single-page-mode", isSinglePageMode());
+            document.body.classList.toggle("zoomed-mode", AppState.zoomLevel > 1.0);
+        }
 
-      // Foco e Menu
-      function wakeFocusBar() {
-        if (
-          AppState.zoomLevel > 1.0 ||
-          !DOM.floatingBar.classList.contains("visible")
-        )
-          return;
-        DOM.floatingBar.classList.remove("faded");
-        clearTimeout(AppState.focusTimer);
-        AppState.focusTimer = setTimeout(() => {
-          if (!DOM.floatingBar.matches(":hover"))
+        function switchTab(tab) {
+            document
+                .querySelectorAll(".sidebar-tabs button")
+                .forEach((b) => b.classList.remove("active"));
+            document
+                .querySelectorAll(".tab-content")
+                .forEach((c) => c.classList.remove("active"));
+            document.getElementById(`tab-btn-${tab}`).classList.add("active");
+            document.getElementById(`tab-${tab}`).classList.add("active");
+            if (tab === "global") updateGlobalView();
+        }
+
+        // Foco e Menu
+        function wakeFocusBar() {
+            if (
+                AppState.zoomLevel > 1.0 ||
+                !DOM.floatingBar.classList.contains("visible")
+            )
+                return;
+            DOM.floatingBar.classList.remove("faded");
+            clearTimeout(AppState.focusTimer);
+            AppState.focusTimer = setTimeout(() => {
+                if (!DOM.floatingBar.matches(":hover"))
+                    DOM.floatingBar.classList.add("faded");
+            }, 4000);
+        }
+        function hideFocusBar() {
+            if (
+                AppState.zoomLevel > 1.0 ||
+                !DOM.floatingBar.classList.contains("visible")
+            )
+                return;
             DOM.floatingBar.classList.add("faded");
-        }, 4000);
-      }
-      function hideFocusBar() {
-        if (
-          AppState.zoomLevel > 1.0 ||
-          !DOM.floatingBar.classList.contains("visible")
-        )
-          return;
-        DOM.floatingBar.classList.add("faded");
-        clearTimeout(AppState.focusTimer);
-      }
-      document.addEventListener("mousemove", wakeFocusBar);
-      DOM.floatingBar.addEventListener("mouseenter", () => {
-        clearTimeout(AppState.focusTimer);
-        DOM.floatingBar.classList.remove("faded");
-      });
-      DOM.floatingBar.addEventListener("mouseleave", wakeFocusBar);
-
-      function toggleMenu() {
-        DOM.topMenu.classList.toggle("hidden");
-        if (DOM.topMenu.classList.contains("hidden")) {
-          DOM.floatingBar.classList.add("visible");
-          wakeFocusBar();
-        } else {
-          DOM.floatingBar.classList.remove("visible", "faded");
-          clearTimeout(AppState.focusTimer);
+            clearTimeout(AppState.focusTimer);
         }
-      }
-      function toggleSidebar() {
-        DOM.sidebar.classList.toggle("hidden");
-      }
-
-      document
-        .getElementById("theme-selector")
-        .addEventListener(
-          "change",
-          (e) => (document.body.className = e.target.value),
-        );
-
-      // ==========================================
-      // 3. CARREGAMENTO E RENDERIZAÇÃO PDF (TEXT LAYER)
-      // ==========================================
-      async function handleFile(file) {
-        if (!file || file.type !== "application/pdf")
-          return showToast(
-            "Por favor, selecione um arquivo PDF.",
-            "file-warning",
-          );
-
-        AppState.fileName = file.name;
-        AppState.fileKey = `dr2_${file.name}_${file.size}`;
-
-        DOM.fileTitle.textContent = file.name;
-        DOM.fileTitle.style.display = "block";
-        DOM.emptyState.style.display = "none";
-        DOM.bookContainer.style.display = "flex";
-        DOM.sidebar.style.display = "flex";
-
-        [
-          "btn-zoom-out",
-          "btn-zoom-in",
-          "btn-toggle-sidebar",
-          "btn-toggle-focus",
-          "theme-selector",
-          "btn-highlight",
-        ].forEach((id) => (document.getElementById(id).disabled = false));
-
-        AppState.zoomLevel = 1.0;
-        updateBodyMode();
-        DOM.topMenu.classList.remove("hidden");
-        DOM.floatingBar.classList.remove("visible");
-        DOM.loading.style.display = "flex";
-        document.getElementById("page-input").disabled = true;
-
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          AppState.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer })
-            .promise;
-
-          const savedPage = localStorage.getItem(AppState.fileKey + "_page");
-          AppState.pageNum = savedPage ? parseInt(savedPage, 10) : 1;
-          if (!isSinglePageMode() && AppState.pageNum % 2 === 0)
-            AppState.pageNum -= 1;
-
-          // Carregar dados salvos (Notas e Grifos)
-          AppState.notesData = JSON.parse(
-            localStorage.getItem(AppState.fileKey + "_anotacoes") || "{}",
-          );
-          AppState.highlightsData = JSON.parse(
-            localStorage.getItem(AppState.fileKey + "_highlights") || "{}",
-          );
-
-          DOM.notepad.disabled = false;
-          document.getElementById("page-input").disabled = false;
-          document.getElementById("total-pages").textContent =
-            AppState.pdfDoc.numPages;
-
-          await renderPages(AppState.pageNum);
-          showToast(
-            "Documento carregado e pronto para estudo!",
-            "check-circle-2",
-          );
-        } catch (error) {
-          console.error(error);
-          showToast("Erro ao processar PDF.", "alert-circle");
-          DOM.emptyState.style.display = "flex";
-          DOM.bookContainer.style.display = "none";
-        }
-        DOM.loading.style.display = "none";
-      }
-
-      document
-        .getElementById("file-input")
-        .addEventListener("change", (e) => handleFile(e.target.files[0]));
-
-      // Drag and Drop
-      const dragOverlay = document.getElementById("drag-overlay");
-      document.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dragOverlay.classList.add("active");
-      });
-      document.addEventListener("dragleave", (e) => {
-        if (e.clientX === 0 || e.clientY === 0)
-          dragOverlay.classList.remove("active");
-      });
-      document.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dragOverlay.classList.remove("active");
-        if (e.dataTransfer.files.length > 0)
-          handleFile(e.dataTransfer.files[0]);
-      });
-
-      function getScale(viewport, forceSingle) {
-        const containerWidth = DOM.bookContainer.clientWidth;
-        const containerHeight = DOM.bookContainer.clientHeight;
-        // Desconta padding
-        const widthTarget = forceSingle
-          ? containerWidth - 40
-          : containerWidth / 2 - 40;
-        const heightTarget = containerHeight - 40;
-
-        const scaleX = widthTarget / viewport.width;
-        const scaleY = heightTarget / viewport.height;
-        let baseScale = Math.min(scaleX, scaleY) * 0.98;
-
-        return baseScale * AppState.zoomLevel;
-      }
-
-      // Construtor da Página com Text Layer
-      async function buildPageWrapper(pageNum, forceSingle) {
-        const page = await AppState.pdfDoc.getPage(pageNum);
-        const scale = getScale(page.getViewport({ scale: 1 }), forceSingle);
-        const viewport = page.getViewport({ scale: scale });
-
-        const wrapper = document.createElement("div");
-        wrapper.className = "page-wrapper";
-        wrapper.style.width = `${viewport.width}px`;
-        wrapper.style.height = `${viewport.height}px`;
-        wrapper.dataset.page = pageNum;
-
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        wrapper.appendChild(canvas);
-
-        const highlightLayer = document.createElement("div");
-        highlightLayer.className = "highlight-layer";
-        wrapper.appendChild(highlightLayer);
-
-        const textLayer = document.createElement("div");
-        textLayer.className = "textLayer";
-        textLayer.style.width = `${viewport.width}px`;
-        textLayer.style.height = `${viewport.height}px`;
-        wrapper.appendChild(textLayer);
-
-        // Renderiza Visual
-        await page.render({
-          canvasContext: canvas.getContext("2d"),
-          viewport: viewport,
-        }).promise;
-
-        const textContent = await page.getTextContent();
-
-        if (pdfjsLib.Util && pdfjsLib.Util.transform) {
-          textContent.items.forEach((item) => {
-            const span = document.createElement("span");
-            span.textContent = item.str + (item.hasEOL ? "\n" : "");
-
-            const tx = pdfjsLib.Util.transform(
-              viewport.transform,
-              item.transform,
-            );
-            const fontHeight = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
-
-            span.style.left = `${tx[4]}px`;
-            // Subtrai 80% da altura da fonte para compensar a "linha de base" (baseline) do PDF
-            span.style.top = `${tx[5] - fontHeight * 0.8}px`;
-            span.style.fontSize = `${fontHeight}px`;
-            span.style.fontFamily = item.fontName;
-
-            // Define a largura exata para impedir que as palavras "escorreguem" horizontalmente
-            if (item.width > 0) {
-              span.style.width = `${item.width * viewport.scale}px`;
-            }
-
-            textLayer.appendChild(span);
-          });
-        }
-
-        drawHighlights(pageNum, highlightLayer);
-
-        textLayer.addEventListener("dblclick", (e) => {
-          const rect = textLayer.getBoundingClientRect();
-          // Pega a posição (X,Y) percentual do clique
-          const clickX = (e.clientX - rect.left) / rect.width;
-          const clickY = (e.clientY - rect.top) / rect.height;
-
-          const hData = AppState.highlightsData[pageNum] || [];
-
-          // Verifica se o clique ocorreu dentro de algum retângulo salvo
-          const clickedHighlight = hData.find(
-            (h) =>
-              clickX >= h.x &&
-              clickX <= h.x + h.width &&
-              clickY >= h.y &&
-              clickY <= h.y + h.height,
-          );
-
-          if (clickedHighlight) {
-            // Remove a seleção azul nativa do navegador
-            window.getSelection().removeAllRanges();
-            // Apaga o grupo inteiro de grifos daquele ID
-            removeHighlightGroup(
-              pageNum,
-              clickedHighlight.id,
-              clickedHighlight,
-              highlightLayer,
-            );
-          }
+        document.addEventListener("mousemove", wakeFocusBar);
+        DOM.floatingBar.addEventListener("mouseenter", () => {
+            clearTimeout(AppState.focusTimer);
+            DOM.floatingBar.classList.remove("faded");
         });
-
-        // NOVO: Detecção de Duplo Toque (Mobile/Tablet) para apagar grifos
-        let lastTap = 0;
-        textLayer.addEventListener("touchend", (e) => {
-          const currentTime = new Date().getTime();
-          const tapLength = currentTime - lastTap;
-
-          // Se tocou 2x em menos de 400ms com apenas 1 dedo
-          if (
-            tapLength < 400 &&
-            tapLength > 0 &&
-            e.changedTouches.length === 1
-          ) {
-            const rect = textLayer.getBoundingClientRect();
-            const touch = e.changedTouches[0];
-            const clickX = (touch.clientX - rect.left) / rect.width;
-            const clickY = (touch.clientY - rect.top) / rect.height;
-
-            const hData = AppState.highlightsData[pageNum] || [];
-            const clickedHighlight = hData.find(
-              (h) =>
-                clickX >= h.x &&
-                clickX <= h.x + h.width &&
-                clickY >= h.y &&
-                clickY <= h.y + h.height,
-            );
-
-            if (clickedHighlight) {
-              window.getSelection().removeAllRanges();
-              removeHighlightGroup(
-                pageNum,
-                clickedHighlight.id,
-                clickedHighlight,
-                highlightLayer,
-              );
-              e.preventDefault(); // Evita o zoom nativo indesejado do celular
-            }
-          }
-          lastTap = currentTime;
-        });
-
-        return wrapper;
-      }
-
-      async function renderPages(num) {
-        if (!AppState.pdfDoc) return;
-        AppState.isRendering = true;
-        localStorage.setItem(AppState.fileKey + "_page", num);
-
-        DOM.notepad.value = AppState.notesData[num] || "";
-        updateGlobalView();
-
-        document.getElementById("page-input").value = num;
-        document.getElementById("btn-prev").disabled = num <= 1;
-
-        const singlePage = isSinglePageMode();
-        DOM.pdfViewer.innerHTML = ""; // Limpa view antiga
-
-        if (AppState.zoomLevel > 1.0) {
-          DOM.bookContainer.scrollTop = 0;
-          DOM.bookContainer.scrollLeft = 0;
-        }
-
-        let indicatorText = `${num}`;
-
-        if (singlePage) {
-          document.getElementById("btn-next").disabled =
-            num >= AppState.pdfDoc.numPages;
-          const wrapper = await buildPageWrapper(num, true);
-          DOM.pdfViewer.appendChild(wrapper);
-        } else {
-          document.getElementById("btn-next").disabled =
-            num >= AppState.pdfDoc.numPages - 1;
-          DOM.pdfViewer.appendChild(await buildPageWrapper(num, false));
-          if (num + 1 <= AppState.pdfDoc.numPages) {
-            DOM.pdfViewer.appendChild(await buildPageWrapper(num + 1, false));
-            indicatorText += ` & ${num + 1}`;
-          }
-        }
-
-        DOM.indicator.textContent = `Pág. ${indicatorText} / ${AppState.pdfDoc.numPages}`;
-        DOM.indicator.style.opacity = "1";
-        setTimeout(() => {
-          if (AppState.zoomLevel <= 1.0) DOM.indicator.style.opacity = "0";
-        }, 2000);
-        AppState.isRendering = false;
-      }
-
-      // ==========================================
-      // 4. SISTEMA DE GRIFO E WORKFLOW ACADÊMICO
-      // ==========================================
-      function addHighlight() {
-        const selection = window.getSelection();
-        if (selection.isCollapsed || !selection.toString().trim()) {
-          return showToast(
-            "Selecione um texto antes de grifar.",
-            "mouse-pointer-click",
-          );
-        }
-
-        const range = selection.getRangeAt(0);
-        const rects = range.getClientRects();
-        const textExtracted = selection
-          .toString()
-          .replace(/[\r\n]+/g, " ")
-          .trim();
-
-        let container = range.commonAncestorContainer;
-        if (container.nodeType === 3) container = container.parentNode;
-        const wrapper = container.closest(".page-wrapper");
-
-        if (!wrapper) return;
-
-        // CORREÇÃO: Separando a página visual (amarelo) da página lógica (texto)
-        const highlightPageNum = parseInt(wrapper.dataset.page); // Onde o grifo é desenhado
-        const activeNotePage = AppState.pageNum; // A página "mestra" aberta no Caderno
-
-        const wrapperRect = wrapper.getBoundingClientRect();
-
-        if (!AppState.highlightsData[highlightPageNum])
-          AppState.highlightsData[highlightPageNum] = [];
-
-        // NOVO: Verificação de "Duplo Grifo" (Colisão)
-        // NOVO: Verificação de "Duplo Grifo" (Checagem pelo Centro da Linha)
-        let isAlreadyHighlighted = false;
-        const hData = AppState.highlightsData[highlightPageNum];
-
-        for (let i = 0; i < rects.length; i++) {
-          const r = rects[i];
-
-          // Calculamos o PONTO CENTRAL (X e Y) da linha que você acabou de selecionar
-          const centerX =
-            (r.left - wrapperRect.left + r.width / 2) / wrapperRect.width;
-          const centerY =
-            (r.top - wrapperRect.top + r.height / 2) / wrapperRect.height;
-
-          // Verifica se o centro da nova seleção cai dentro de algum retângulo amarelo já existente
-          isAlreadyHighlighted = hData.some(
-            (existing) =>
-              centerX >= existing.x &&
-              centerX <= existing.x + existing.width &&
-              centerY >= existing.y &&
-              centerY <= existing.y + existing.height,
-          );
-
-          if (isAlreadyHighlighted) break;
-        }
-
-        if (isAlreadyHighlighted) {
-          selection.removeAllRanges();
-          return showToast("Este trecho já foi grifado.", "alert-circle");
-        }
-
-        // Se passou no teste, segue a rotina normal de salvar
-        const highlightId = Date.now().toString();
-        const filteredRects = [];
-
-        for (let i = 0; i < rects.length; i++) {
-          const r = rects[i];
-
-          // Converte para percentual
-          const x = (r.left - wrapperRect.left) / wrapperRect.width;
-          const y = (r.top - wrapperRect.top) / wrapperRect.height;
-          const width = r.width / wrapperRect.width;
-          const height = r.height / wrapperRect.height;
-
-          // Verifica se já existe um retângulo praticamente idêntico (Filtro Anti-Duplicação)
-          const isDuplicate = filteredRects.some(
-            (existing) =>
-              Math.abs(existing.x - x) < 0.005 &&
-              Math.abs(existing.y - y) < 0.005,
-          );
-
-          // Só salva se não for cópia e se não for um retângulo vazio invisível
-          if (!isDuplicate && width > 0 && height > 0) {
-            filteredRects.push({ id: highlightId, x, y, width, height });
-          }
-        }
-
-        // Joga os retângulos limpos no sistema
-        AppState.highlightsData[highlightPageNum].push(...filteredRects);
-
-        localStorage.setItem(
-          AppState.fileKey + "_highlights",
-          JSON.stringify(AppState.highlightsData),
-        );
-
-        // O texto extraído agora vai sempre para a aba ativa do caderno, evitando perdas
-        const currentNotes = AppState.notesData[activeNotePage] || "";
-        const prefix = currentNotes ? currentNotes + "\n\n" : "";
-        AppState.notesData[activeNotePage] = prefix + `> "${textExtracted}"`;
-        localStorage.setItem(
-          AppState.fileKey + "_anotacoes",
-          JSON.stringify(AppState.notesData),
-        );
-
-        drawHighlights(
-          highlightPageNum,
-          wrapper.querySelector(".highlight-layer"),
-        );
-        DOM.notepad.value = AppState.notesData[activeNotePage];
-        updateGlobalView();
-
-        selection.removeAllRanges();
-        showToast("Fichado no caderno!", "book-marked");
-      }
-
-      function drawHighlights(pageNum, layerNode) {
-        layerNode.innerHTML = "";
-        const hData = AppState.highlightsData[pageNum] || [];
-
-        hData.forEach((h) => {
-          const mark = document.createElement("div");
-          mark.className = "highlight-rect";
-          mark.style.left = `${h.x * 100}%`;
-          mark.style.top = `${h.y * 100}%`;
-          mark.style.width = `${h.width * 100}%`;
-          mark.style.height = `${h.height * 100}%`;
-          mark.title = "Duplo clique para remover";
-
-          layerNode.appendChild(mark);
-        });
-      }
-
-      function removeHighlightGroup(pageNum, id, rectObj, layerNode) {
-        if (id) {
-          // Remove todas as linhas (retângulos) que pertencem ao mesmo ID
-          AppState.highlightsData[pageNum] = AppState.highlightsData[
-            pageNum
-          ].filter((h) => h.id !== id);
-        } else {
-          // Fallback de segurança caso você clique em um grifo antigo (sem ID salvo)
-          const index = AppState.highlightsData[pageNum].indexOf(rectObj);
-          if (index > -1) AppState.highlightsData[pageNum].splice(index, 1);
-        }
-
-        // Salva o novo estado e redesenha a página
-        localStorage.setItem(
-          AppState.fileKey + "_highlights",
-          JSON.stringify(AppState.highlightsData),
-        );
-        drawHighlights(pageNum, layerNode);
-
-        // Substituí o ícone padrão pelo ícone de "borracha" do Lucide
-        showToast("Grifo apagado.", "eraser");
-      }
-
-      // ==========================================
-      // 5. BLOCO DE NOTAS / FICHAMENTO
-      // ==========================================
-      let noteSaveTimeout;
-      DOM.notepad.addEventListener("input", () => {
-        if (!AppState.fileKey) return;
-        clearTimeout(noteSaveTimeout);
-        AppState.notesData[AppState.pageNum] = DOM.notepad.value;
-        noteSaveTimeout = setTimeout(
-          () =>
-            localStorage.setItem(
-              AppState.fileKey + "_anotacoes",
-              JSON.stringify(AppState.notesData),
-            ),
-          800,
-        );
-      });
-
-      function updateGlobalView() {
-        if (!AppState.pdfDoc) return;
-        let compiled = "";
-        let hasNotes = false;
-        const pages = Object.keys(AppState.notesData)
-          .map(Number)
-          .sort((a, b) => a - b);
-
-        for (let p of pages) {
-          if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
-            hasNotes = true;
-            compiled += `[ Página ${p} ]\n${AppState.notesData[p].trim()}\n\n`;
-          }
-        }
-        DOM.globalView.textContent = hasNotes
-          ? compiled.trim()
-          : "Nenhum fichamento gerado ainda.";
-      }
-
-      function copyGlobalNotes() {
-        updateGlobalView();
-        if (DOM.globalView.textContent.includes("Nenhum fichamento")) return;
-        navigator.clipboard
-          .writeText(DOM.globalView.textContent)
-          .then(() => showToast("Fichamento copiado!", "copy-check"));
-      }
-
-      function downloadNotes() {
-        if (!AppState.pdfDoc) return;
-
-        const pages = Object.keys(AppState.notesData)
-          .map(Number)
-          .sort((a, b) => a - b);
-        let hasNotes = false;
-
-        // Cabeçalho Bonito do Documento
-        let markdown = `# 📖 Fichamento de Leitura\n\n`;
-        markdown += `**Documento:** \`${AppState.fileName}\`\n`;
-        markdown += `**Data da Exportação:** ${new Date().toLocaleDateString("pt-BR")}\n\n`;
-        markdown += `---\n\n`;
-
-        // Estrutura das Páginas
-        for (let p of pages) {
-          if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
-            hasNotes = true;
-            markdown += `### 📄 Página ${p}\n\n`;
-            markdown += `${AppState.notesData[p].trim()}\n\n`;
-            markdown += `---\n\n`;
-          }
-        }
-
-        if (!hasNotes)
-          return showToast("Não há notas para baixar", "file-warning");
-
-        // Gera o arquivo Markdown
-        const blob = new Blob([markdown], {
-          type: "text/markdown;charset=utf-8",
-        });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `Fichamento_${AppState.fileName.split(".")[0]}.md`;
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        showToast("Fichamento baixado com sucesso!", "download-cloud");
-      }
-
-      // ==========================================
-      // 6. NAVEGAÇÃO E ZOOM
-      // ==========================================
-      function changeZoom(delta) {
-        const wasSingle = isSinglePageMode();
-        AppState.zoomLevel = Math.max(
-          1.0,
-          Math.min(4.0, AppState.zoomLevel + delta),
-        );
-        updateBodyMode();
-
-        if (AppState.zoomLevel > 1.0) {
-          DOM.topMenu.classList.add("hidden");
-          DOM.floatingBar.classList.add("faded");
-          DOM.sidebar.classList.add("hidden");
-        } else {
-          DOM.floatingBar.classList.add("visible");
-          wakeFocusBar();
-        }
-
-        if (wasSingle && !isSinglePageMode() && AppState.pageNum % 2 === 0)
-          AppState.pageNum -= 1;
-        renderPages(AppState.pageNum);
-      }
-
-      function onNextPage() {
-        if (!AppState.pdfDoc || AppState.isRendering) return;
-        const single = isSinglePageMode();
-        if (AppState.pageNum >= AppState.pdfDoc.numPages - (single ? 0 : 1))
-          return;
-
-        AppState.isRendering = true;
-        if (AppState.zoomLevel <= 1.0) {
-          const pages = DOM.pdfViewer.children;
-          // No modo duplo, anima a página da direita. No modo simples, anima a única página.
-          const target = single
-            ? pages[0]
-            : pages.length > 1
-              ? pages[1]
-              : pages[0];
-          if (target) target.classList.add("flip-next");
-
-          setTimeout(() => {
-            AppState.isRendering = false;
-            AppState.pageNum += single ? 1 : 2;
-            renderPages(AppState.pageNum);
-          }, 400);
-        } else {
-          AppState.pageNum += single ? 1 : 2;
-          renderPages(AppState.pageNum);
-        }
-      }
-
-      function onPrevPage() {
-        if (AppState.pageNum <= 1 || AppState.isRendering) return;
-        const single = isSinglePageMode();
-
-        AppState.isRendering = true;
-        if (AppState.zoomLevel <= 1.0) {
-          const pages = DOM.pdfViewer.children;
-          // Anima sempre a página da esquerda (ou a única) para trás
-          const target = pages[0];
-          if (target) target.classList.add("flip-prev");
-
-          setTimeout(() => {
-            AppState.isRendering = false;
-            AppState.pageNum -= single ? 1 : 2;
-            if (AppState.pageNum < 1) AppState.pageNum = 1;
-            renderPages(AppState.pageNum);
-          }, 400);
-        } else {
-          AppState.pageNum -= single ? 1 : 2;
-          if (AppState.pageNum < 1) AppState.pageNum = 1;
-          renderPages(AppState.pageNum);
-        }
-      }
-
-      document.getElementById("page-input").addEventListener("change", (e) => {
-        if (!AppState.pdfDoc || AppState.isRendering) return;
-        let tp = parseInt(e.target.value, 10);
-        if (isNaN(tp) || tp < 1) tp = 1;
-        if (tp > AppState.pdfDoc.numPages) tp = AppState.pdfDoc.numPages;
-        if (!isSinglePageMode() && tp % 2 === 0) tp -= 1;
-        renderPages((AppState.pageNum = tp));
-      });
-
-      // Eventos de Teclado
-      document.addEventListener("keydown", (e) => {
-        if (e.ctrlKey || e.metaKey) {
-          if (["+", "=", "-"].includes(e.key)) {
-            e.preventDefault();
-            changeZoom(e.key === "-" ? -0.25 : 0.25);
-            return;
-          }
-        }
-        if (
-          !AppState.pdfDoc ||
-          ["TEXTAREA", "INPUT"].includes(document.activeElement.tagName)
-        )
-          return;
-
-        if (e.key === "ArrowLeft") onPrevPage();
-        if (e.key === "ArrowRight") onNextPage();
-
-        // Setas Cima e Baixo para os Menus
-        const isAtTop = DOM.bookContainer.scrollTop <= 2;
-        const isAtBottom =
-          DOM.bookContainer.scrollTop + DOM.bookContainer.clientHeight >=
-          DOM.bookContainer.scrollHeight - 2;
-
-        if (e.key === "ArrowUp" && AppState.zoomLevel <= 1.0 && isAtTop) {
-          if (DOM.topMenu.classList.contains("hidden")) {
-            if (DOM.floatingBar.classList.contains("faded")) toggleMenu();
-            else hideFocusBar();
-          }
-        }
-        if (e.key === "ArrowDown" && AppState.zoomLevel <= 1.0 && isAtBottom) {
-          if (DOM.topMenu.classList.contains("hidden")) wakeFocusBar();
-          else toggleMenu();
-        }
-      });
-
-      // Eventos de Scroll de Roda (Mouse)
-      let zoomWheelCD;
-      DOM.bookContainer.addEventListener(
-        "wheel",
-        (e) => {
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            if (zoomWheelCD) return;
-            zoomWheelCD = setTimeout(() => {
-              zoomWheelCD = null;
-            }, 100);
-            changeZoom(e.deltaY < 0 ? 0.25 : -0.25);
-            return;
-          }
-          if (!AppState.pdfDoc || AppState.zoomLevel > 1.0) return;
-          e.preventDefault();
-          if (!window.scrollCooldown) {
-            window.scrollCooldown = setTimeout(() => {
-              window.scrollCooldown = null;
-            }, 600);
-            if (e.deltaY > 0) onNextPage();
-            else if (e.deltaY < 0) onPrevPage();
-          }
-        },
-        { passive: false },
-      );
-
-      // ==========================================
-      // 7. GESTOS MOBILE (SWIPE)
-      // ==========================================
-      let touchStartX = 0;
-      let touchStartY = 0;
-
-      DOM.bookContainer.addEventListener(
-        "touchstart",
-        (e) => {
-          if (e.touches.length === 1) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-          }
-        },
-        { passive: true },
-      );
-
-      DOM.bookContainer.addEventListener(
-        "touchend",
-        (e) => {
-          // Só executa se for 1 dedo e se o clique NÃO for na barra lateral
-          if (e.changedTouches.length === 1 && !e.target.closest("#sidebar")) {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            const diffX = touchStartX - touchEndX;
-            const diffY = touchStartY - touchEndY;
-
-            // Bloqueio de Segurança: Se o usuário estiver selecionando texto, não vira a página
-            if (window.getSelection().toString().trim().length > 0) return;
-
-            // Se o movimento horizontal for maior que 60 pixels e maior que o vertical
-            if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
-              if (diffX > 0)
-                onNextPage(); // Deslizou para a esquerda
-              else onPrevPage(); // Deslizou para a direita
-            }
-          }
-        },
-        { passive: true },
-      );
-
-      window.addEventListener("resize", () => {
-        if (AppState.pdfDoc && !AppState.isRendering) {
-          updateBodyMode();
-          if (!isSinglePageMode() && AppState.pageNum % 2 === 0)
-            AppState.pageNum -= 1;
-          renderPages(AppState.pageNum);
-        }
-      });
-
-      // ==========================================
-      // 8. AUXILIAR POMODORO
-      // ==========================================
-      let pomodoroTotal = 20 * 60; // Padrão de 20 minutos
-      let pomodoroRemaining = pomodoroTotal;
-      let pomodoroTimer = null;
-      let isPomodoroRunning = false;
-
-      function updatePomodoroUI() {
-        const mins = Math.floor(pomodoroRemaining / 60)
-          .toString()
-          .padStart(2, "0");
-        const secs = (pomodoroRemaining % 60).toString().padStart(2, "0");
-        document.getElementById("pomodoro-text").textContent =
-          `${mins}:${secs}`;
-
-        // Calcula o ângulo do ponteiro e da "torta"
-        const fraction = pomodoroRemaining / pomodoroTotal;
-        const deg = (1 - fraction) * 360;
-
-        const hand = document.getElementById("clock-hand");
-        const face = document.getElementById("clock-face");
-
-        hand.style.transform = `translateX(-50%) rotate(${deg}deg)`;
-
-        // Trocamos a cor do preenchimento aqui também para o vermelho pastel
-        face.style.background = `conic-gradient(transparent ${deg}deg, #ff8787 ${deg}deg)`;
-      }
-
-      function togglePomodoro() {
-        const controls = document.getElementById("pomodoro-controls");
-        if (isPomodoroRunning) {
-          clearInterval(pomodoroTimer);
-          isPomodoroRunning = false;
-          document.getElementById("pomodoro-text").style.opacity = "0.5";
-          controls.classList.remove("faded"); // Volta os mini botões
-          showToast("Pomodoro pausado", "pause");
-        } else {
-          isPomodoroRunning = true;
-          document.getElementById("pomodoro-text").style.opacity = "1";
-          controls.classList.add("faded"); // Esconde os mini botões
-          showToast("Timer iniciado!", "play");
-
-          pomodoroTimer = setInterval(() => {
-            if (pomodoroRemaining > 0) {
-              pomodoroRemaining--;
-              updatePomodoroUI();
+        DOM.floatingBar.addEventListener("mouseleave", wakeFocusBar);
+
+        function toggleMenu() {
+            DOM.topMenu.classList.toggle("hidden");
+            if (DOM.topMenu.classList.contains("hidden")) {
+                DOM.floatingBar.classList.add("visible");
+                wakeFocusBar();
             } else {
-              clearInterval(pomodoroTimer);
-              isPomodoroRunning = false;
-              document
-                .getElementById("pomodoro-alert")
-                .classList.remove("hidden");
-              controls.classList.remove("faded"); // Volta os botões se o alarme tocar
-              lucide.createIcons({
-                root: document.getElementById("pomodoro-alert"),
-              });
+                DOM.floatingBar.classList.remove("visible", "faded");
+                clearTimeout(AppState.focusTimer);
             }
-          }, 1000);
         }
-      }
-
-      function snoozePomodoro() {
-        // Adiciona 5 minutos na conta e retoma o relógio
-        pomodoroRemaining += 5 * 60;
-        pomodoroTotal = Math.max(pomodoroTotal, pomodoroRemaining); // Ajusta o total para o gráfico não quebrar
-        document.getElementById("pomodoro-alert").classList.add("hidden");
-        togglePomodoro();
-        showToast("+5 Minutos adicionados", "clock");
-      }
-
-      function resetPomodoro(minutes) {
-        pomodoroTotal = minutes * 60;
-        pomodoroRemaining = pomodoroTotal;
-        updatePomodoroUI();
-        document.getElementById("pomodoro-alert").classList.add("hidden");
-        if (isPomodoroRunning) {
-          clearInterval(pomodoroTimer);
-          isPomodoroRunning = false;
-          document.getElementById("pomodoro-text").style.opacity = "0.5";
-        }
-      }
-
-      // NOVO: Função para os mini botões de +5 e -5
-      function adjustPomodoro(minutes) {
-        if (isPomodoroRunning) return; // Bloqueia ajustes se estiver rodando
-
-        pomodoroRemaining += minutes * 60;
-        if (pomodoroRemaining < 60) pomodoroRemaining = 60; // Mínimo de 1 minuto
-
-        pomodoroTotal = pomodoroRemaining; // Ajusta a proporção da "torta"
-        updatePomodoroUI();
-      }
-
-      // Inicializa a UI do relógio ao carregar a página
-      updatePomodoroUI();
-      document.getElementById("pomodoro-text").style.opacity = "0.5"; // Começa opaco (pausado)
-
-      // ==========================================
-      // 9. SISTEMA DE BACKUP (IMPORT / EXPORT)
-      // ==========================================
-
-      function exportBackup() {
-        const backupData = {};
-        let hasData = false;
-
-        // Varre o armazenamento do navegador procurando chaves do DiveReader
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key.startsWith("dr2_")) {
-            backupData[key] = localStorage.getItem(key);
-            hasData = true;
-          }
+        function toggleSidebar() {
+            DOM.sidebar.classList.toggle("hidden");
         }
 
-        if (!hasData)
-          return showToast(
-            "Não há dados de estudo para exportar.",
-            "alert-circle",
-          );
+        document
+            .getElementById("theme-selector")
+            .addEventListener(
+                "change",
+                (e) => (document.body.className = e.target.value),
+            );
 
-        // Cria o arquivo .json e força o download
-        const blob = new Blob([JSON.stringify(backupData, null, 2)], {
-          type: "application/json",
-        });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `DiveReader_Backup_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.json`;
+        // ==========================================
+        // 3. CARREGAMENTO E RENDERIZAÇÃO PDF (TEXT LAYER)
+        // ==========================================
+        async function handleFile(file) {
+            if (!file || file.type !== "application/pdf")
+                return showToast(
+                    "Por favor, selecione um arquivo PDF.",
+                    "file-warning",
+                );
 
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+            AppState.fileName = file.name;
+            AppState.fileKey = `dr2_${file.name}_${file.size}`;
 
-        showToast("Backup exportado com sucesso!", "save");
-      }
+            DOM.fileTitle.textContent = file.name;
+            DOM.fileTitle.style.display = "block";
+            DOM.emptyState.style.display = "none";
+            DOM.bookContainer.style.display = "flex";
+            DOM.sidebar.style.display = "flex";
 
-      document
-        .getElementById("import-backup")
-        .addEventListener("change", (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
+            [
+                "btn-zoom-out",
+                "btn-zoom-in",
+                "btn-toggle-sidebar",
+                "btn-toggle-focus",
+                "theme-selector",
+                "btn-highlight",
+            ].forEach((id) => (document.getElementById(id).disabled = false));
 
-          const reader = new FileReader();
-          reader.onload = (event) => {
+            AppState.zoomLevel = 1.0;
+            updateBodyMode();
+            DOM.topMenu.classList.remove("hidden");
+            document.getElementById('color-picker').style.display = 'flex';
+            DOM.floatingBar.classList.remove("visible");
+            DOM.loading.style.display = "flex";
+            document.getElementById("page-input").disabled = true;
+
             try {
-              const data = JSON.parse(event.target.result);
-              let importedCount = 0;
+                const arrayBuffer = await file.arrayBuffer();
+                AppState.pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer })
+                    .promise;
 
-              // Injeta os dados de volta no navegador
-              for (const key in data) {
-                if (key.startsWith("dr2_")) {
-                  localStorage.setItem(key, data[key]);
-                  importedCount++;
-                }
-              }
+                const savedPage = localStorage.getItem(AppState.fileKey + "_page");
+                AppState.pageNum = savedPage ? parseInt(savedPage, 10) : 1;
+                if (!isSinglePageMode() && AppState.pageNum % 2 === 0)
+                    AppState.pageNum -= 1;
 
-              if (importedCount > 0) {
-                showToast(
-                  "Backup restaurado! Dados carregados.",
-                  "check-circle-2",
+                // Carregar dados salvos (Notas e Grifos)
+                AppState.notesData = JSON.parse(
+                    localStorage.getItem(AppState.fileKey + "_anotacoes") || "{}",
+                );
+                AppState.highlightsData = JSON.parse(
+                    localStorage.getItem(AppState.fileKey + "_highlights") || "{}",
                 );
 
-                // Se houver um PDF aberto no momento, recarrega a página para puxar os grifos novos
-                if (AppState.pdfDoc && AppState.fileKey) {
-                  AppState.notesData = JSON.parse(
-                    localStorage.getItem(AppState.fileKey + "_anotacoes") ||
-                      "{}",
-                  );
-                  AppState.highlightsData = JSON.parse(
-                    localStorage.getItem(AppState.fileKey + "_highlights") ||
-                      "{}",
-                  );
-                  renderPages(AppState.pageNum);
-                }
-              } else {
+                DOM.notepad.disabled = false;
+                document.getElementById("page-input").disabled = false;
+                document.getElementById("total-pages").textContent =
+                    AppState.pdfDoc.numPages;
+
+                await renderPages(AppState.pageNum);
                 showToast(
-                  "O arquivo não contém dados do DiveReader.",
-                  "x-circle",
+                    "Documento carregado e pronto para estudo!",
+                    "check-circle-2",
                 );
-              }
             } catch (error) {
-              showToast(
-                "Arquivo de backup inválido ou corrompido.",
-                "alert-triangle",
-              );
+                console.error(error);
+                showToast("Erro ao processar PDF.", "alert-circle");
+                DOM.emptyState.style.display = "flex";
+                DOM.bookContainer.style.display = "none";
             }
-          };
-          reader.readAsText(file);
-          e.target.value = ""; // Reseta o input para permitir importar o mesmo arquivo de novo se necessário
+            DOM.loading.style.display = "none";
+        }
+
+        document
+            .getElementById("file-input")
+            .addEventListener("change", (e) => handleFile(e.target.files[0]));
+
+        // Drag and Drop
+        const dragOverlay = document.getElementById("drag-overlay");
+        document.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dragOverlay.classList.add("active");
         });
+        document.addEventListener("dragleave", (e) => {
+            if (e.clientX === 0 || e.clientY === 0)
+                dragOverlay.classList.remove("active");
+        });
+        document.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dragOverlay.classList.remove("active");
+            if (e.dataTransfer.files.length > 0)
+                handleFile(e.dataTransfer.files[0]);
+        });
+
+        function getScale(viewport, forceSingle) {
+            const containerWidth = DOM.bookContainer.clientWidth;
+            const containerHeight = DOM.bookContainer.clientHeight;
+            // Desconta padding
+            const widthTarget = forceSingle
+                ? containerWidth - 40
+                : containerWidth / 2 - 40;
+            const heightTarget = containerHeight - 40;
+
+            const scaleX = widthTarget / viewport.width;
+            const scaleY = heightTarget / viewport.height;
+            let baseScale = Math.min(scaleX, scaleY) * 0.98;
+
+            return baseScale * AppState.zoomLevel;
+        }
+
+        // Construtor da Página com Text Layer
+        async function buildPageWrapper(pageNum, forceSingle) {
+            const page = await AppState.pdfDoc.getPage(pageNum);
+            const scale = getScale(page.getViewport({ scale: 1 }), forceSingle);
+            const viewport = page.getViewport({ scale: scale });
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "page-wrapper";
+            wrapper.style.width = `${viewport.width}px`;
+            wrapper.style.height = `${viewport.height}px`;
+            wrapper.dataset.page = pageNum;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            wrapper.appendChild(canvas);
+
+            const highlightLayer = document.createElement("div");
+            highlightLayer.className = "highlight-layer";
+            wrapper.appendChild(highlightLayer);
+
+            const textLayer = document.createElement("div");
+            textLayer.className = "textLayer";
+            textLayer.style.width = `${viewport.width}px`;
+            textLayer.style.height = `${viewport.height}px`;
+            wrapper.appendChild(textLayer);
+
+            // Renderiza Visual
+            await page.render({
+                canvasContext: canvas.getContext("2d"),
+                viewport: viewport,
+            }).promise;
+
+            const textContent = await page.getTextContent();
+
+            if (pdfjsLib.Util && pdfjsLib.Util.transform) {
+                textContent.items.forEach((item) => {
+                    const span = document.createElement("span");
+                    // Adiciona um espaço extra no final de cada bloco para evitar que o navegador "engula" a última letra
+                    span.textContent = item.str + (item.hasEOL ? "\n" : " ");
+
+                    const tx = pdfjsLib.Util.transform(
+                        viewport.transform,
+                        item.transform,
+                    );
+                    const fontHeight = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
+
+                    span.style.left = `${tx[4]}px`;
+                    // Subtrai 80% da altura da fonte para compensar a "linha de base" (baseline) do PDF
+                    span.style.top = `${tx[5] - fontHeight * 0.8}px`;
+                    span.style.fontSize = `${fontHeight}px`;
+                    span.style.fontFamily = item.fontName;
+
+                    // Define a largura exata para impedir que as palavras "escorreguem" horizontalmente
+                    if (item.width > 0) {
+                        span.style.width = `${(item.width * viewport.scale) + 4}px`;
+                    }
+
+                    textLayer.appendChild(span);
+                });
+            }
+
+            drawHighlights(pageNum, highlightLayer);
+
+            textLayer.addEventListener("dblclick", (e) => {
+                const rect = textLayer.getBoundingClientRect();
+                // Pega a posição (X,Y) percentual do clique
+                const clickX = (e.clientX - rect.left) / rect.width;
+                const clickY = (e.clientY - rect.top) / rect.height;
+
+                const hData = AppState.highlightsData[pageNum] || [];
+
+                // Verifica se o clique ocorreu dentro de algum retângulo salvo
+                const clickedHighlight = hData.find(
+                    (h) =>
+                        clickX >= h.x &&
+                        clickX <= h.x + h.width &&
+                        clickY >= h.y &&
+                        clickY <= h.y + h.height,
+                );
+
+                if (clickedHighlight) {
+                    // Remove a seleção azul nativa do navegador
+                    window.getSelection().removeAllRanges();
+                    // Apaga o grupo inteiro de grifos daquele ID
+                    removeHighlightGroup(
+                        pageNum,
+                        clickedHighlight.id,
+                        clickedHighlight,
+                        highlightLayer,
+                    );
+                }
+            });
+
+            // NOVO: Detecção de Duplo Toque (Mobile/Tablet) para apagar grifos
+            let lastTap = 0;
+            textLayer.addEventListener("touchend", (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+
+                // Se tocou 2x em menos de 400ms com apenas 1 dedo
+                if (
+                    tapLength < 400 &&
+                    tapLength > 0 &&
+                    e.changedTouches.length === 1
+                ) {
+                    const rect = textLayer.getBoundingClientRect();
+                    const touch = e.changedTouches[0];
+                    const clickX = (touch.clientX - rect.left) / rect.width;
+                    const clickY = (touch.clientY - rect.top) / rect.height;
+
+                    const hData = AppState.highlightsData[pageNum] || [];
+                    const clickedHighlight = hData.find(
+                        (h) =>
+                            clickX >= h.x &&
+                            clickX <= h.x + h.width &&
+                            clickY >= h.y &&
+                            clickY <= h.y + h.height,
+                    );
+
+                    if (clickedHighlight) {
+                        window.getSelection().removeAllRanges();
+                        removeHighlightGroup(
+                            pageNum,
+                            clickedHighlight.id,
+                            clickedHighlight,
+                            highlightLayer,
+                        );
+                        e.preventDefault(); // Evita o zoom nativo indesejado do celular
+                    }
+                }
+                lastTap = currentTime;
+            });
+
+            return wrapper;
+        }
+
+        async function renderPages(num) {
+            if (!AppState.pdfDoc) return;
+            AppState.isRendering = true;
+            localStorage.setItem(AppState.fileKey + "_page", num);
+
+            DOM.notepad.value = AppState.notesData[num] || "";
+            updateGlobalView();
+
+            document.getElementById("page-input").value = num;
+            document.getElementById("btn-prev").disabled = num <= 1;
+
+            const singlePage = isSinglePageMode();
+            DOM.pdfViewer.innerHTML = ""; // Limpa view antiga
+
+            if (AppState.zoomLevel > 1.0) {
+                DOM.bookContainer.scrollTop = 0;
+                DOM.bookContainer.scrollLeft = 0;
+            }
+
+            let indicatorText = `${num}`;
+
+            if (singlePage) {
+                document.getElementById("btn-next").disabled =
+                    num >= AppState.pdfDoc.numPages;
+                const wrapper = await buildPageWrapper(num, true);
+                DOM.pdfViewer.appendChild(wrapper);
+            } else {
+                document.getElementById("btn-next").disabled =
+                    num >= AppState.pdfDoc.numPages - 1;
+                DOM.pdfViewer.appendChild(await buildPageWrapper(num, false));
+                if (num + 1 <= AppState.pdfDoc.numPages) {
+                    DOM.pdfViewer.appendChild(await buildPageWrapper(num + 1, false));
+                    indicatorText += ` & ${num + 1}`;
+                }
+            }
+
+            DOM.indicator.textContent = `Pág. ${indicatorText} / ${AppState.pdfDoc.numPages}`;
+            const isSingle = isSinglePageMode();
+            let tabName = "Nesta Página";
+            if (!isSingle && num < AppState.pdfDoc.numPages) {
+                tabName = `Páginas ${num} e ${num + 1}`;
+            }
+            document.getElementById('tab-btn-page').textContent = tabName;
+            DOM.indicator.style.opacity = "1";
+            setTimeout(() => {
+                if (AppState.zoomLevel <= 1.0) DOM.indicator.style.opacity = "0";
+            }, 2000);
+            AppState.isRendering = false;
+        }
+
+        // ==========================================
+        // 4. SISTEMA DE GRIFO E WORKFLOW ACADÊMICO
+        // ==========================================
+        function addHighlight() {
+            const selection = window.getSelection();
+            if (selection.isCollapsed || !selection.toString().trim()) {
+                return showToast(
+                    "Selecione um texto antes de grifar.",
+                    "mouse-pointer-click",
+                );
+            }
+
+            const range = selection.getRangeAt(0);
+            const rects = range.getClientRects();
+            const textExtracted = selection
+                .toString()
+                .replace(/\s+/g, " ") // Agora limpa quebras de linha E duplos espaços gerados pelo PDF
+                .trim();
+
+            let container = range.commonAncestorContainer;
+            if (container.nodeType === 3) container = container.parentNode;
+            const wrapper = container.closest(".page-wrapper");
+
+            if (!wrapper) return;
+
+            // CORREÇÃO: Separando a página visual (amarelo) da página lógica (texto)
+            const highlightPageNum = parseInt(wrapper.dataset.page); // Onde o grifo é desenhado
+            const activeNotePage = AppState.pageNum; // A página "mestra" aberta no Caderno
+
+            const wrapperRect = wrapper.getBoundingClientRect();
+
+            if (!AppState.highlightsData[highlightPageNum])
+                AppState.highlightsData[highlightPageNum] = [];
+
+            // NOVO: Verificação de "Duplo Grifo" (Colisão)
+            // NOVO: Verificação de "Duplo Grifo" (Checagem pelo Centro da Linha)
+            let isAlreadyHighlighted = false;
+            const hData = AppState.highlightsData[highlightPageNum];
+
+            for (let i = 0; i < rects.length; i++) {
+                const r = rects[i];
+
+                // Calculamos o PONTO CENTRAL (X e Y) da linha que você acabou de selecionar
+                const centerX =
+                    (r.left - wrapperRect.left + r.width / 2) / wrapperRect.width;
+                const centerY =
+                    (r.top - wrapperRect.top + r.height / 2) / wrapperRect.height;
+
+                // Verifica se o centro da nova seleção cai dentro de algum retângulo amarelo já existente
+                isAlreadyHighlighted = hData.some(
+                    (existing) =>
+                        centerX >= existing.x &&
+                        centerX <= existing.x + existing.width &&
+                        centerY >= existing.y &&
+                        centerY <= existing.y + existing.height,
+                );
+
+                if (isAlreadyHighlighted) break;
+            }
+
+            if (isAlreadyHighlighted) {
+                selection.removeAllRanges();
+                return showToast("Este trecho já foi grifado.", "alert-circle");
+            }
+
+            // Se passou no teste, segue a rotina normal de salvar
+            const highlightId = Date.now().toString();
+            const filteredRects = [];
+
+            for (let i = 0; i < rects.length; i++) {
+                const r = rects[i];
+
+                // Converte para percentual
+                const x = (r.left - wrapperRect.left) / wrapperRect.width;
+                const y = (r.top - wrapperRect.top) / wrapperRect.height;
+                const width = r.width / wrapperRect.width;
+                const height = r.height / wrapperRect.height;
+
+                // Verifica se já existe um retângulo praticamente idêntico (Filtro Anti-Duplicação)
+                const isDuplicate = filteredRects.some(
+                    (existing) =>
+                        Math.abs(existing.x - x) < 0.005 &&
+                        Math.abs(existing.y - y) < 0.005,
+                );
+
+                // Só salva se não for cópia e se não for um retângulo vazio invisível
+                if (!isDuplicate && width > 0 && height > 0) {
+                    // Agora salva a cor junto com a coordenada!
+                    filteredRects.push({ id: highlightId, x, y, width, height, color: AppState.currentHighlightColor });
+                }
+            }
+
+            AppState.highlightsData[highlightPageNum].push(...filteredRects);
+            localStorage.setItem(AppState.fileKey + "_highlights", JSON.stringify(AppState.highlightsData));
+
+            const currentNotes = AppState.notesData[activeNotePage] || "";
+            const prefix = currentNotes ? currentNotes + "\n\n" : "";
+
+            // NOVO: Injeta a página exata da citação se estiver lendo em dupla
+            let exactPageTag = "";
+            if (!isSinglePageMode() && highlightPageNum !== activeNotePage) {
+                exactPageTag = `*(pág. ${highlightPageNum})* `;
+            } else if (!isSinglePageMode()) {
+                exactPageTag = `*(pág. ${activeNotePage})* `;
+            }
+
+            AppState.notesData[activeNotePage] = prefix + `> ${exactPageTag}"${textExtracted}"`;
+            localStorage.setItem(AppState.fileKey + "_anotacoes", JSON.stringify(AppState.notesData));
+
+            drawHighlights(highlightPageNum, wrapper.querySelector(".highlight-layer"));
+            DOM.notepad.value = AppState.notesData[activeNotePage];
+            updateGlobalView();
+
+            selection.removeAllRanges();
+            showToast("Fichado no caderno!", "book-marked");
+        }
+
+        function drawHighlights(pageNum, layerNode) {
+            layerNode.innerHTML = "";
+            const hData = AppState.highlightsData[pageNum] || [];
+
+            hData.forEach(h => {
+                const mark = document.createElement('div');
+                mark.className = 'highlight-rect';
+                mark.style.left = `${h.x * 100}%`;
+                mark.style.top = `${h.y * 100}%`;
+                mark.style.width = `${h.width * 100}%`;
+                mark.style.height = `${h.height * 100}%`;
+                // Puxa a cor salva ou usa o amarelo como fallback para grifos antigos
+                mark.style.backgroundColor = h.color || "var(--highlight-color)";
+                mark.title = "Duplo clique para remover";
+
+                layerNode.appendChild(mark);
+            });
+        }
+
+        function removeHighlightGroup(pageNum, id, rectObj, layerNode) {
+            if (id) {
+                // Remove todas as linhas (retângulos) que pertencem ao mesmo ID
+                AppState.highlightsData[pageNum] = AppState.highlightsData[
+                    pageNum
+                ].filter((h) => h.id !== id);
+            } else {
+                // Fallback de segurança caso você clique em um grifo antigo (sem ID salvo)
+                const index = AppState.highlightsData[pageNum].indexOf(rectObj);
+                if (index > -1) AppState.highlightsData[pageNum].splice(index, 1);
+            }
+
+            // Salva o novo estado e redesenha a página
+            localStorage.setItem(
+                AppState.fileKey + "_highlights",
+                JSON.stringify(AppState.highlightsData),
+            );
+            drawHighlights(pageNum, layerNode);
+
+            // Substituí o ícone padrão pelo ícone de "borracha" do Lucide
+            showToast("Grifo apagado.", "eraser");
+        }
+
+        // ==========================================
+        // 5. BLOCO DE NOTAS / FICHAMENTO
+        // ==========================================
+        let noteSaveTimeout;
+        DOM.notepad.addEventListener("input", () => {
+            if (!AppState.fileKey) return;
+            clearTimeout(noteSaveTimeout);
+            AppState.notesData[AppState.pageNum] = DOM.notepad.value;
+            noteSaveTimeout = setTimeout(
+                () =>
+                    localStorage.setItem(
+                        AppState.fileKey + "_anotacoes",
+                        JSON.stringify(AppState.notesData),
+                    ),
+                800,
+            );
+        });
+
+        function updateGlobalView() {
+            if (!AppState.pdfDoc) return;
+            let compiled = ""; let hasNotes = false;
+            const pages = Object.keys(AppState.notesData).map(Number).sort((a, b) => a - b);
+
+            for (let p of pages) {
+                if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
+                    hasNotes = true;
+
+                    // Inteligência de Agrupamento: Se a página for ímpar (mestra) e houver uma próxima, é um spread
+                    let title = `Página ${p}`;
+                    if (p % 2 !== 0 && p < AppState.pdfDoc.numPages) {
+                        title = `Páginas ${p} e ${p + 1}`;
+                    }
+
+                    compiled += `[ ${title} ]\n${AppState.notesData[p].trim()}\n\n`;
+                }
+            }
+            DOM.globalView.textContent = hasNotes ? compiled.trim() : "Nenhum fichamento gerado ainda.";
+        }
+
+        function downloadNotes() {
+            if (!AppState.pdfDoc) return;
+
+            const pages = Object.keys(AppState.notesData).map(Number).sort((a, b) => a - b);
+            let hasNotes = false;
+
+            let markdown = `# 📖 Fichamento de Leitura\n\n`;
+            markdown += `**Documento:** \`${AppState.fileName}\`\n`;
+            markdown += `**Data da Exportação:** ${new Date().toLocaleDateString('pt-BR')}\n\n`;
+            markdown += `---\n\n`;
+
+            for (let p of pages) {
+                if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
+                    hasNotes = true;
+
+                    // Aplica a mesma inteligência na exportação do Markdown
+                    let title = `Página ${p}`;
+                    if (p % 2 !== 0 && p < AppState.pdfDoc.numPages) {
+                        title = `Páginas ${p} e ${p + 1}`;
+                    }
+
+                    markdown += `### 📄 ${title}\n\n`;
+                    markdown += `${AppState.notesData[p].trim()}\n\n`;
+                    markdown += `---\n\n`;
+                }
+            }
+
+            if (!hasNotes) return showToast("Não há notas para baixar", "file-warning");
+
+            const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Fichamento_${AppState.fileName.split('.')[0]}.md`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            showToast("Fichamento baixado com sucesso!", "download-cloud");
+        }
+
+        function copyGlobalNotes() {
+            updateGlobalView();
+            if (DOM.globalView.textContent.includes("Nenhum fichamento")) return;
+            navigator.clipboard
+                .writeText(DOM.globalView.textContent)
+                .then(() => showToast("Fichamento copiado!", "copy-check"));
+        }
+
+        // ==========================================
+        // 6. NAVEGAÇÃO E ZOOM
+        // ==========================================
+        function changeZoom(delta) {
+            const wasSingle = isSinglePageMode();
+            AppState.zoomLevel = Math.max(
+                1.0,
+                Math.min(4.0, AppState.zoomLevel + delta),
+            );
+            updateBodyMode();
+
+            if (AppState.zoomLevel > 1.0) {
+                DOM.topMenu.classList.add("hidden");
+                DOM.floatingBar.classList.add("faded");
+                DOM.sidebar.classList.add("hidden");
+            } else {
+                DOM.floatingBar.classList.add("visible");
+                wakeFocusBar();
+            }
+
+            if (wasSingle && !isSinglePageMode() && AppState.pageNum % 2 === 0)
+                AppState.pageNum -= 1;
+            renderPages(AppState.pageNum);
+        }
+
+        function onNextPage() {
+            if (!AppState.pdfDoc || AppState.isRendering) return;
+            const single = isSinglePageMode();
+            if (AppState.pageNum >= AppState.pdfDoc.numPages - (single ? 0 : 1))
+                return;
+
+            AppState.isRendering = true;
+            if (AppState.zoomLevel <= 1.0) {
+                const pages = DOM.pdfViewer.children;
+                // No modo duplo, anima a página da direita. No modo simples, anima a única página.
+                const target = single
+                    ? pages[0]
+                    : pages.length > 1
+                        ? pages[1]
+                        : pages[0];
+                if (target) target.classList.add("flip-next");
+
+                setTimeout(() => {
+                    AppState.isRendering = false;
+                    AppState.pageNum += single ? 1 : 2;
+                    renderPages(AppState.pageNum);
+                }, 400);
+            } else {
+                AppState.pageNum += single ? 1 : 2;
+                renderPages(AppState.pageNum);
+            }
+        }
+
+        function onPrevPage() {
+            if (AppState.pageNum <= 1 || AppState.isRendering) return;
+            const single = isSinglePageMode();
+
+            AppState.isRendering = true;
+            if (AppState.zoomLevel <= 1.0) {
+                const pages = DOM.pdfViewer.children;
+                // Anima sempre a página da esquerda (ou a única) para trás
+                const target = pages[0];
+                if (target) target.classList.add("flip-prev");
+
+                setTimeout(() => {
+                    AppState.isRendering = false;
+                    AppState.pageNum -= single ? 1 : 2;
+                    if (AppState.pageNum < 1) AppState.pageNum = 1;
+                    renderPages(AppState.pageNum);
+                }, 400);
+            } else {
+                AppState.pageNum -= single ? 1 : 2;
+                if (AppState.pageNum < 1) AppState.pageNum = 1;
+                renderPages(AppState.pageNum);
+            }
+        }
+
+        document.getElementById("page-input").addEventListener("change", (e) => {
+            if (!AppState.pdfDoc || AppState.isRendering) return;
+            let tp = parseInt(e.target.value, 10);
+            if (isNaN(tp) || tp < 1) tp = 1;
+            if (tp > AppState.pdfDoc.numPages) tp = AppState.pdfDoc.numPages;
+            if (!isSinglePageMode() && tp % 2 === 0) tp -= 1;
+            renderPages((AppState.pageNum = tp));
+        });
+
+        // Eventos de Teclado
+        document.addEventListener("keydown", (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (["+", "=", "-"].includes(e.key)) {
+                    e.preventDefault();
+                    changeZoom(e.key === "-" ? -0.25 : 0.25);
+                    return;
+                }
+            }
+            if (
+                !AppState.pdfDoc ||
+                ["TEXTAREA", "INPUT"].includes(document.activeElement.tagName)
+            )
+                return;
+
+            if (e.key === "ArrowLeft") onPrevPage();
+            if (e.key === "ArrowRight") onNextPage();
+
+            // Setas Cima e Baixo para os Menus
+            const isAtTop = DOM.bookContainer.scrollTop <= 2;
+            const isAtBottom =
+                DOM.bookContainer.scrollTop + DOM.bookContainer.clientHeight >=
+                DOM.bookContainer.scrollHeight - 2;
+
+            if (e.key === "ArrowUp" && AppState.zoomLevel <= 1.0 && isAtTop) {
+                if (DOM.topMenu.classList.contains("hidden")) {
+                    if (DOM.floatingBar.classList.contains("faded")) toggleMenu();
+                    else hideFocusBar();
+                }
+            }
+            if (e.key === "ArrowDown" && AppState.zoomLevel <= 1.0 && isAtBottom) {
+                if (DOM.topMenu.classList.contains("hidden")) wakeFocusBar();
+                else toggleMenu();
+            }
+        });
+
+        // Eventos de Scroll de Roda (Mouse)
+        let zoomWheelCD;
+        DOM.bookContainer.addEventListener(
+            "wheel",
+            (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    if (zoomWheelCD) return;
+                    zoomWheelCD = setTimeout(() => {
+                        zoomWheelCD = null;
+                    }, 100);
+                    changeZoom(e.deltaY < 0 ? 0.25 : -0.25);
+                    return;
+                }
+                if (!AppState.pdfDoc || AppState.zoomLevel > 1.0) return;
+                e.preventDefault();
+                if (!window.scrollCooldown) {
+                    window.scrollCooldown = setTimeout(() => {
+                        window.scrollCooldown = null;
+                    }, 600);
+                    if (e.deltaY > 0) onNextPage();
+                    else if (e.deltaY < 0) onPrevPage();
+                }
+            },
+            { passive: false },
+        );
+
+        // ==========================================
+        // 7. GESTOS MOBILE (SWIPE)
+        // ==========================================
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        DOM.bookContainer.addEventListener(
+            "touchstart",
+            (e) => {
+                if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }
+            },
+            { passive: true },
+        );
+
+        DOM.bookContainer.addEventListener(
+            "touchend",
+            (e) => {
+                // Só executa se for 1 dedo e se o clique NÃO for na barra lateral
+                if (e.changedTouches.length === 1 && !e.target.closest("#sidebar")) {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const touchEndY = e.changedTouches[0].clientY;
+                    const diffX = touchStartX - touchEndX;
+                    const diffY = touchStartY - touchEndY;
+
+                    // Bloqueio de Segurança: Se o usuário estiver selecionando texto, não vira a página
+                    if (window.getSelection().toString().trim().length > 0) return;
+
+                    // Se o movimento horizontal for maior que 60 pixels e maior que o vertical
+                    if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY)) {
+                        if (diffX > 0)
+                            onNextPage(); // Deslizou para a esquerda
+                        else onPrevPage(); // Deslizou para a direita
+                    }
+                }
+            },
+            { passive: true },
+        );
+
+        window.addEventListener("resize", () => {
+            if (AppState.pdfDoc && !AppState.isRendering) {
+                updateBodyMode();
+                if (!isSinglePageMode() && AppState.pageNum % 2 === 0)
+                    AppState.pageNum -= 1;
+                renderPages(AppState.pageNum);
+            }
+        });
+
+        // ==========================================
+        // 8. AUXILIAR POMODORO
+        // ==========================================
+        let pomodoroTotal = 20 * 60; // Padrão de 20 minutos
+        let pomodoroRemaining = pomodoroTotal;
+        let pomodoroTimer = null;
+        let isPomodoroRunning = false;
+
+        function updatePomodoroUI() {
+            const mins = Math.floor(pomodoroRemaining / 60)
+                .toString()
+                .padStart(2, "0");
+            const secs = (pomodoroRemaining % 60).toString().padStart(2, "0");
+            document.getElementById("pomodoro-text").textContent =
+                `${mins}:${secs}`;
+
+            // Calcula o ângulo do ponteiro e da "torta"
+            const fraction = pomodoroRemaining / pomodoroTotal;
+            const deg = (1 - fraction) * 360;
+
+            const hand = document.getElementById("clock-hand");
+            const face = document.getElementById("clock-face");
+
+            hand.style.transform = `translateX(-50%) rotate(${deg}deg)`;
+
+            // Trocamos a cor do preenchimento aqui também para o vermelho pastel
+            face.style.background = `conic-gradient(transparent ${deg}deg, #ff8787 ${deg}deg)`;
+        }
+
+        function togglePomodoro() {
+            const controls = document.getElementById("pomodoro-controls");
+            if (isPomodoroRunning) {
+                clearInterval(pomodoroTimer);
+                isPomodoroRunning = false;
+                document.getElementById("pomodoro-text").style.opacity = "0.5";
+                controls.classList.remove("faded"); // Volta os mini botões
+                showToast("Pomodoro pausado", "pause");
+            } else {
+                isPomodoroRunning = true;
+                document.getElementById("pomodoro-text").style.opacity = "1";
+                controls.classList.add("faded"); // Esconde os mini botões
+                showToast("Timer iniciado!", "play");
+
+                pomodoroTimer = setInterval(() => {
+                    if (pomodoroRemaining > 0) {
+                        pomodoroRemaining--;
+                        updatePomodoroUI();
+                    } else {
+                        clearInterval(pomodoroTimer);
+                        isPomodoroRunning = false;
+                        document
+                            .getElementById("pomodoro-alert")
+                            .classList.remove("hidden");
+                        controls.classList.remove("faded"); // Volta os botões se o alarme tocar
+                        lucide.createIcons({
+                            root: document.getElementById("pomodoro-alert"),
+                        });
+                    }
+                }, 1000);
+            }
+        }
+
+        function snoozePomodoro() {
+            // Adiciona 5 minutos na conta e retoma o relógio
+            pomodoroRemaining += 5 * 60;
+            pomodoroTotal = Math.max(pomodoroTotal, pomodoroRemaining); // Ajusta o total para o gráfico não quebrar
+            document.getElementById("pomodoro-alert").classList.add("hidden");
+            togglePomodoro();
+            showToast("+5 Minutos adicionados", "clock");
+        }
+
+        function resetPomodoro(minutes) {
+            pomodoroTotal = minutes * 60;
+            pomodoroRemaining = pomodoroTotal;
+            updatePomodoroUI();
+            document.getElementById("pomodoro-alert").classList.add("hidden");
+            if (isPomodoroRunning) {
+                clearInterval(pomodoroTimer);
+                isPomodoroRunning = false;
+                document.getElementById("pomodoro-text").style.opacity = "0.5";
+            }
+        }
+
+        // NOVO: Função para os mini botões de +5 e -5
+        function adjustPomodoro(minutes) {
+            if (isPomodoroRunning) return; // Bloqueia ajustes se estiver rodando
+
+            pomodoroRemaining += minutes * 60;
+            if (pomodoroRemaining < 60) pomodoroRemaining = 60; // Mínimo de 1 minuto
+
+            pomodoroTotal = pomodoroRemaining; // Ajusta a proporção da "torta"
+            updatePomodoroUI();
+        }
+
+        // Inicializa a UI do relógio ao carregar a página
+        updatePomodoroUI();
+        document.getElementById("pomodoro-text").style.opacity = "0.5"; // Começa opaco (pausado)
+
+        // ==========================================
+        // 9. SISTEMA DE BACKUP (IMPORT / EXPORT)
+        // ==========================================
+
+        function exportBackup() {
+            const backupData = {};
+            let hasData = false;
+
+            // Varre o armazenamento do navegador procurando chaves do DiveReader
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith("dr2_")) {
+                    backupData[key] = localStorage.getItem(key);
+                    hasData = true;
+                }
+            }
+
+            if (!hasData)
+                return showToast(
+                    "Não há dados de estudo para exportar.",
+                    "alert-circle",
+                );
+
+            // Cria o arquivo .json e força o download
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], {
+                type: "application/json",
+            });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `DiveReader_Backup_${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}.json`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            showToast("Backup exportado com sucesso!", "save");
+        }
+
+        document
+            .getElementById("import-backup")
+            .addEventListener("change", (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        let importedCount = 0;
+
+                        // Injeta os dados de volta no navegador
+                        for (const key in data) {
+                            if (key.startsWith("dr2_")) {
+                                localStorage.setItem(key, data[key]);
+                                importedCount++;
+                            }
+                        }
+
+                        if (importedCount > 0) {
+                            showToast(
+                                "Backup restaurado! Dados carregados.",
+                                "check-circle-2",
+                            );
+
+                            // Se houver um PDF aberto no momento, recarrega a página para puxar os grifos novos
+                            if (AppState.pdfDoc && AppState.fileKey) {
+                                AppState.notesData = JSON.parse(
+                                    localStorage.getItem(AppState.fileKey + "_anotacoes") ||
+                                    "{}",
+                                );
+                                AppState.highlightsData = JSON.parse(
+                                    localStorage.getItem(AppState.fileKey + "_highlights") ||
+                                    "{}",
+                                );
+                                renderPages(AppState.pageNum);
+                            }
+                        } else {
+                            showToast(
+                                "O arquivo não contém dados do DiveReader.",
+                                "x-circle",
+                            );
+                        }
+                    } catch (error) {
+                        showToast(
+                            "Arquivo de backup inválido ou corrompido.",
+                            "alert-triangle",
+                        );
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = ""; // Reseta o input para permitir importar o mesmo arquivo de novo se necessário
+            });
     </script>
-  </body>
+</body>
+
 </html>
