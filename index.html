@@ -277,15 +277,13 @@
             flex-direction: column;
             flex-grow: 1;
             height: 100%;
-            padding: 15px;
+            padding: 6px; /* Reduzido de 15px para 6px para colar mais nas bordas */
             box-sizing: border-box;
             overflow-y: auto;
             overflow-x: auto;
-
-            /* Aplica a mesa dinâmica do tema e uma leve sombra interna para dar profundidade */
             background: var(--workspace-bg);
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.03);
-        }
+      }
 
         /* Estrutura das Camadas da Página */
         .page-wrapper {
@@ -1209,6 +1207,7 @@
             isRendering: false,
             notesData: {},
             highlightsData: {},
+            customTitles: {},
             currentHighlightColor: "rgba(253, 224, 71, 0.35)",
             zoomLevel: 1.0,
             focusTimer: null,
@@ -1370,12 +1369,11 @@
                     AppState.pageNum -= 1;
 
                 // Carregar dados salvos (Notas e Grifos)
-                AppState.notesData = JSON.parse(
-                    localStorage.getItem(AppState.fileKey + "_anotacoes") || "{}",
-                );
-                AppState.highlightsData = JSON.parse(
-                    localStorage.getItem(AppState.fileKey + "_highlights") || "{}",
-                );
+                AppState.notesData = JSON.parse(localStorage.getItem(AppState.fileKey + "_anotacoes") || "{}");
+                AppState.highlightsData = JSON.parse(localStorage.getItem(AppState.fileKey + "_highlights") || "{}");
+
+                // NOVO: Carrega os títulos salvos
+                AppState.customTitles = JSON.parse(localStorage.getItem(AppState.fileKey + "_titles") || "{}");
 
                 DOM.notepad.disabled = false;
                 document.getElementById("page-input").disabled = false;
@@ -1418,20 +1416,21 @@
         });
 
         function getScale(viewport, forceSingle) {
-            const containerWidth = DOM.bookContainer.clientWidth;
-            const containerHeight = DOM.bookContainer.clientHeight;
-            // Desconta padding
-            const widthTarget = forceSingle
-                ? containerWidth - 40
-                : containerWidth / 2 - 40;
-            const heightTarget = containerHeight - 40;
+        const containerWidth = DOM.bookContainer.clientWidth;
+        const containerHeight = DOM.bookContainer.clientHeight;
+        
+        // Reduzimos o desconto de margem de 40px para apenas 12px
+        const widthTarget = forceSingle
+          ? containerWidth - 12
+          : containerWidth / 2 - 12;
+        const heightTarget = containerHeight - 12;
 
-            const scaleX = widthTarget / viewport.width;
-            const scaleY = heightTarget / viewport.height;
-            let baseScale = Math.min(scaleX, scaleY) * 0.98;
+        const scaleX = widthTarget / viewport.width;
+        const scaleY = heightTarget / viewport.height;
+        let baseScale = Math.min(scaleX, scaleY) * 0.98;
 
-            return baseScale * AppState.zoomLevel;
-        }
+        return baseScale * AppState.zoomLevel;
+      }
 
         // Construtor da Página com Text Layer
         async function buildPageWrapper(pageNum, forceSingle) {
@@ -1607,17 +1606,49 @@
             }
 
             DOM.indicator.textContent = `Pág. ${indicatorText} / ${AppState.pdfDoc.numPages}`;
-            const isSingle = isSinglePageMode();
-            let tabName = "Nesta Página";
-            if (!isSingle && num < AppState.pdfDoc.numPages) {
-                tabName = `Páginas ${num} e ${num + 1}`;
-            }
-            document.getElementById('tab-btn-page').textContent = tabName;
             DOM.indicator.style.opacity = "1";
             setTimeout(() => {
                 if (AppState.zoomLevel <= 1.0) DOM.indicator.style.opacity = "0";
             }, 2000);
+
+            // ATUALIZADO: Nome da aba com suporte a Título Customizado e botão de edição
+            const isSingle = isSinglePageMode();
+            let defaultTitle = `Página ${num}`;
+            if (!isSingle && num < AppState.pdfDoc.numPages) {
+                defaultTitle = `Páginas ${num} e ${num + 1}`;
+            }
+
+            // Puxa o título customizado ou usa o padrão
+            const finalTitle = AppState.customTitles[num] || defaultTitle;
+
+            const tabBtn = document.getElementById('tab-btn-page');
+            tabBtn.innerHTML = `${finalTitle} <i data-lucide="edit-2" style="width: 12px; height: 12px; margin-left: 6px; opacity: 0.6; cursor: pointer;" onclick="renameCurrentPage(event)"></i>`;
+            lucide.createIcons({ root: tabBtn });
+
             AppState.isRendering = false;
+        }
+
+        // Função para renomear o título da página/capítulo
+        function renameCurrentPage(event) {
+            if (event) event.stopPropagation(); // Impede que o clique no lápis acione a troca de aba
+
+            const p = AppState.pageNum;
+            const current = AppState.customTitles[p] || "";
+            const newTitle = prompt("Nome do capítulo/seção:\n(Deixe em branco para voltar à numeração padrão)", current);
+
+            if (newTitle === null) return; // Usuário cancelou
+
+            if (newTitle.trim() === "") {
+                delete AppState.customTitles[p];
+            } else {
+                AppState.customTitles[p] = newTitle.trim();
+            }
+
+            localStorage.setItem(AppState.fileKey + "_titles", JSON.stringify(AppState.customTitles));
+
+            renderPages(AppState.pageNum); // Atualiza a aba
+            updateGlobalView(); // Atualiza o fichamento visual
+            showToast("Título do capítulo atualizado!", "edit-3");
         }
 
         // ==========================================
@@ -1799,8 +1830,11 @@
 
         function updateGlobalView() {
             if (!AppState.pdfDoc) return;
-            let compiled = ""; let hasNotes = false;
-            const pages = Object.keys(AppState.notesData).map(Number).sort((a, b) => a - b);
+            let compiled = "";
+            let hasNotes = false;
+            const pages = Object.keys(AppState.notesData)
+                .map(Number)
+                .sort((a, b) => a - b);
 
             for (let p of pages) {
                 if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
@@ -1812,31 +1846,47 @@
                         title = `Páginas ${p} e ${p + 1}`;
                     }
 
+                    // NOVO: Se existir um título customizado, ele assume o protagonismo
+                    if (AppState.customTitles && AppState.customTitles[p]) {
+                        title = `${AppState.customTitles[p]} (${title})`;
+                    }
+
                     compiled += `[ ${title} ]\n${AppState.notesData[p].trim()}\n\n`;
                 }
             }
-            DOM.globalView.textContent = hasNotes ? compiled.trim() : "Nenhum fichamento gerado ainda.";
+            DOM.globalView.textContent = hasNotes
+                ? compiled.trim()
+                : "Nenhum fichamento gerado ainda.";
         }
 
         function downloadNotes() {
             if (!AppState.pdfDoc) return;
 
-            const pages = Object.keys(AppState.notesData).map(Number).sort((a, b) => a - b);
+            const pages = Object.keys(AppState.notesData)
+                .map(Number)
+                .sort((a, b) => a - b);
             let hasNotes = false;
 
+            // Cabeçalho Bonito do Documento
             let markdown = `# 📖 Fichamento de Leitura\n\n`;
             markdown += `**Documento:** \`${AppState.fileName}\`\n`;
-            markdown += `**Data da Exportação:** ${new Date().toLocaleDateString('pt-BR')}\n\n`;
+            markdown += `**Data da Exportação:** ${new Date().toLocaleDateString("pt-BR")}\n\n`;
             markdown += `---\n\n`;
 
+            // Estrutura das Páginas
             for (let p of pages) {
                 if (AppState.notesData[p] && AppState.notesData[p].trim() !== "") {
                     hasNotes = true;
 
-                    // Aplica a mesma inteligência na exportação do Markdown
+                    // Inteligência de Agrupamento
                     let title = `Página ${p}`;
                     if (p % 2 !== 0 && p < AppState.pdfDoc.numPages) {
                         title = `Páginas ${p} e ${p + 1}`;
+                    }
+
+                    // NOVO: Se existir um título customizado, ele assume o protagonismo
+                    if (AppState.customTitles && AppState.customTitles[p]) {
+                        title = `${AppState.customTitles[p]} (${title})`;
                     }
 
                     markdown += `### 📄 ${title}\n\n`;
@@ -1845,12 +1895,16 @@
                 }
             }
 
-            if (!hasNotes) return showToast("Não há notas para baixar", "file-warning");
+            if (!hasNotes)
+                return showToast("Não há notas para baixar", "file-warning");
 
-            const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+            // Gera o arquivo Markdown
+            const blob = new Blob([markdown], {
+                type: "text/markdown;charset=utf-8",
+            });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `Fichamento_${AppState.fileName.split('.')[0]}.md`;
+            link.download = `Fichamento_${AppState.fileName.split(".")[0]}.md`;
 
             document.body.appendChild(link);
             link.click();
