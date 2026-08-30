@@ -63,18 +63,34 @@ body.zoomed-mode #pomodoro-container:hover {
 }
 
 #pomodoro-controls button {
+  position: relative;
   background: var(--ui-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
-  padding: 3px 8px;
-  min-height: 24px;
+  padding: 4px 8px;
+  min-height: 26px;
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   box-shadow: var(--shadow-sm);
   color: var(--text-color);
-  min-width: 32px;
+  min-width: 34px;
   justify-content: center;
+  touch-action: manipulation;
+}
+
+/* Área de toque expandida invisível para mobile (Lei de Fitts / WCAG 2.5.5) */
+#pomodoro-controls button::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: -8px;
+  right: -8px;
+}
+
+#pomodoro-controls button:active {
+  transform: scale(0.92);
 }
 
 .clock-face {

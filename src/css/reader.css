@@ -1,6 +1,23 @@
-/* ========================================================= */
-/* READER & PDF.JS CANVAS                                    */
-/* ========================================================= */
+/* Reading Progress Bar */
+#reading-progress-bar-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#reading-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary) 0%, #38bdf8 50%, var(--highlight-border) 100%);
+  box-shadow: 0 0 8px var(--primary-light);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 #pdf-viewer {
   display: flex;
@@ -95,7 +112,7 @@ body.zoomed-mode #pdf-viewer {
 
 .highlight-rect {
   position: absolute;
-  background-color: var(--highlight-color);
+  background-color: var(--hl-yellow-bg);
   mix-blend-mode: multiply;
   border-radius: 3px;
   pointer-events: auto;
@@ -109,8 +126,49 @@ body.zoomed-mode #pdf-viewer {
 }
 
 .highlight-rect:hover {
-  background-color: var(--highlight-color-hover);
-  box-shadow: 0 0 0 1.5px var(--highlight-border);
+  background-color: var(--hl-yellow-hover);
+  box-shadow: 0 0 0 1.5px var(--hl-yellow-border);
+}
+
+/* Variações de Cores Semânticas */
+.highlight-rect.highlight-yellow {
+  background-color: var(--hl-yellow-bg);
+}
+.highlight-rect.highlight-yellow:hover {
+  background-color: var(--hl-yellow-hover);
+  box-shadow: 0 0 0 1.5px var(--hl-yellow-border);
+}
+
+.highlight-rect.highlight-green {
+  background-color: var(--hl-green-bg);
+}
+.highlight-rect.highlight-green:hover {
+  background-color: var(--hl-green-hover);
+  box-shadow: 0 0 0 1.5px var(--hl-green-border);
+}
+
+.highlight-rect.highlight-pink {
+  background-color: var(--hl-pink-bg);
+}
+.highlight-rect.highlight-pink:hover {
+  background-color: var(--hl-pink-hover);
+  box-shadow: 0 0 0 1.5px var(--hl-pink-border);
+}
+
+.highlight-rect.highlight-blue {
+  background-color: var(--hl-blue-bg);
+}
+.highlight-rect.highlight-blue:hover {
+  background-color: var(--hl-blue-hover);
+  box-shadow: 0 0 0 1.5px var(--hl-blue-border);
+}
+
+.highlight-rect.highlight-purple {
+  background-color: var(--hl-purple-bg);
+}
+.highlight-rect.highlight-purple:hover {
+  background-color: var(--hl-purple-hover);
+  box-shadow: 0 0 0 1.5px var(--hl-purple-border);
 }
 
 .highlight-rect.highlight-pulse {
@@ -119,12 +177,12 @@ body.zoomed-mode #pdf-viewer {
 
 @keyframes highlightFlash {
   0% {
-    background-color: var(--highlight-color);
+    opacity: 0.7;
     box-shadow: 0 0 0 0 var(--highlight-pulse);
   }
   100% {
-    background-color: var(--highlight-color-hover);
-    box-shadow: 0 0 10px 4px var(--highlight-pulse);
+    opacity: 1;
+    box-shadow: 0 0 12px 4px var(--highlight-pulse);
   }
 }
 

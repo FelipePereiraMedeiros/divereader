@@ -127,4 +127,23 @@ describe('NotebookView UI Component', () => {
     expect(synthTextarea).toBeDefined();
     expect(synthTextarea.value).toBe('Síntese da página 3');
   });
+
+  it('deve renderizar grifos de ambas as páginas visíveis quando em modo duas páginas', () => {
+    // Configura tela larga e zoom 1.0 (modo 2 páginas)
+    window.innerWidth = 1200;
+    appState.set({
+      zoomLevel: 1.0,
+      pageNum: 1,
+      highlights: {
+        1: [new Highlight({ id: 'hl_p1', pageNum: 1, text: 'Grifo da Página Esquerda' })],
+        2: [new Highlight({ id: 'hl_p2', pageNum: 2, text: 'Grifo da Página Direita' })],
+      },
+    });
+
+    NotebookView.render();
+
+    expect(DOM.highlightsContainer.children.length).toBe(2);
+    expect(DOM.highlightsContainer.textContent).toContain('Grifo da Página Esquerda');
+    expect(DOM.highlightsContainer.textContent).toContain('Grifo da Página Direita');
+  });
 });

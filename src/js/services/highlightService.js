@@ -9,22 +9,39 @@ import { EVENTS } from '../constants.js';
 
 export const HighlightService = {
   /**
-   * Cria um novo grifo a partir da seleção de texto atual
-   * @param {Selection} selection
+   * Cria um novo grifo a partir da seleção de texto atual ou de um Range clonado
+   * @param {Selection|Range} selectionOrRange
    * @param {string} [color='yellow']
+   * @param {string} [customText]
    * @returns {{ success: boolean, highlight?: Highlight, message?: string }}
    */
-  createFromSelection(selection, color = 'yellow') {
-    if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+  createFromSelection(selectionOrRange, color = 'yellow', customText = null) {
+    if (!selectionOrRange) {
       return { success: false, message: 'Selecione um texto antes de grifar.' };
     }
 
-    const range = selection.getRangeAt(0);
+    let range;
+    let textExtracted = '';
+
+    if (typeof Range !== 'undefined' && selectionOrRange instanceof Range) {
+      range = selectionOrRange;
+      textExtracted = customText || range.toString();
+    } else if (selectionOrRange.getRangeAt && selectionOrRange.rangeCount > 0) {
+      if (selectionOrRange.isCollapsed || !selectionOrRange.toString().trim()) {
+        return { success: false, message: 'Selecione um texto antes de grifar.' };
+      }
+      range = selectionOrRange.getRangeAt(0);
+      textExtracted = customText || selectionOrRange.toString();
+    } else {
+      return { success: false, message: 'Selecione um texto antes de grifar.' };
+    }
+
+    textExtracted = textExtracted.replace(/[\r\n]+/g, ' ').trim();
+    if (textExtracted.length < 2) {
+      return { success: false, message: 'Selecione um texto válido para grifar.' };
+    }
+
     const rects = range.getClientRects();
-    const textExtracted = selection
-      .toString()
-      .replace(/[\r\n]+/g, ' ')
-      .trim();
 
     let container = range.commonAncestorContainer;
     if (container.nodeType === 3) container = container.parentNode;
@@ -47,7 +64,12 @@ export const HighlightService = {
 
       const isCollision = pageHighlights.some((h) => h.containsPoint(centerX, centerY));
       if (isCollision) {
-        selection.removeAllRanges();
+        try {
+          const winSel = window.getSelection();
+          if (winSel && typeof winSel.removeAllRanges === 'function') {
+            winSel.removeAllRanges();
+          }
+        } catch (err) {}
         return { success: false, message: 'Este trecho já foi grifado.' };
       }
     }
@@ -90,13 +112,21 @@ export const HighlightService = {
     appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
     Storage.saveHighlights(appState.get('fileKey'), updatedHighlights);
 
-    // Limpa a seleção azul nativa
-    selection.removeAllRanges();
+    // Limpa a seleção azul nativa de forma segura
+    try {
+      const winSel = window.getSelection();
+      if (winSel && typeof winSel.removeAllRanges === 'function') {
+        winSel.removeAllRanges();
+      }
+    } catch (err) {}
 
-    // Redesenha a camada da página
-    const layer = wrapper.querySelector('.highlight-layer');
-    if (layer) {
-      this.drawPageHighlights(pageNum, layer);
+    // Redesenha a camada na página visível imediatamente
+    const pageWrapper = wrapper || document.querySelector(`.page-wrapper[data-page="${pageNum}"]`);
+    if (pageWrapper) {
+      const layer = pageWrapper.querySelector('.highlight-layer');
+      if (layer) {
+        this.drawPageHighlights(pageNum, layer);
+      }
     }
 
     return { success: true, highlight: newHighlight };
@@ -179,9 +209,11 @@ export const HighlightService = {
 
       continuousRects.forEach((rect) => {
         const mark = document.createElement('div');
-        mark.className = 'highlight-rect';
+        const colorClass = h.color ? `highlight-${h.color}` : 'highlight-yellow';
+        mark.className = `highlight-rect ${colorClass}`;
         mark.dataset.highlightId = h.id;
         mark.dataset.pageNum = String(pageNum);
+        mark.dataset.color = h.color || 'yellow';
         mark.style.left = `${rect.x * 100}%`;
         mark.style.top = `${rect.y * 100}%`;
         mark.style.width = `${rect.width * 100}%`;
@@ -203,6 +235,46 @@ export const HighlightService = {
     const allHighlights = appState.get('highlights') || {};
     const pageList = allHighlights[pageNum] || [];
     return pageList.find((h) => h.id === highlightId) || null;
+  },
+
+  /**
+   * Atualiza a cor de um grifo existente
+   * @param {number} pageNum
+   * @param {string} highlightId
+   * @param {string} newColor
+   */
+  updateHighlightColor(pageNum, highlightId, newColor) {
+    const allHighlights = appState.get('highlights') || {};
+    const pageHighlights = allHighlights[pageNum] || [];
+
+    const updatedPage = pageHighlights.map((h) => {
+      if (h.id === highlightId) {
+        return new Highlight({
+          id: h.id,
+          pageNum: h.pageNum,
+          text: h.text,
+          rects: h.rects,
+          color: newColor,
+          note: h.note,
+          createdAt: h.createdAt,
+        });
+      }
+      return h;
+    });
+
+    const updatedHighlights = {
+      ...allHighlights,
+      [pageNum]: updatedPage,
+    };
+
+    appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
+    Storage.saveHighlights(appState.get('fileKey'), updatedHighlights);
+
+    const wrapper = document.querySelector(`.page-wrapper[data-page="${pageNum}"]`);
+    if (wrapper) {
+      const layer = wrapper.querySelector('.highlight-layer');
+      if (layer) this.drawPageHighlights(pageNum, layer);
+    }
   },
 
   /**

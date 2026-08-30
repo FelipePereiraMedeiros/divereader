@@ -164,4 +164,51 @@ export const PdfService = {
       textLayer.appendChild(span);
     });
   },
+
+  /**
+   * Extrai a árvore do sumário (outline/bookmarks) com páginas resolvidas
+   * @param {any} pdfDoc
+   * @returns {Promise<Array<{ title: string, pageNum: number|null, items: Array }>>}
+   */
+  async getOutline(pdfDoc) {
+    if (!pdfDoc || typeof pdfDoc.getOutline !== 'function') return [];
+    try {
+      const rawOutline = await pdfDoc.getOutline();
+      if (!rawOutline || rawOutline.length === 0) return [];
+
+      const resolveItems = async (items) => {
+        const resolved = [];
+        for (const item of items) {
+          let pageNum = null;
+          if (item.dest) {
+            try {
+              let destRef = item.dest;
+              if (typeof destRef === 'string') {
+                destRef = await pdfDoc.getDestination(destRef);
+              }
+              if (Array.isArray(destRef) && destRef.length > 0) {
+                const pageIndex = await pdfDoc.getPageIndex(destRef[0]);
+                pageNum = pageIndex + 1;
+              }
+            } catch (err) {
+              console.warn('Não foi possível resolver destino:', item.title, err);
+            }
+          }
+
+          const children = item.items && item.items.length > 0 ? await resolveItems(item.items) : [];
+          resolved.push({
+            title: item.title,
+            pageNum,
+            items: children,
+          });
+        }
+        return resolved;
+      };
+
+      return await resolveItems(rawOutline);
+    } catch (e) {
+      console.warn('Erro ao extrair sumário do PDF:', e);
+      return [];
+    }
+  },
 };

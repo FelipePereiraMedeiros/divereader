@@ -15,12 +15,16 @@ class StateManager {
       isRendering: false,
       highlights: {}, // Object.<number, Highlight[]>
       manualNotes: {}, // Object.<number, string>
+      outline: [], // Array<{ title: string, pageNum: number|null, items: Array }>
       zoomLevel: 1.0,
+      activeHighlightColor: 'yellow',
       theme: THEMES.LIGHT,
       isSidebarOpen: false,
       isFocusMode: false,
-      activeTab: 'page', // 'page' | 'global'
+      activeTab: 'page', // 'page' | 'global' | 'toc'
       selectedHighlightId: null,
+      searchQuery: '',
+      activeColorFilter: 'all', // 'all' | 'yellow' | 'green' | 'pink' | 'blue' | 'purple'
     };
 
     this.listeners = new Map();

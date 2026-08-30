@@ -34,10 +34,13 @@ export const App = {
     if (DOM.themeSelector) DOM.themeSelector.value = savedTheme;
 
     // Inicializa componentes de UI
-    NotebookView.init();
+    NotebookView.init({
+      onNavigatePage: (pageNum) => this.renderPages(pageNum),
+    });
     QuickHighlightTooltip.init();
     this.initEventListeners();
     this.initPomodoro();
+    window.app = this;
 
     // Redimensionamento de tela
     window.addEventListener('resize', () => {
@@ -213,6 +216,8 @@ export const App = {
       container: DOM.bookContainer,
       onNextPage: () => this.onNextPage(),
       onPrevPage: () => this.onPrevPage(),
+      onSetZoom: (zoom) => this.setZoom(zoom),
+      onChangeZoom: (delta) => this.changeZoom(delta),
     });
   },
 
@@ -264,6 +269,7 @@ export const App = {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PdfService.loadDocument(arrayBuffer);
+      const outline = await PdfService.getOutline(pdfDoc);
 
       const savedPage = Storage.loadPage(fileKey);
       const savedHighlights = Storage.loadHighlights(fileKey);
@@ -276,6 +282,7 @@ export const App = {
 
       appState.set({
         pdfDoc,
+        outline,
         pageNum,
         totalPages: pdfDoc.numPages,
         highlights: savedHighlights,
@@ -376,9 +383,17 @@ export const App = {
       }
     }
 
-    // Atualiza o indicador de página
+    // Atualiza a barra linear de progresso de leitura (%)
+    const currentEffectivePage = singlePage ? targetPage : Math.min(totalPages, leftPageNum + 1);
+    const progressPercent = totalPages > 0 ? Math.min(100, Math.max(1, Math.round((currentEffectivePage / totalPages) * 100))) : 0;
+    const progressBar = DOM.readingProgressBar || document.getElementById('reading-progress-bar');
+    if (progressBar) {
+      progressBar.style.width = `${progressPercent}%`;
+    }
+
+    // Atualiza o indicador de página com porcentagem de leitura
     if (DOM.indicator) {
-      DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages}`;
+      DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages} (${progressPercent}%)`;
       DOM.indicator.style.opacity = '1';
       setTimeout(() => {
         if (appState.get('zoomLevel') <= 1.0 && DOM.indicator) {
@@ -449,13 +464,14 @@ export const App = {
   },
 
   /**
-   * Altera o nível de zoom
-   * @param {number} delta
+   * Define o nível de zoom absoluto
+   * @param {number} targetZoom
    */
-  changeZoom(delta) {
+  setZoom(targetZoom) {
     const current = appState.get('zoomLevel');
-    const newZoom = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, current + delta));
-    if (newZoom === current) return;
+    const clamped = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, targetZoom));
+    const newZoom = Math.round(clamped * 100) / 100;
+    if (Math.abs(newZoom - current) < 0.02) return;
 
     const wasSingle = appState.isSinglePageMode();
     appState.set({ zoomLevel: newZoom });
@@ -475,6 +491,15 @@ export const App = {
       pageNum -= 1;
     }
     this.renderPages(pageNum);
+  },
+
+  /**
+   * Altera o nível de zoom relativamente
+   * @param {number} delta
+   */
+  changeZoom(delta) {
+    const current = appState.get('zoomLevel');
+    this.setZoom(current + delta);
   },
 
   updateBodyMode() {
