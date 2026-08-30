@@ -1,5 +1,6 @@
 /**
  * Renderizador da Interface do Caderno de Estudos (Cards de Grifos + Síntese + Sumário TOC + Fichamento)
+ * com Suporte a Busca em Tempo Real e Filtragem Semântica por Cores
  */
 
 import { appState } from '../state.js';
@@ -23,6 +24,35 @@ export const NotebookView = {
   },
 
   /**
+   * Escapa caracteres HTML para exibição segura
+   * @param {string} str
+   * @returns {string}
+   */
+  escapeHtml(str) {
+    return (str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  },
+
+  /**
+   * Destaca termos coincidentes da busca no texto
+   * @param {string} text
+   * @param {string} query
+   * @returns {string}
+   */
+  highlightMatch(text, query) {
+    if (!text) return '';
+    const safeText = this.escapeHtml(text);
+    if (!query || !query.trim()) return safeText;
+
+    const q = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${q})`, 'gi');
+    return safeText.replace(regex, '<mark class="search-match">$1</mark>');
+  },
+
+  /**
    * Inicializa ouvintes e comportamentos do Caderno
    */
   init(callbacks = {}) {
@@ -34,6 +64,46 @@ export const NotebookView = {
     appState.on(EVENTS.HIGHLIGHTS_UPDATED, () => {
       this.render();
     });
+
+    // Campo de Busca em Tempo Real
+    const searchInput = DOM.notebookSearchInput || document.getElementById('notebook-search-input');
+    const clearBtn = DOM.btnClearSearch || document.getElementById('btn-clear-search');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value;
+        appState.set({ searchQuery: query });
+        if (clearBtn) {
+          clearBtn.classList.toggle('hidden', !query);
+        }
+        this.render();
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.onclick = () => {
+        if (searchInput) searchInput.value = '';
+        appState.set({ searchQuery: '' });
+        clearBtn.classList.add('hidden');
+        this.render();
+      };
+    }
+
+    // Chips de Filtro de Cor
+    const filterChipsContainer = DOM.colorFilterChips || document.getElementById('color-filter-chips');
+    if (filterChipsContainer) {
+      filterChipsContainer.addEventListener('click', (e) => {
+        const chip = e.target.closest('.color-chip');
+        if (!chip) return;
+
+        filterChipsContainer.querySelectorAll('.color-chip').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        const color = chip.dataset.color || 'all';
+        appState.set({ activeColorFilter: color });
+        this.render();
+      });
+    }
 
     // Alternância de Abas
     if (DOM.tabBtnPage) {
@@ -151,20 +221,33 @@ export const NotebookView = {
   },
 
   /**
-   * Renderiza os dados do caderno para a página ativa
+   * Renderiza os dados do caderno para a página ativa com filtros de busca e cor
    */
   render() {
     const pageNum = appState.get('pageNum') || 1;
     const isSingle = appState.isSinglePageMode();
     const highlights = appState.get('highlights') || {};
+    const searchQuery = (appState.get('searchQuery') || '').trim().toLowerCase();
+    const activeColorFilter = appState.get('activeColorFilter') || 'all';
 
     // Obtém grifos da página ativa (e da página direita se estiver no modo livro aberto de 2 páginas)
-    let pageHighlights = [...(highlights[pageNum] || [])];
+    let rawPageHighlights = [...(highlights[pageNum] || [])];
     if (!isSingle) {
       const rightPageNum = pageNum + 1;
       const rightHighlights = highlights[rightPageNum] || [];
-      pageHighlights = [...pageHighlights, ...rightHighlights];
+      rawPageHighlights = [...rawPageHighlights, ...rightHighlights];
     }
+
+    // Aplica filtro por cor e por termo de busca
+    const filteredHighlights = rawPageHighlights.filter((h) => {
+      const matchColor = activeColorFilter === 'all' || (h.color || 'yellow') === activeColorFilter;
+      if (!matchColor) return false;
+
+      if (!searchQuery) return true;
+      const matchText = (h.text || '').toLowerCase().includes(searchQuery);
+      const matchNote = (h.note || '').toLowerCase().includes(searchQuery);
+      return matchText || matchNote;
+    });
 
     // Atualiza a lista de cards de grifos
     const container = DOM.highlightsContainer || document.getElementById('page-highlights-list');
@@ -172,18 +255,19 @@ export const NotebookView = {
       container.innerHTML = '';
 
       const countBadge = document.getElementById('page-highlights-count');
-      if (countBadge) countBadge.textContent = String(pageHighlights.length);
+      if (countBadge) countBadge.textContent = String(filteredHighlights.length);
 
-      if (pageHighlights.length === 0) {
+      if (filteredHighlights.length === 0) {
+        const isFiltering = !!searchQuery || activeColorFilter !== 'all';
         container.innerHTML = `
           <div class="empty-highlights-hint">
-            <i data-lucide="highlighter" style="width: 20px; height: 20px; margin-bottom: 4px; display: inline-block;"></i>
-            <p style="margin: 0;">Nenhum grifo nesta página.</p>
-            <p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.8;">Selecione qualquer trecho de texto no PDF para grifar!</p>
+            <i data-lucide="${isFiltering ? 'search-x' : 'highlighter'}" style="width: 20px; height: 20px; margin-bottom: 4px; display: inline-block;"></i>
+            <p style="margin: 0;">${isFiltering ? 'Nenhum grifo corresponde ao filtro atual.' : 'Nenhum grifo nesta página.'}</p>
+            <p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.8;">${isFiltering ? 'Tente limpar a busca ou selecionar outra cor.' : 'Selecione qualquer trecho de texto no PDF para grifar!'}</p>
           </div>
         `;
       } else {
-        pageHighlights.forEach((h) => {
+        filteredHighlights.forEach((h) => {
           const hPageNum = h.pageNum || pageNum;
           const card = document.createElement('div');
           const colorKey = h.color || 'yellow';
@@ -191,6 +275,7 @@ export const NotebookView = {
           card.dataset.highlightId = h.id;
 
           const badgeLabel = this.COLOR_LABELS[colorKey] || '🟡 Conceito';
+          const highlightedQuote = this.highlightMatch(h.text, searchQuery);
 
           card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -203,12 +288,12 @@ export const NotebookView = {
                 <option value="purple" ${colorKey === 'purple' ? 'selected' : ''}>🟣 Roxo</option>
               </select>
             </div>
-            <div class="highlight-quote">"${h.text}"</div>
+            <div class="highlight-quote">"${highlightedQuote}"</div>
             <div class="highlight-card-note">
               <input 
                 type="text" 
                 placeholder="Adicionar nota a esta citação..." 
-                value="${h.note || ''}" 
+                value="${this.escapeHtml(h.note || '')}" 
                 data-highlight-id="${h.id}"
               />
             </div>
@@ -367,13 +452,15 @@ export const NotebookView = {
   },
 
   /**
-   * Renderiza a aba de Fichamento Completo com cards estruturados por página
+   * Renderiza a aba de Fichamento Completo com cards estruturados por página e filtragem
    */
   renderGlobalDossier() {
     const globalViewEl = DOM.globalView || document.getElementById('global-view');
     if (!globalViewEl) return;
     const highlights = appState.get('highlights') || {};
     const manualNotes = appState.get('manualNotes') || {};
+    const searchQuery = (appState.get('searchQuery') || '').trim().toLowerCase();
+    const activeColorFilter = appState.get('activeColorFilter') || 'all';
 
     const pageSet = new Set([
       ...Object.keys(highlights).map(Number),
@@ -383,18 +470,32 @@ export const NotebookView = {
     const pages = Array.from(pageSet).sort((a, b) => a - b);
     globalViewEl.innerHTML = '';
 
-    const validPages = pages.filter((p) => {
-      const hList = highlights[p] || [];
-      const note = (manualNotes[p] || '').trim();
-      return hList.length > 0 || note.length > 0;
+    const validPages = pages.filter((pageNum) => {
+      const pageHighlights = highlights[pageNum] || [];
+      const pageSynthesis = (manualNotes[pageNum] || '').trim();
+
+      const matchingHighlights = pageHighlights.filter((h) => {
+        const matchColor = activeColorFilter === 'all' || (h.color || 'yellow') === activeColorFilter;
+        if (!matchColor) return false;
+        if (!searchQuery) return true;
+        return (
+          (h.text || '').toLowerCase().includes(searchQuery) ||
+          (h.note || '').toLowerCase().includes(searchQuery)
+        );
+      });
+
+      const matchSynthesis = !searchQuery || pageSynthesis.toLowerCase().includes(searchQuery);
+
+      return matchingHighlights.length > 0 || (matchSynthesis && pageSynthesis.length > 0 && activeColorFilter === 'all');
     });
 
     if (validPages.length === 0) {
+      const isFiltering = !!searchQuery || activeColorFilter !== 'all';
       globalViewEl.innerHTML = `
         <div class="global-empty-state">
-          <i data-lucide="file-text" style="width: 36px; height: 36px; opacity: 0.4;"></i>
-          <p style="margin: 0; font-weight: 600;">Nenhum fichamento gerado ainda.</p>
-          <p style="margin: 0; font-size: 12px;">Seus grifos e anotações aparecerão compilados aqui automaticamente.</p>
+          <i data-lucide="${isFiltering ? 'search-x' : 'file-text'}" style="width: 36px; height: 36px; opacity: 0.4;"></i>
+          <p style="margin: 0; font-weight: 600;">${isFiltering ? 'Nenhum item corresponde ao filtro da busca.' : 'Nenhum fichamento gerado ainda.'}</p>
+          <p style="margin: 0; font-size: 12px;">${isFiltering ? 'Experimente buscar por outros termos ou limpar os filtros.' : 'Seus grifos e anotações aparecerão compilados aqui automaticamente.'}</p>
         </div>
       `;
       refreshIcons(globalViewEl);
@@ -404,6 +505,17 @@ export const NotebookView = {
     validPages.forEach((pageNum) => {
       const pageHighlights = highlights[pageNum] || [];
       const pageSynthesis = (manualNotes[pageNum] || '').trim();
+
+      // Filtra os grifos da página
+      const matchingHighlights = pageHighlights.filter((h) => {
+        const matchColor = activeColorFilter === 'all' || (h.color || 'yellow') === activeColorFilter;
+        if (!matchColor) return false;
+        if (!searchQuery) return true;
+        return (
+          (h.text || '').toLowerCase().includes(searchQuery) ||
+          (h.note || '').toLowerCase().includes(searchQuery)
+        );
+      });
 
       const pageCard = document.createElement('div');
       pageCard.className = 'global-page-card';
@@ -430,35 +542,36 @@ export const NotebookView = {
       pageCard.appendChild(header);
 
       // Seção de Grifos / Citações da Página
-      if (pageHighlights.length > 0) {
+      if (matchingHighlights.length > 0) {
         const quotesSection = document.createElement('div');
         quotesSection.innerHTML = `
           <div class="global-section-title">
-            <i data-lucide="highlighter" style="width: 12px; height: 12px;"></i> Citações Grifadas (${pageHighlights.length})
+            <i data-lucide="highlighter" style="width: 12px; height: 12px;"></i> Citações Grifadas (${matchingHighlights.length})
           </div>
         `;
 
         const quotesList = document.createElement('div');
         quotesList.className = 'global-quotes-list';
 
-        pageHighlights.forEach((h) => {
+        matchingHighlights.forEach((h) => {
           const item = document.createElement('div');
           const colorKey = h.color || 'yellow';
           item.className = `global-quote-item color-${colorKey}`;
           const badgeLabel = this.COLOR_LABELS[colorKey] || '🟡 Conceito';
+          const highlightedQuote = this.highlightMatch(h.text, searchQuery);
 
           item.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span class="highlight-color-badge color-${colorKey}">${badgeLabel}</span>
             </div>
-            <div class="global-quote-text">"${h.text}"</div>
+            <div class="global-quote-text">"${highlightedQuote}"</div>
             <div class="global-quote-note-edit">
               <i data-lucide="message-square" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
               <input 
                 type="text" 
                 class="global-quote-note-input" 
                 placeholder="Adicionar nota a este grifo..." 
-                value="${h.note || ''}" 
+                value="${this.escapeHtml(h.note || '')}" 
                 data-highlight-id="${h.id}"
                 data-page-num="${pageNum}"
               />
@@ -547,34 +660,37 @@ export const NotebookView = {
         pageCard.appendChild(quotesSection);
       }
 
-      // Seção de Síntese / Anotações da Página (Totalmente Editável)
-      const synthesisSection = document.createElement('div');
-      synthesisSection.innerHTML = `
-        <div class="global-section-title">
-          <i data-lucide="pen-tool" style="width: 12px; height: 12px;"></i> Síntese da Página
-        </div>
-        <textarea 
-          class="global-synthesis-textarea" 
-          placeholder="Escreva a síntese ou reflexões desta página..."
-          data-page-num="${pageNum}"
-        >${pageSynthesis}</textarea>
-      `;
+      // Seção de Síntese / Anotações da Página (Exibida se houver síntese ou se ativa)
+      if (pageSynthesis.length > 0 && activeColorFilter === 'all') {
+        const synthesisSection = document.createElement('div');
+        synthesisSection.innerHTML = `
+          <div class="global-section-title">
+            <i data-lucide="pen-tool" style="width: 12px; height: 12px;"></i> Síntese da Página
+          </div>
+          <textarea 
+            class="global-synthesis-textarea" 
+            placeholder="Escreva a síntese ou reflexões desta página..."
+            data-page-num="${pageNum}"
+          >${pageSynthesis}</textarea>
+        `;
 
-      const synthTextarea = synthesisSection.querySelector('.global-synthesis-textarea');
-      if (synthTextarea) {
-        let synthTimer;
-        synthTextarea.oninput = () => {
-          clearTimeout(synthTimer);
-          synthTimer = setTimeout(() => {
-            NoteService.savePageSynthesis(pageNum, synthTextarea.value);
-            if (appState.get('pageNum') === pageNum && DOM.notepad) {
-              DOM.notepad.value = synthTextarea.value;
-            }
-          }, 300);
-        };
+        const synthTextarea = synthesisSection.querySelector('.global-synthesis-textarea');
+        if (synthTextarea) {
+          let synthTimer;
+          synthTextarea.oninput = () => {
+            clearTimeout(synthTimer);
+            synthTimer = setTimeout(() => {
+              NoteService.savePageSynthesis(pageNum, synthTextarea.value);
+              if (appState.get('pageNum') === pageNum && DOM.notepad) {
+                DOM.notepad.value = synthTextarea.value;
+              }
+            }, 300);
+          };
+        }
+
+        pageCard.appendChild(synthesisSection);
       }
 
-      pageCard.appendChild(synthesisSection);
       globalViewEl.appendChild(pageCard);
     });
 

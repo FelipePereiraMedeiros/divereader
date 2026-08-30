@@ -30,9 +30,11 @@ export const DOM = {
   btnExportBackup: document.getElementById('btn-export-backup'),
   importBackupInput: document.getElementById('import-backup-input'),
 
-  // Indicador Discreto & Barra Flutuante
+  // Indicador Discreto, Barra Flutuante & Barra de Progresso
   indicator: document.getElementById('discreet-indicator'),
   floatingBar: document.getElementById('floating-focus-bar'),
+  readingProgressBar: document.getElementById('reading-progress-bar'),
+  readingProgressBarContainer: document.getElementById('reading-progress-bar-container'),
 
   // Caderno de Estudos (Sidebar)
   tabBtnPage: document.getElementById('tab-btn-page'),
@@ -48,6 +50,9 @@ export const DOM = {
   btnCopyGlobal: document.getElementById('btn-copy-global'),
   btnDownloadNotes: document.getElementById('btn-download-notes'),
   btnCloseSidebar: document.getElementById('btn-close-sidebar'),
+  notebookSearchInput: document.getElementById('notebook-search-input'),
+  btnClearSearch: document.getElementById('btn-clear-search'),
+  colorFilterChips: document.getElementById('color-filter-chips'),
 
   // Pomodoro
   pomodoroContainer: document.getElementById('pomodoro-container'),

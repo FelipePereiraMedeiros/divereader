@@ -23,6 +23,8 @@ class StateManager {
       isFocusMode: false,
       activeTab: 'page', // 'page' | 'global' | 'toc'
       selectedHighlightId: null,
+      searchQuery: '',
+      activeColorFilter: 'all', // 'all' | 'yellow' | 'green' | 'pink' | 'blue' | 'purple'
     };
 
     this.listeners = new Map();

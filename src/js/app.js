@@ -383,9 +383,17 @@ export const App = {
       }
     }
 
-    // Atualiza o indicador de página
+    // Atualiza a barra linear de progresso de leitura (%)
+    const currentEffectivePage = singlePage ? targetPage : Math.min(totalPages, leftPageNum + 1);
+    const progressPercent = totalPages > 0 ? Math.min(100, Math.max(1, Math.round((currentEffectivePage / totalPages) * 100))) : 0;
+    const progressBar = DOM.readingProgressBar || document.getElementById('reading-progress-bar');
+    if (progressBar) {
+      progressBar.style.width = `${progressPercent}%`;
+    }
+
+    // Atualiza o indicador de página com porcentagem de leitura
     if (DOM.indicator) {
-      DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages}`;
+      DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages} (${progressPercent}%)`;
       DOM.indicator.style.opacity = '1';
       setTimeout(() => {
         if (appState.get('zoomLevel') <= 1.0 && DOM.indicator) {

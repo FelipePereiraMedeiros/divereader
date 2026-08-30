@@ -22,8 +22,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Folhas de Estilo Modulares -->
-    <script type="module" crossorigin src="/assets/index-BWPJLb6d.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DnRZCgsf.css">
+    <script type="module" crossorigin src="/assets/index-BXzE4xY1.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C-1Bj3ut.css">
   </head>
 
   <body class="theme-light">
@@ -210,6 +210,9 @@
 
       <!-- ESPAÇO DE LEITURA & SIDEBAR -->
       <main class="main-workspace">
+        <div id="reading-progress-bar-container">
+          <div id="reading-progress-bar" style="width: 0%;"></div>
+        </div>
         <div id="book-container" style="display: none">
           <div id="pdf-viewer">
             <!-- Páginas PDF renderizadas dinamicamente -->
@@ -226,6 +229,25 @@
             <button id="btn-close-sidebar" class="btn-ghost btn-icon" title="Fechar Caderno">
               <i data-lucide="x" style="width: 18px; height: 18px"></i>
             </button>
+          </div>
+
+          <!-- Barra de Busca e Filtro Semântico por Cores -->
+          <div class="sidebar-search-bar">
+            <div class="search-input-wrapper">
+              <i data-lucide="search" style="width: 14px; height: 14px; opacity: 0.6;"></i>
+              <input type="text" id="notebook-search-input" placeholder="Buscar nos grifos e anotações..." autocomplete="off" />
+              <button id="btn-clear-search" class="btn-clear-search hidden" title="Limpar busca">
+                <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+              </button>
+            </div>
+            <div class="color-filter-chips" id="color-filter-chips">
+              <button class="color-chip active" data-color="all" title="Todas as cores">Todos</button>
+              <button class="color-chip color-yellow" data-color="yellow" title="🟡 Conceito"></button>
+              <button class="color-chip color-green" data-color="green" title="🟢 Exemplo"></button>
+              <button class="color-chip color-pink" data-color="pink" title="🔴 Dúvida"></button>
+              <button class="color-chip color-blue" data-color="blue" title="🔵 Citação"></button>
+              <button class="color-chip color-purple" data-color="purple" title="🟣 Tese"></button>
+            </div>
           </div>
 
           <div class="sidebar-tabs" role="tablist">
