@@ -1,0 +1,114 @@
+/* ========================================================= */
+/* DIALOGS & CONFIRMATION MODALS                            */
+/* ========================================================= */
+
+dialog {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--ui-bg);
+  color: var(--text-color);
+  padding: 0;
+  box-shadow: var(--shadow-xl);
+  max-width: 440px;
+  width: 90vw;
+  margin: auto;
+}
+
+dialog::backdrop {
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+}
+
+.modal-dialog-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-header .icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-header .icon-badge.warning {
+  background: rgba(234, 179, 8, 0.15);
+  color: #ca8a04;
+}
+
+.modal-header .icon-badge.danger {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.modal-header .icon-badge.primary {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.modal-body {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.modal-body strong {
+  color: var(--text-color);
+}
+
+.modal-quote-preview {
+  background: var(--ui-surface);
+  border-left: 3px solid var(--highlight-border);
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-doc);
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--text-color);
+  max-height: 80px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.modal-actions button {
+  width: 100%;
+  min-height: 38px;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.modal-actions .btn-cancel {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.modal-actions .btn-cancel:hover {
+  background: var(--ui-surface);
+  color: var(--text-color);
+}

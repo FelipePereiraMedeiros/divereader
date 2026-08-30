@@ -1,0 +1,458 @@
+/* ========================================================= */
+/* SIDEBAR (MEU CADERNO DE ESTUDOS)                         */
+/* ========================================================= */
+
+#sidebar {
+  width: 360px;
+  min-width: 320px;
+  background-color: var(--ui-bg);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
+  transition:
+    transform var(--transition-normal),
+    margin-right var(--transition-normal);
+  z-index: 500;
+}
+
+#sidebar.hidden {
+  transform: translateX(100%);
+  margin-right: -360px;
+  box-shadow: none;
+}
+
+.sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  background-color: var(--ui-surface);
+}
+
+.sidebar-header .header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-color);
+}
+
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--ui-surface);
+}
+
+.sidebar-tabs button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 8px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 13px;
+  min-height: 40px;
+}
+
+.sidebar-tabs button:hover {
+  color: var(--text-color);
+  background: transparent;
+}
+
+.sidebar-tabs button.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: var(--ui-bg);
+}
+
+.tab-content {
+  flex-grow: 1;
+  display: none;
+  flex-direction: column;
+  position: relative;
+  background: var(--ui-bg);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tab-content.active {
+  display: flex;
+}
+
+/* Tab Page: Split into Highlights Cards List + Synthesis Editor */
+.notebook-page-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 14px;
+  gap: 16px;
+}
+
+.notebook-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.section-header .badge {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+}
+
+/* Highlight Cards */
+.highlights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.highlight-card {
+  background: var(--ui-surface);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--highlight-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.highlight-card:hover {
+  border-color: var(--primary);
+  border-left-color: var(--highlight-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.highlight-quote {
+  font-family: var(--font-doc);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-color);
+  font-style: italic;
+}
+
+.highlight-card-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--ui-bg);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+  margin-top: 2px;
+}
+
+.highlight-card-note input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-color);
+  outline: none;
+}
+
+.highlight-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.highlight-actions button {
+  padding: 4px 8px;
+  min-height: 24px;
+  font-size: 11px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-xs);
+}
+
+.highlight-actions button:hover {
+  background: var(--ui-bg);
+  color: var(--text-color);
+}
+
+.highlight-actions button.btn-del:hover {
+  color: var(--danger);
+  background: var(--danger-light);
+}
+
+.empty-highlights-hint {
+  font-size: 12px;
+  color: var(--text-subtle);
+  text-align: center;
+  padding: 16px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+/* Synthesis Textarea */
+.synthesis-editor-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 140px;
+}
+
+#notepad {
+  flex-grow: 1;
+  width: 100%;
+  min-height: 140px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  background: var(--ui-bg);
+  color: var(--text-color);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+#notepad:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-focus);
+}
+
+/* Global Fichamento Tab */
+#global-view {
+  flex-grow: 1;
+  padding: 14px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-color);
+  padding-bottom: 74px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.global-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-page-card {
+  background: var(--ui-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.global-page-card:hover {
+  border-color: var(--border-focus);
+}
+
+.global-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.global-page-header .page-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.global-page-header .btn-jump-page {
+  font-size: 11px;
+  padding: 3px 8px;
+  min-height: 24px;
+  border: 1px solid var(--border-color);
+  background: var(--ui-bg);
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+}
+
+.global-page-header .btn-jump-page:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.global-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.global-quotes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.global-quote-item {
+  background: var(--ui-bg);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--highlight-border);
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.global-quote-text {
+  font-family: var(--font-doc);
+  font-size: 13px;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--text-color);
+}
+
+.global-quote-note-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ui-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  padding: 4px 8px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.global-quote-note-edit:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.global-quote-note-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-color);
+  outline: none;
+  padding: 2px 0;
+}
+
+.global-quote-note-input::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.global-quote-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.global-quote-actions button {
+  padding: 3px 6px;
+  min-height: 22px;
+  font-size: 11px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-xs);
+}
+
+.global-quote-actions button:hover {
+  background: var(--ui-surface);
+  color: var(--text-color);
+}
+
+.global-quote-actions button.btn-del:hover {
+  color: var(--danger);
+  background: var(--danger-light);
+}
+
+.global-synthesis-textarea {
+  width: 100%;
+  min-height: 72px;
+  background: var(--ui-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-color);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.global-synthesis-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.global-synthesis-textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.action-buttons {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background-color: var(--ui-bg);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+}
+
+.action-buttons button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+}
