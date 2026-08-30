@@ -456,3 +456,150 @@
   border-radius: 50%;
   justify-content: center;
 }
+
+/* ========================================================= */
+/* HIGHLIGHT COLORS & BADGES IN NOTEBOOK                     */
+/* ========================================================= */
+
+.highlight-card.color-yellow,
+.global-quote-item.color-yellow {
+  border-left-color: var(--hl-yellow-border);
+}
+.highlight-card.color-green,
+.global-quote-item.color-green {
+  border-left-color: var(--hl-green-border);
+}
+.highlight-card.color-pink,
+.global-quote-item.color-pink {
+  border-left-color: var(--hl-pink-border);
+}
+.highlight-card.color-blue,
+.global-quote-item.color-blue {
+  border-left-color: var(--hl-blue-border);
+}
+.highlight-card.color-purple,
+.global-quote-item.color-purple {
+  border-left-color: var(--hl-purple-border);
+}
+
+.highlight-color-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  width: fit-content;
+}
+
+.highlight-color-badge.color-yellow {
+  background: var(--hl-yellow-bg);
+  color: #a16207;
+  border: 1px solid var(--hl-yellow-border);
+}
+.highlight-color-badge.color-green {
+  background: var(--hl-green-bg);
+  color: #15803d;
+  border: 1px solid var(--hl-green-border);
+}
+.highlight-color-badge.color-pink {
+  background: var(--hl-pink-bg);
+  color: #be185d;
+  border: 1px solid var(--hl-pink-border);
+}
+.highlight-color-badge.color-blue {
+  background: var(--hl-blue-bg);
+  color: #0369a1;
+  border: 1px solid var(--hl-blue-border);
+}
+.highlight-color-badge.color-purple {
+  background: var(--hl-purple-bg);
+  color: #7e22ce;
+  border: 1px solid var(--hl-purple-border);
+}
+
+.theme-dark .highlight-color-badge.color-yellow { color: #facc15; }
+.theme-dark .highlight-color-badge.color-green { color: #4ade80; }
+.theme-dark .highlight-color-badge.color-pink { color: #f472b6; }
+.theme-dark .highlight-color-badge.color-blue { color: #38bdf8; }
+.theme-dark .highlight-color-badge.color-purple { color: #c084fc; }
+
+/* ========================================================= */
+/* TOC (SUMÁRIO DO LIVRO)                                    */
+/* ========================================================= */
+
+.toc-container {
+  padding: 14px;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toc-empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.toc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-color);
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  gap: 8px;
+}
+
+.toc-item:hover {
+  background: var(--ui-surface);
+  border-color: var(--border-color);
+  color: var(--primary);
+}
+
+.toc-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+  border-color: var(--primary-focus);
+}
+
+.toc-item .toc-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-item .toc-page {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--ui-bg);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-color);
+}
+
+.toc-nested {
+  margin-left: 12px;
+  border-left: 1.5px solid var(--border-color);
+  padding-left: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

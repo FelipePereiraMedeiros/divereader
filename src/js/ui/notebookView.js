@@ -1,5 +1,5 @@
 /**
- * Renderizador da Interface do Caderno de Estudos (Cards de Grifos + Síntese + Fichamento)
+ * Renderizador da Interface do Caderno de Estudos (Cards de Grifos + Síntese + Sumário TOC + Fichamento)
  */
 
 import { appState } from '../state.js';
@@ -8,18 +8,42 @@ import { NoteService } from '../services/noteService.js';
 import { DialogService } from './dialogs.js';
 import { showToast } from './toast.js';
 import { DOM, refreshIcons } from './dom.js';
+import { EVENTS } from '../constants.js';
 
 export const NotebookView = {
+  /** Callback opcional de navegação externa */
+  onNavigatePage: null,
+
+  COLOR_LABELS: {
+    yellow: '🟡 Conceito',
+    green: '🟢 Exemplo',
+    pink: '🔴 Dúvida',
+    blue: '🔵 Citação',
+    purple: '🟣 Tese',
+  },
+
   /**
    * Inicializa ouvintes e comportamentos do Caderno
    */
-  init() {
+  init(callbacks = {}) {
+    if (callbacks.onNavigatePage) {
+      this.onNavigatePage = callbacks.onNavigatePage;
+    }
+
+    // Reatividade: renderiza sempre que os grifos mudarem
+    appState.on(EVENTS.HIGHLIGHTS_UPDATED, () => {
+      this.render();
+    });
+
     // Alternância de Abas
     if (DOM.tabBtnPage) {
       DOM.tabBtnPage.onclick = () => this.switchTab('page');
     }
     if (DOM.tabBtnGlobal) {
       DOM.tabBtnGlobal.onclick = () => this.switchTab('global');
+    }
+    if (DOM.tabBtnToc) {
+      DOM.tabBtnToc.onclick = () => this.switchTab('toc');
     }
 
     // Auto-save da Síntese Manual
@@ -65,6 +89,27 @@ export const NotebookView = {
   },
 
   /**
+   * Navega para uma página e fecha a sidebar no mobile se necessário
+   * @param {number} pageNum
+   */
+  navigateTo(pageNum) {
+    if (!pageNum) return;
+    if (this.onNavigatePage) {
+      this.onNavigatePage(pageNum);
+    } else if (window.app && typeof window.app.renderPages === 'function') {
+      window.app.renderPages(pageNum);
+    } else if (DOM.pageInput) {
+      DOM.pageInput.value = String(pageNum);
+      DOM.pageInput.dispatchEvent(new Event('change'));
+    }
+
+    // No mobile, fecha a sidebar ao selecionar item do sumário
+    if (window.innerWidth <= 820) {
+      this.toggleSidebar(false);
+    }
+  },
+
+  /**
    * Alterna a visibilidade da barra lateral (Caderno)
    * @param {boolean} [forceState]
    */
@@ -84,24 +129,24 @@ export const NotebookView = {
   },
 
   /**
-   * Alterna entre as abas 'page' e 'global'
-   * @param {'page'|'global'} tab
+   * Alterna entre as abas 'page', 'global' e 'toc'
+   * @param {'page'|'global'|'toc'} tab
    */
   switchTab(tab) {
     appState.set({ activeTab: tab });
 
-    if (DOM.tabBtnPage && DOM.tabBtnGlobal) {
-      DOM.tabBtnPage.classList.toggle('active', tab === 'page');
-      DOM.tabBtnGlobal.classList.toggle('active', tab === 'global');
-    }
+    if (DOM.tabBtnPage) DOM.tabBtnPage.classList.toggle('active', tab === 'page');
+    if (DOM.tabBtnGlobal) DOM.tabBtnGlobal.classList.toggle('active', tab === 'global');
+    if (DOM.tabBtnToc) DOM.tabBtnToc.classList.toggle('active', tab === 'toc');
 
-    if (DOM.tabPage && DOM.tabGlobal) {
-      DOM.tabPage.classList.toggle('active', tab === 'page');
-      DOM.tabGlobal.classList.toggle('active', tab === 'global');
-    }
+    if (DOM.tabPage) DOM.tabPage.classList.toggle('active', tab === 'page');
+    if (DOM.tabGlobal) DOM.tabGlobal.classList.toggle('active', tab === 'global');
+    if (DOM.tabToc) DOM.tabToc.classList.toggle('active', tab === 'toc');
 
     if (tab === 'global') {
       this.renderGlobalDossier();
+    } else if (tab === 'toc') {
+      this.renderToc();
     }
   },
 
@@ -109,12 +154,20 @@ export const NotebookView = {
    * Renderiza os dados do caderno para a página ativa
    */
   render() {
-    const pageNum = appState.get('pageNum');
+    const pageNum = appState.get('pageNum') || 1;
+    const isSingle = appState.isSinglePageMode();
     const highlights = appState.get('highlights') || {};
-    const pageHighlights = highlights[pageNum] || [];
+
+    // Obtém grifos da página ativa (e da página direita se estiver no modo livro aberto de 2 páginas)
+    let pageHighlights = [...(highlights[pageNum] || [])];
+    if (!isSingle) {
+      const rightPageNum = pageNum + 1;
+      const rightHighlights = highlights[rightPageNum] || [];
+      pageHighlights = [...pageHighlights, ...rightHighlights];
+    }
 
     // Atualiza a lista de cards de grifos
-    const container = DOM.highlightsContainer;
+    const container = DOM.highlightsContainer || document.getElementById('page-highlights-list');
     if (container) {
       container.innerHTML = '';
 
@@ -130,12 +183,26 @@ export const NotebookView = {
           </div>
         `;
       } else {
-        pageHighlights.forEach((h, index) => {
+        pageHighlights.forEach((h) => {
+          const hPageNum = h.pageNum || pageNum;
           const card = document.createElement('div');
-          card.className = 'highlight-card';
+          const colorKey = h.color || 'yellow';
+          card.className = `highlight-card color-${colorKey}`;
           card.dataset.highlightId = h.id;
 
+          const badgeLabel = this.COLOR_LABELS[colorKey] || '🟡 Conceito';
+
           card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="highlight-color-badge color-${colorKey}">${badgeLabel}</span>
+              <select class="highlight-color-select" title="Alterar cor do grifo" style="font-size: 11px; padding: 1px 4px; height: 22px; border-radius: var(--radius-xs); border: 1px solid var(--border-color); background: var(--ui-bg);">
+                <option value="yellow" ${colorKey === 'yellow' ? 'selected' : ''}>🟡 Amarelo</option>
+                <option value="green" ${colorKey === 'green' ? 'selected' : ''}>🟢 Verde</option>
+                <option value="pink" ${colorKey === 'pink' ? 'selected' : ''}>🔴 Rosa</option>
+                <option value="blue" ${colorKey === 'blue' ? 'selected' : ''}>🔵 Azul</option>
+                <option value="purple" ${colorKey === 'purple' ? 'selected' : ''}>🟣 Roxo</option>
+              </select>
+            </div>
             <div class="highlight-quote">"${h.text}"</div>
             <div class="highlight-card-note">
               <input 
@@ -146,6 +213,9 @@ export const NotebookView = {
               />
             </div>
             <div class="highlight-actions">
+              <button class="btn-abnt" title="Copiar citação formatada ABNT">
+                <i data-lucide="quote" style="width: 12px; height: 12px;"></i> Copiar ABNT
+              </button>
               <button class="btn-locate" title="Localizar no documento">
                 <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver no PDF
               </button>
@@ -155,11 +225,36 @@ export const NotebookView = {
             </div>
           `;
 
+          // Evento: Alterar Cor do Grifo
+          const colorSelect = card.querySelector('.highlight-color-select');
+          if (colorSelect) {
+            colorSelect.onchange = (e) => {
+              const newColor = e.target.value;
+              HighlightService.updateHighlightColor(hPageNum, h.id, newColor);
+              this.render();
+              showToast(`Cor do grifo alterada!`, 'palette');
+            };
+          }
+
+          // Evento: Copiar Citação ABNT
+          const btnAbnt = card.querySelector('.btn-abnt');
+          if (btnAbnt) {
+            btnAbnt.onclick = async () => {
+              const citation = `"${h.text}" (Pág. ${hPageNum})`;
+              try {
+                await navigator.clipboard.writeText(citation);
+                showToast('Citação ABNT copiada!', 'copy-check');
+              } catch (err) {
+                showToast('Erro ao copiar citação.', 'alert-circle');
+              }
+            };
+          }
+
           // Evento: Ver no PDF (pisca o grifo)
           const btnLocate = card.querySelector('.btn-locate');
           if (btnLocate) {
             btnLocate.onclick = () => {
-              HighlightService.flashHighlight(pageNum, h.id);
+              HighlightService.flashHighlight(hPageNum, h.id);
             };
           }
 
@@ -176,14 +271,10 @@ export const NotebookView = {
                 secondaryActionText: 'Remover apenas do Caderno',
               });
 
-              if (choice === 'delete-all') {
-                HighlightService.deleteHighlight(pageNum, h.id);
+              if (choice === 'delete-all' || choice === 'delete-one') {
+                HighlightService.deleteHighlight(hPageNum, h.id);
                 this.render();
-                showToast('Grifo excluído do Caderno e do PDF.', 'eraser');
-              } else if (choice === 'delete-one') {
-                HighlightService.deleteHighlight(pageNum, h.id);
-                this.render();
-                showToast('Grifo removido do Caderno.', 'eraser');
+                showToast('Grifo excluído com sucesso.', 'eraser');
               }
             };
           }
@@ -195,7 +286,7 @@ export const NotebookView = {
             noteInput.oninput = () => {
               clearTimeout(inputTimeout);
               inputTimeout = setTimeout(() => {
-                HighlightService.updateHighlightNote(pageNum, h.id, noteInput.value);
+                HighlightService.updateHighlightNote(hPageNum, h.id, noteInput.value);
               }, 400);
             };
           }
@@ -212,17 +303,75 @@ export const NotebookView = {
       DOM.notepad.value = NoteService.getPageSynthesis(pageNum);
     }
 
-    // Se estiver na aba global, atualiza a visão geral
+    // Atualiza aba global ou sumário se estiver ativa
     if (appState.get('activeTab') === 'global') {
       this.renderGlobalDossier();
+    } else if (appState.get('activeTab') === 'toc') {
+      this.renderToc();
     }
+  },
+
+  /**
+   * Renderiza a árvore hierárquica do Sumário (TOC)
+   */
+  renderToc() {
+    const tocListEl = DOM.tocList || document.getElementById('toc-list');
+    if (!tocListEl) return;
+    const outline = appState.get('outline') || [];
+    const currentPage = appState.get('pageNum') || 1;
+
+    tocListEl.innerHTML = '';
+
+    if (!outline || outline.length === 0) {
+      tocListEl.innerHTML = `
+        <div class="toc-empty">
+          <i data-lucide="bookmark" style="width: 32px; height: 32px; opacity: 0.4;"></i>
+          <p style="margin: 0; font-weight: 600;">Nenhum sumário encontrado</p>
+          <p style="margin: 0; font-size: 11.5px; opacity: 0.8;">Este documento PDF não possui bookmarks/sumário estruturado embutido.</p>
+        </div>
+      `;
+      refreshIcons(tocListEl);
+      return;
+    }
+
+    const renderTree = (items, containerNode) => {
+      items.forEach((item) => {
+        const itemEl = document.createElement('div');
+        const isActive = item.pageNum && (item.pageNum === currentPage || item.pageNum === currentPage + 1);
+        itemEl.className = `toc-item ${isActive ? 'active' : ''}`;
+
+        itemEl.innerHTML = `
+          <span class="toc-title" title="${item.title}">${item.title}</span>
+          ${item.pageNum ? `<span class="toc-page">p. ${item.pageNum}</span>` : ''}
+        `;
+
+        if (item.pageNum) {
+          itemEl.onclick = () => {
+            this.navigateTo(item.pageNum);
+          };
+        }
+
+        containerNode.appendChild(itemEl);
+
+        if (item.items && item.items.length > 0) {
+          const nestedContainer = document.createElement('div');
+          nestedContainer.className = 'toc-nested';
+          renderTree(item.items, nestedContainer);
+          containerNode.appendChild(nestedContainer);
+        }
+      });
+    };
+
+    renderTree(outline, tocListEl);
+    refreshIcons(tocListEl);
   },
 
   /**
    * Renderiza a aba de Fichamento Completo com cards estruturados por página
    */
   renderGlobalDossier() {
-    if (!DOM.globalView) return;
+    const globalViewEl = DOM.globalView || document.getElementById('global-view');
+    if (!globalViewEl) return;
     const highlights = appState.get('highlights') || {};
     const manualNotes = appState.get('manualNotes') || {};
 
@@ -232,7 +381,7 @@ export const NotebookView = {
     ]);
 
     const pages = Array.from(pageSet).sort((a, b) => a - b);
-    DOM.globalView.innerHTML = '';
+    globalViewEl.innerHTML = '';
 
     const validPages = pages.filter((p) => {
       const hList = highlights[p] || [];
@@ -241,14 +390,14 @@ export const NotebookView = {
     });
 
     if (validPages.length === 0) {
-      DOM.globalView.innerHTML = `
+      globalViewEl.innerHTML = `
         <div class="global-empty-state">
           <i data-lucide="file-text" style="width: 36px; height: 36px; opacity: 0.4;"></i>
           <p style="margin: 0; font-weight: 600;">Nenhum fichamento gerado ainda.</p>
           <p style="margin: 0; font-size: 12px;">Seus grifos e anotações aparecerão compilados aqui automaticamente.</p>
         </div>
       `;
-      refreshIcons(DOM.globalView);
+      refreshIcons(globalViewEl);
       return;
     }
 
@@ -274,12 +423,7 @@ export const NotebookView = {
       const btnJump = header.querySelector('.btn-jump-page');
       if (btnJump) {
         btnJump.onclick = () => {
-          if (window.app && typeof window.app.renderPages === 'function') {
-            window.app.renderPages(pageNum);
-          } else if (DOM.pageInput) {
-            DOM.pageInput.value = String(pageNum);
-            DOM.pageInput.dispatchEvent(new Event('change'));
-          }
+          this.navigateTo(pageNum);
         };
       }
 
@@ -299,8 +443,14 @@ export const NotebookView = {
 
         pageHighlights.forEach((h) => {
           const item = document.createElement('div');
-          item.className = 'global-quote-item';
+          const colorKey = h.color || 'yellow';
+          item.className = `global-quote-item color-${colorKey}`;
+          const badgeLabel = this.COLOR_LABELS[colorKey] || '🟡 Conceito';
+
           item.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="highlight-color-badge color-${colorKey}">${badgeLabel}</span>
+            </div>
             <div class="global-quote-text">"${h.text}"</div>
             <div class="global-quote-note-edit">
               <i data-lucide="message-square" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
@@ -314,6 +464,9 @@ export const NotebookView = {
               />
             </div>
             <div class="global-quote-actions">
+              <button class="btn-abnt" title="Copiar citação ABNT">
+                <i data-lucide="quote" style="width: 11px; height: 11px;"></i> Copiar ABNT
+              </button>
               <button class="btn-locate" title="Ver grifo no PDF">
                 <i data-lucide="eye" style="width: 11px; height: 11px;"></i> Ver no PDF
               </button>
@@ -323,6 +476,20 @@ export const NotebookView = {
             </div>
           `;
 
+          // Ação: Copiar ABNT
+          const btnAbnt = item.querySelector('.btn-abnt');
+          if (btnAbnt) {
+            btnAbnt.onclick = async () => {
+              const citation = `"${h.text}" (Pág. ${pageNum})`;
+              try {
+                await navigator.clipboard.writeText(citation);
+                showToast('Citação ABNT copiada!', 'copy-check');
+              } catch (err) {
+                showToast('Erro ao copiar citação.', 'alert-circle');
+              }
+            };
+          }
+
           // Ação: Editar Nota da Citação em Tempo Real
           const noteInput = item.querySelector('.global-quote-note-input');
           if (noteInput) {
@@ -331,9 +498,8 @@ export const NotebookView = {
               clearTimeout(noteTimer);
               noteTimer = setTimeout(() => {
                 HighlightService.updateHighlightNote(pageNum, h.id, noteInput.value);
-                // Se a página atual for esta, atualiza o input da aba página se existir
-                if (appState.get('pageNum') === pageNum && DOM.highlightsContainer) {
-                  const cardInput = DOM.highlightsContainer.querySelector(
+                if (appState.get('pageNum') === pageNum) {
+                  const cardInput = (DOM.highlightsContainer || document).querySelector(
                     `input[data-highlight-id="${h.id}"]`,
                   );
                   if (cardInput && cardInput.value !== noteInput.value) {
@@ -348,15 +514,8 @@ export const NotebookView = {
           const btnLocate = item.querySelector('.btn-locate');
           if (btnLocate) {
             btnLocate.onclick = () => {
-              if (window.app && typeof window.app.renderPages === 'function') {
-                window.app.renderPages(pageNum).then(() => {
-                  HighlightService.flashHighlight(pageNum, h.id);
-                });
-              } else if (DOM.pageInput) {
-                DOM.pageInput.value = String(pageNum);
-                DOM.pageInput.dispatchEvent(new Event('change'));
-                setTimeout(() => HighlightService.flashHighlight(pageNum, h.id), 300);
-              }
+              this.navigateTo(pageNum);
+              setTimeout(() => HighlightService.flashHighlight(pageNum, h.id), 350);
             };
           }
 
@@ -408,7 +567,6 @@ export const NotebookView = {
           clearTimeout(synthTimer);
           synthTimer = setTimeout(() => {
             NoteService.savePageSynthesis(pageNum, synthTextarea.value);
-            // Sincroniza com o textarea da página se estiver na mesma página
             if (appState.get('pageNum') === pageNum && DOM.notepad) {
               DOM.notepad.value = synthTextarea.value;
             }
@@ -417,9 +575,9 @@ export const NotebookView = {
       }
 
       pageCard.appendChild(synthesisSection);
-      DOM.globalView.appendChild(pageCard);
+      globalViewEl.appendChild(pageCard);
     });
 
-    refreshIcons(DOM.globalView);
+    refreshIcons(globalViewEl);
   },
 };

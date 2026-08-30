@@ -81,7 +81,8 @@ describe('Highlight Service & Model', () => {
 
     expect(layer.children.length).toBe(1);
     const rectEl = layer.children[0];
-    expect(rectEl.className).toBe('highlight-rect');
+    expect(rectEl.classList.contains('highlight-rect')).toBe(true);
+    expect(rectEl.classList.contains('highlight-yellow')).toBe(true);
     expect(rectEl.dataset.highlightId).toBe('hl_abc');
     expect(rectEl.dataset.pageNum).toBe('1');
     expect(parseFloat(rectEl.style.left)).toBeCloseTo(10, 0);

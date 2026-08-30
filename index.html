@@ -81,11 +81,15 @@
         </div>
       </div>
 
-      <!-- TOOLTIP FLUTUANTE DE GRIFO RÁPIDO (MOBILE / TOUCH) -->
+      <!-- TOOLTIP FLUTUANTE DE GRIFO RÁPIDO COM PALETA DE CORES -->
       <div id="quick-highlight-tooltip">
-        <button id="btn-quick-highlight" class="btn-primary" title="Grifar trecho selecionado">
-          <i data-lucide="highlighter" style="width: 14px; height: 14px"></i> Grifar
-        </button>
+        <div class="color-swatches">
+          <button class="color-swatch-btn color-yellow" data-color="yellow" title="Conceito / Ideia Principal (Amarelo)"></button>
+          <button class="color-swatch-btn color-green" data-color="green" title="Fato / Exemplo (Verde)"></button>
+          <button class="color-swatch-btn color-pink" data-color="pink" title="Dúvida / Refutação (Rosa)"></button>
+          <button class="color-swatch-btn color-blue" data-color="blue" title="Citação / Fonte (Azul)"></button>
+          <button class="color-swatch-btn color-purple" data-color="purple" title="Metodologia / Tese (Roxo)"></button>
+        </div>
       </div>
 
       <!-- OVERLAYS, INDICADORES & TOASTS -->
@@ -228,7 +232,10 @@
               Nesta Página
             </button>
             <button id="tab-btn-global" role="tab" aria-selected="false">
-              Fichamento Completo
+              Fichamento
+            </button>
+            <button id="tab-btn-toc" role="tab" aria-selected="false">
+              Sumário
             </button>
           </div>
 
@@ -271,6 +278,16 @@
               <button id="btn-download-notes" class="btn-primary" title="Baixar Fichamento (.md)">
                 <i data-lucide="download" style="width: 16px; height: 16px"></i>
               </button>
+            </div>
+          </div>
+
+          <!-- Aba 3: Sumário Estruturado do Livro (TOC) -->
+          <div id="tab-toc" class="tab-content" role="tabpanel">
+            <div class="toc-container" id="toc-list">
+              <div class="toc-empty">
+                <i data-lucide="bookmark" style="width: 28px; height: 28px; opacity: 0.5;"></i>
+                <span>Nenhum sumário encontrado neste documento.</span>
+              </div>
             </div>
           </div>
         </aside>

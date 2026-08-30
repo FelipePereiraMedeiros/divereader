@@ -12,12 +12,25 @@
   box-shadow: var(--shadow-xl);
   border-radius: var(--radius-pill);
   padding: 4px 6px;
-  transform: translate(-50%, -100%);
-  margin-top: -10px;
   pointer-events: auto;
   align-items: center;
   gap: 6px;
+  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), top 0.16s ease, left 0.16s ease;
+}
+
+/* Posição Padrão (Acima da seleção) */
+#quick-highlight-tooltip,
+#quick-highlight-tooltip.placement-top {
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
   animation: tooltipPop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Posição Invertida (Abaixo da seleção quando houver conflito de extensão/borda) */
+#quick-highlight-tooltip.placement-bottom {
+  transform: translate(-50%, 0);
+  margin-top: 10px;
+  animation: tooltipPopBottom 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes tooltipPop {
@@ -31,21 +44,80 @@
   }
 }
 
-#quick-highlight-tooltip button {
-  padding: 6px 14px;
-  min-height: 38px;
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  font-weight: 600;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  touch-action: manipulation;
+@keyframes tooltipPopBottom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10%) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
 
-#quick-highlight-tooltip button:active {
-  transform: scale(0.94);
+#quick-highlight-tooltip .color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+
+#quick-highlight-tooltip .color-swatch-btn {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  min-width: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  display: block;
+  position: relative;
+  touch-action: manipulation;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Área de toque expandida para mobile */
+#quick-highlight-tooltip .color-swatch-btn::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -6px;
+  right: -6px;
+}
+
+#quick-highlight-tooltip .color-swatch-btn:hover {
+  transform: scale(1.22);
+}
+
+#quick-highlight-tooltip .color-swatch-btn:active {
+  transform: scale(0.9);
+}
+
+#quick-highlight-tooltip .color-swatch-btn.color-yellow {
+  background-color: #facc15;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+#quick-highlight-tooltip .color-swatch-btn.color-green {
+  background-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+#quick-highlight-tooltip .color-swatch-btn.color-pink {
+  background-color: #ec4899;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+#quick-highlight-tooltip .color-swatch-btn.color-blue {
+  background-color: #0284c7;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+#quick-highlight-tooltip .color-swatch-btn.color-purple {
+  background-color: #a855f7;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 /* Mobile Bottom Navigation Bar */

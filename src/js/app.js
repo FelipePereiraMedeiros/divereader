@@ -34,10 +34,13 @@ export const App = {
     if (DOM.themeSelector) DOM.themeSelector.value = savedTheme;
 
     // Inicializa componentes de UI
-    NotebookView.init();
+    NotebookView.init({
+      onNavigatePage: (pageNum) => this.renderPages(pageNum),
+    });
     QuickHighlightTooltip.init();
     this.initEventListeners();
     this.initPomodoro();
+    window.app = this;
 
     // Redimensionamento de tela
     window.addEventListener('resize', () => {
@@ -266,6 +269,7 @@ export const App = {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PdfService.loadDocument(arrayBuffer);
+      const outline = await PdfService.getOutline(pdfDoc);
 
       const savedPage = Storage.loadPage(fileKey);
       const savedHighlights = Storage.loadHighlights(fileKey);
@@ -278,6 +282,7 @@ export const App = {
 
       appState.set({
         pdfDoc,
+        outline,
         pageNum,
         totalPages: pdfDoc.numPages,
         highlights: savedHighlights,
