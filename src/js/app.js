@@ -213,6 +213,8 @@ export const App = {
       container: DOM.bookContainer,
       onNextPage: () => this.onNextPage(),
       onPrevPage: () => this.onPrevPage(),
+      onSetZoom: (zoom) => this.setZoom(zoom),
+      onChangeZoom: (delta) => this.changeZoom(delta),
     });
   },
 
@@ -449,13 +451,14 @@ export const App = {
   },
 
   /**
-   * Altera o nível de zoom
-   * @param {number} delta
+   * Define o nível de zoom absoluto
+   * @param {number} targetZoom
    */
-  changeZoom(delta) {
+  setZoom(targetZoom) {
     const current = appState.get('zoomLevel');
-    const newZoom = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, current + delta));
-    if (newZoom === current) return;
+    const clamped = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, targetZoom));
+    const newZoom = Math.round(clamped * 100) / 100;
+    if (Math.abs(newZoom - current) < 0.02) return;
 
     const wasSingle = appState.isSinglePageMode();
     appState.set({ zoomLevel: newZoom });
@@ -475,6 +478,15 @@ export const App = {
       pageNum -= 1;
     }
     this.renderPages(pageNum);
+  },
+
+  /**
+   * Altera o nível de zoom relativamente
+   * @param {number} delta
+   */
+  changeZoom(delta) {
+    const current = appState.get('zoomLevel');
+    this.setZoom(current + delta);
   },
 
   updateBodyMode() {
