@@ -104,4 +104,88 @@ describe('Highlight Service & Model', () => {
     expect(consolidated[0].y).toBeCloseTo(0.15, 2);
     expect(consolidated[0].height).toBeCloseTo(0.03, 2);
   });
+
+  it('findHighlightAtPoint deve identificar grifo diretamente pelo elemento alvo', () => {
+    const hl = new Highlight({
+      id: 'hl_direct',
+      pageNum: 1,
+      text: 'Texto direto',
+      rects: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+    });
+    appState.set({ highlights: { 1: [hl] } });
+
+    const rectEl = document.createElement('div');
+    rectEl.className = 'highlight-rect';
+    rectEl.dataset.highlightId = 'hl_direct';
+    rectEl.dataset.pageNum = '1';
+
+    const result = HighlightService.findHighlightAtPoint(100, 100, rectEl);
+    expect(result).not.toBeNull();
+    expect(result?.highlightId).toBe('hl_direct');
+    expect(result?.pageNum).toBe(1);
+    expect(result?.highlight.text).toBe('Texto direto');
+  });
+
+  it('findHighlightAtPoint deve identificar grifo através de document.elementsFromPoint quando textLayer está sobreposta', () => {
+    const hl = new Highlight({
+      id: 'hl_under_text',
+      pageNum: 1,
+      text: 'Texto sob a textLayer',
+      rects: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+    });
+    appState.set({ highlights: { 1: [hl] } });
+
+    const rectEl = document.createElement('div');
+    rectEl.className = 'highlight-rect';
+    rectEl.dataset.highlightId = 'hl_under_text';
+    rectEl.dataset.pageNum = '1';
+
+    const spanEl = document.createElement('span');
+    spanEl.textContent = 'Texto';
+
+    // Mock elementsFromPoint para simular clique através da camada de texto
+    const originalElementsFromPoint = document.elementsFromPoint;
+    document.elementsFromPoint = (x, y) => [spanEl, rectEl];
+
+    try {
+      const result = HighlightService.findHighlightAtPoint(50, 50, spanEl);
+      expect(result).not.toBeNull();
+      expect(result?.highlightId).toBe('hl_under_text');
+      expect(result?.pageNum).toBe(1);
+    } finally {
+      document.elementsFromPoint = originalElementsFromPoint;
+    }
+  });
+
+  it('findHighlightAtPoint deve identificar grifo geometricamente nas coordenadas da página', () => {
+    const hl = new Highlight({
+      id: 'hl_geo',
+      pageNum: 1,
+      text: 'Texto geométrico',
+      rects: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+    });
+    appState.set({ highlights: { 1: [hl] } });
+
+    const pageWrapper = document.createElement('div');
+    pageWrapper.className = 'page-wrapper';
+    pageWrapper.dataset.page = '1';
+    // Mock getBoundingClientRect: x: 0..1000, y: 0..1000
+    pageWrapper.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 1000,
+      height: 1000,
+      right: 1000,
+      bottom: 1000,
+    });
+
+    const spanEl = document.createElement('span');
+    pageWrapper.appendChild(spanEl);
+
+    // Clique em (200, 220) -> x = 0.2, y = 0.22 (dentro de x: 0.1..0.4, y: 0.2..0.25)
+    const result = HighlightService.findHighlightAtPoint(200, 220, spanEl);
+    expect(result).not.toBeNull();
+    expect(result?.highlightId).toBe('hl_geo');
+    expect(result?.pageNum).toBe(1);
+  });
 });

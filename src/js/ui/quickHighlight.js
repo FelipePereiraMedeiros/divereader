@@ -41,6 +41,11 @@ export const QuickHighlightTooltip = {
   },
 
   handleSelectionChange() {
+    if (typeof document !== 'undefined' && document.querySelector('dialog[open]')) {
+      this.hide();
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.toString().trim()) {
       this.hide();

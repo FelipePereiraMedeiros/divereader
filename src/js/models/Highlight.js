@@ -35,11 +35,16 @@ export class Highlight {
    * Verifica se um ponto percentual (px, py) colide com algum dos retângulos deste grifo
    * @param {number} px
    * @param {number} py
+   * @param {number} [tolerance=0]
    * @returns {boolean}
    */
-  containsPoint(px, py) {
+  containsPoint(px, py, tolerance = 0) {
     return this.rects.some(
-      (r) => px >= r.x && px <= r.x + r.width && py >= r.y && py <= r.y + r.height,
+      (r) =>
+        px >= r.x - tolerance &&
+        px <= r.x + r.width + tolerance &&
+        py >= r.y - tolerance &&
+        py <= r.y + r.height + tolerance,
     );
   }
 

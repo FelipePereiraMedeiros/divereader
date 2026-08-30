@@ -271,4 +271,81 @@ export const HighlightService = {
       setTimeout(() => m.classList.remove('highlight-pulse'), 2400);
     });
   },
+
+  /**
+   * Identifica um grifo a partir das coordenadas do clique ou elemento alvo
+   * @param {number} clientX
+   * @param {number} clientY
+   * @param {HTMLElement} [targetEl]
+   * @returns {{ highlight: Highlight, pageNum: number, highlightId: string } | null}
+   */
+  findHighlightAtPoint(clientX, clientY, targetEl = null) {
+    // 1. Tenta encontrar elemento .highlight-rect no alvo direto
+    let mark = targetEl?.closest?.('.highlight-rect') || null;
+
+    // 2. Se não encontrou no target direto, busca nos elementos sob o cursor (através da textLayer)
+    if (!mark && typeof document !== 'undefined' && typeof document.elementsFromPoint === 'function') {
+      const elements = document.elementsFromPoint(clientX, clientY) || [];
+      mark = elements.find((el) => el.classList && el.classList.contains('highlight-rect')) || null;
+    }
+
+    if (mark) {
+      const highlightId = mark.dataset.highlightId;
+      const pageNum = parseInt(mark.dataset.pageNum, 10);
+      if (highlightId && !isNaN(pageNum)) {
+        const highlight = this.getHighlight(pageNum, highlightId);
+        if (highlight) {
+          return { highlight, pageNum, highlightId };
+        }
+      }
+    }
+
+    // 3. Fallback geométrico: verifica colisão de coordenadas no .page-wrapper
+    let pageWrapper = targetEl?.closest?.('.page-wrapper') || null;
+    if (!pageWrapper && typeof document !== 'undefined') {
+      if (typeof document.elementsFromPoint === 'function') {
+        const elements = document.elementsFromPoint(clientX, clientY) || [];
+        pageWrapper = elements.find((el) => el.classList && el.classList.contains('page-wrapper')) || null;
+      }
+      if (!pageWrapper) {
+        pageWrapper = document.querySelector('.page-wrapper');
+      }
+    }
+
+    if (pageWrapper) {
+      const pageNum = parseInt(pageWrapper.dataset.page, 10);
+      if (!isNaN(pageNum)) {
+        const rect = pageWrapper.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          const xPercent = (clientX - rect.left) / rect.width;
+          const yPercent = (clientY - rect.top) / rect.height;
+
+          const allHighlights = appState.get('highlights') || {};
+          const pageHighlights = allHighlights[pageNum] || [];
+
+          const match = pageHighlights.find((h) => {
+            if (typeof h.containsPoint === 'function') {
+              return h.containsPoint(xPercent, yPercent, 0.005);
+            }
+            return (
+              Array.isArray(h.rects) &&
+              h.rects.some(
+                (r) =>
+                  xPercent >= r.x - 0.005 &&
+                  xPercent <= r.x + r.width + 0.005 &&
+                  yPercent >= r.y - 0.005 &&
+                  yPercent <= r.y + r.height + 0.005,
+              )
+            );
+          });
+
+          if (match) {
+            return { highlight: match, pageNum, highlightId: match.id };
+          }
+        }
+      }
+    }
+
+    return null;
+  },
 };

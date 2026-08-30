@@ -7,6 +7,7 @@ import { HighlightService } from '../services/highlightService.js';
 import { DialogService } from '../ui/dialogs.js';
 import { NotebookView } from '../ui/notebookView.js';
 import { showToast } from '../ui/toast.js';
+import { QuickHighlightTooltip } from '../ui/quickHighlight.js';
 
 export function setupTouchAndGestures({ container, onNextPage, onPrevPage }) {
   if (!container) return;
@@ -28,7 +29,7 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage }) {
   container.addEventListener(
     'touchend',
     (e) => {
-      // Ignora se o toque for dentro da barra lateral ou modal
+      // Ignora se o toque for dentro da barra lateral, modal ou tooltip
       if (e.target.closest('#sidebar') || e.target.closest('dialog') || e.target.closest('#quick-highlight-tooltip')) {
         return;
       }
@@ -56,19 +57,23 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage }) {
     { passive: true },
   );
 
-  // Deleção de Grifos por Duplo Clique / Duplo Toque no Leitor
+  // Deleção de Grifos por Duplo Clique no Leitor
   container.addEventListener('dblclick', async (e) => {
-    const mark = e.target.closest('.highlight-rect');
-    if (!mark) return;
+    if (e.target.closest('#sidebar') || e.target.closest('dialog') || e.target.closest('#quick-highlight-tooltip')) {
+      return;
+    }
 
-    const highlightId = mark.dataset.highlightId;
-    const pageNum = parseInt(mark.dataset.pageNum, 10);
-    if (!highlightId || isNaN(pageNum)) return;
+    const match = HighlightService.findHighlightAtPoint(e.clientX, e.clientY, e.target);
+    if (!match) return;
 
-    const highlight = HighlightService.getHighlight(pageNum, highlightId);
-    if (!highlight) return;
+    e.preventDefault();
+    e.stopPropagation();
 
+    // Fecha o tooltip rápido de grifar e desfaz seleção nativa de texto do duplo clique
+    QuickHighlightTooltip.hide();
     window.getSelection()?.removeAllRanges();
+
+    const { highlight, pageNum, highlightId } = match;
 
     const choice = await DialogService.confirmHighlightDeletion({
       title: 'Remover Grifo do Documento',
@@ -88,39 +93,52 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage }) {
 
   // Duplo toque no mobile para grifos
   let lastTapTime = 0;
+  let lastTapX = 0;
+  let lastTapY = 0;
+
   container.addEventListener('touchend', async (e) => {
-    const mark = e.target.closest('.highlight-rect');
-    if (!mark) return;
+    if (e.target.closest('#sidebar') || e.target.closest('dialog') || e.target.closest('#quick-highlight-tooltip')) {
+      return;
+    }
 
     const currentTime = Date.now();
     const tapLength = currentTime - lastTapTime;
 
-    if (tapLength < 400 && tapLength > 0 && e.changedTouches.length === 1) {
-      const highlightId = mark.dataset.highlightId;
-      const pageNum = parseInt(mark.dataset.pageNum, 10);
-      if (!highlightId || isNaN(pageNum)) return;
+    if (e.changedTouches.length === 1) {
+      const touch = e.changedTouches[0];
+      const dist = Math.hypot(touch.clientX - lastTapX, touch.clientY - lastTapY);
 
-      const highlight = HighlightService.getHighlight(pageNum, highlightId);
-      if (!highlight) return;
+      if (tapLength < 400 && tapLength > 0 && dist < 35) {
+        const match = HighlightService.findHighlightAtPoint(touch.clientX, touch.clientY, e.target);
+        if (match) {
+          e.preventDefault();
+          e.stopPropagation();
 
-      e.preventDefault();
-      window.getSelection()?.removeAllRanges();
+          QuickHighlightTooltip.hide();
+          window.getSelection()?.removeAllRanges();
 
-      const choice = await DialogService.confirmHighlightDeletion({
-        title: 'Remover Grifo',
-        message: 'Deseja excluir este grifo?',
-        quoteText: highlight.text,
-        hasNote: !!(highlight.note && highlight.note.trim()),
-        primaryActionText: 'Excluir do PDF e Caderno',
-        secondaryActionText: 'Remover apenas do PDF',
-      });
+          const { highlight, pageNum, highlightId } = match;
 
-      if (choice === 'delete-all' || choice === 'delete-one') {
-        HighlightService.deleteHighlight(pageNum, highlightId);
-        NotebookView.render();
-        showToast('Grifo removido.', 'eraser');
+          const choice = await DialogService.confirmHighlightDeletion({
+            title: 'Remover Grifo',
+            message: 'Deseja excluir este grifo?',
+            quoteText: highlight.text,
+            hasNote: !!(highlight.note && highlight.note.trim()),
+            primaryActionText: 'Excluir do PDF e Caderno',
+            secondaryActionText: 'Remover apenas do PDF',
+          });
+
+          if (choice === 'delete-all' || choice === 'delete-one') {
+            HighlightService.deleteHighlight(pageNum, highlightId);
+            NotebookView.render();
+            showToast('Grifo removido.', 'eraser');
+          }
+        }
       }
+
+      lastTapTime = currentTime;
+      lastTapX = touch.clientX;
+      lastTapY = touch.clientY;
     }
-    lastTapTime = currentTime;
   });
 }
