@@ -144,16 +144,16 @@
 }
 
 .theme-sepia {
-  --ui-bg: #f3e9d0;
-  --ui-surface: #eae0c3;
-  --text-color: #3e2f1d;
-  --text-muted: #756045;
-  --text-subtle: #988367;
-  --border-color: #d8c9a8;
+  --ui-bg: #f5edd8;
+  --ui-surface: #eae0c8;
+  --text-color: #2c2115;
+  --text-muted: #705b42;
+  --text-subtle: #947e64;
+  --border-color: #d6c6a4;
   --border-focus: #b45309;
 
-  --workspace-bg: linear-gradient(135deg, #d6c69e 0%, #c2b083 100%);
-  --page-bg: #f6efd8;
+  --workspace-bg: linear-gradient(135deg, #d8cbaf 0%, #c4b595 100%);
+  --page-bg: #f8f1e3;
   --page-shadow: 0 10px 25px -4px rgba(78, 60, 34, 0.18);
 
   --primary: #b45309;

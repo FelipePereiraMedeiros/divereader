@@ -52,18 +52,32 @@ body.zoomed-mode #pdf-viewer {
   display: block;
   max-width: 100%;
   height: auto;
-  transition: filter var(--transition-normal);
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  text-rendering: optimizeLegibility;
+  transition: filter var(--transition-normal), opacity var(--transition-normal);
+  filter: contrast(102%) brightness(99%);
 }
 
-/* Dark Theme PDF Canvas Inversion Filter */
+/* Light Theme PDF Canvas Filter */
+.theme-light .page-wrapper canvas {
+  filter: contrast(102%) brightness(99%);
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+
+/* Dark Theme PDF Canvas Inversion Filter (Alto Contraste e Antirreflexo) */
 .theme-dark .page-wrapper canvas {
-  filter: invert(90%) hue-rotate(180deg) contrast(88%) brightness(92%);
+  filter: invert(93%) hue-rotate(180deg) contrast(110%) brightness(96%);
+  mix-blend-mode: normal;
+  opacity: 1;
 }
 
+/* Sepia Theme PDF Canvas (Papel Acolhedor e Tinta Nítida) */
 .theme-sepia .page-wrapper canvas {
-  filter: none;
+  filter: contrast(104%) brightness(98%);
   mix-blend-mode: multiply;
-  opacity: 0.88;
+  opacity: 1;
 }
 
 /* Text Layer (PDF.js Selectable text) */
@@ -97,6 +111,10 @@ body.zoomed-mode #pdf-viewer {
 
 .theme-dark .textLayer ::selection {
   background: rgba(56, 189, 248, 0.4);
+}
+
+.theme-sepia .textLayer ::selection {
+  background: rgba(180, 83, 9, 0.3);
 }
 
 /* Highlight Layer */

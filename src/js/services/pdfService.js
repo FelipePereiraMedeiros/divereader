@@ -86,10 +86,15 @@ export const PdfService = {
     wrapper.style.height = `${viewport.height}px`;
     wrapper.dataset.page = String(pageNum);
 
-    // 1. Camada Canvas (Visual do PDF)
+    // 1. Camada Canvas (Visual do PDF em Alta Resolução / Subpixel Sharpness)
+    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const renderScale = Math.min(Math.max(dpr, 1), 2.5);
+
     const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    canvas.width = Math.floor(viewport.width * renderScale);
+    canvas.height = Math.floor(viewport.height * renderScale);
+    canvas.style.width = `${viewport.width}px`;
+    canvas.style.height = `${viewport.height}px`;
     wrapper.appendChild(canvas);
 
     // 2. Camada de Grifos (Marca-texto amarelo)
@@ -104,10 +109,14 @@ export const PdfService = {
     textLayer.style.height = `${viewport.height}px`;
     wrapper.appendChild(textLayer);
 
-    // Renderiza Canvas
+    // Renderiza Canvas com transform para displays de alta densidade
+    const canvasContext = canvas.getContext('2d');
+    const transform = renderScale !== 1 ? [renderScale, 0, 0, renderScale, 0, 0] : null;
+
     await page.render({
-      canvasContext: canvas.getContext('2d'),
-      viewport: viewport,
+      canvasContext,
+      viewport,
+      transform,
     }).promise;
 
     // 3. Renderiza Text Content no TextLayer (com renderTextLayer oficial ou fallback calibrado)
