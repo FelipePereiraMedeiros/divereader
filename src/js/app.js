@@ -16,7 +16,7 @@ import { DOM, refreshIcons } from './ui/dom.js';
 import { setupKeyboardShortcuts } from './events/keyboard.js';
 import { setupMouseEvents } from './events/mouse.js';
 import { setupTouchAndGestures } from './events/touch.js';
-import { EVENTS, ZOOM_LIMITS } from './constants.js';
+import { EVENTS, ZOOM_LIMITS, ZOOM_MODES } from './constants.js';
 
 export const App = {
   focusTimer: null,
@@ -79,11 +79,17 @@ export const App = {
       });
     }
 
-    // 3. Zoom
+    // 3. Zoom (Top Bar & Floating HUD)
     if (DOM.btnZoomOut) DOM.btnZoomOut.onclick = () => this.changeZoom(-ZOOM_LIMITS.STEP);
     if (DOM.btnZoomIn) DOM.btnZoomIn.onclick = () => this.changeZoom(ZOOM_LIMITS.STEP);
+    if (DOM.btnZoomPreset) DOM.btnZoomPreset.onclick = () => this.toggleZoomMode();
 
-    // 4. Navegação de Páginas (Top Bar)
+    if (DOM.hudBtnZoomOut) DOM.hudBtnZoomOut.onclick = () => this.changeZoom(-ZOOM_LIMITS.STEP);
+    if (DOM.hudBtnZoomIn) DOM.hudBtnZoomIn.onclick = () => this.changeZoom(ZOOM_LIMITS.STEP);
+    if (DOM.hudBtnPreset) DOM.hudBtnPreset.onclick = () => this.toggleZoomMode();
+    if (DOM.hudBtnFit) DOM.hudBtnFit.onclick = () => this.toggleZoomMode();
+
+    // 4. Navegação de Páginas (Top Bar, Mobile & Indicador Discreto)
     if (DOM.btnPrev) DOM.btnPrev.onclick = () => this.onPrevPage();
     if (DOM.btnNext) DOM.btnNext.onclick = () => this.onNextPage();
 
@@ -97,6 +103,14 @@ export const App = {
         if (!appState.isSinglePageMode() && target % 2 === 0) target -= 1;
         this.renderPages(target);
       });
+    }
+
+    if (DOM.indicator) {
+      DOM.indicator.onclick = () => this.openPageJumpDialog();
+    }
+
+    if (DOM.readingProgressBarContainer) {
+      DOM.readingProgressBarContainer.onclick = (e) => this.onProgressBarClick(e);
     }
 
     // 5. Botões de Grifo, Caderno e Foco
@@ -153,6 +167,7 @@ export const App = {
     // 7. Mobile Bottom Bar
     if (DOM.mobileBtnPrev) DOM.mobileBtnPrev.onclick = () => this.onPrevPage();
     if (DOM.mobileBtnNext) DOM.mobileBtnNext.onclick = () => this.onNextPage();
+    if (DOM.mobileBtnPage) DOM.mobileBtnPage.onclick = () => this.openPageJumpDialog();
     if (DOM.mobileBtnHighlight) {
       DOM.mobileBtnHighlight.onclick = () => {
         const sel = window.getSelection();
@@ -171,20 +186,33 @@ export const App = {
     if (DOM.mobileBtnSidebar) {
       DOM.mobileBtnSidebar.onclick = () => NotebookView.toggleSidebar();
     }
-    if (DOM.mobileBtnTheme) {
-      DOM.mobileBtnTheme.onclick = () => {
-        const themes = ['theme-light', 'theme-sepia', 'theme-dark'];
-        const current = Storage.loadTheme();
-        const nextIdx = (themes.indexOf(current) + 1) % themes.length;
-        const nextTheme = themes[nextIdx];
-        document.body.className = nextTheme;
-        Storage.saveTheme(nextTheme);
-        if (DOM.themeSelector) DOM.themeSelector.value = nextTheme;
-        showToast(`Tema alterado para ${nextTheme.replace('theme-', '')}`, 'sun');
+
+    // 8. Diálogo de Salto Rápido de Página (Page Jump Bottom Sheet)
+    if (DOM.btnClosePageJump) {
+      DOM.btnClosePageJump.onclick = () => this.closePageJumpDialog();
+    }
+    if (DOM.pageJumpDialog) {
+      DOM.pageJumpDialog.oncancel = () => this.closePageJumpDialog();
+    }
+    if (DOM.pjSlider) {
+      DOM.pjSlider.addEventListener('input', (e) => this.onPjSliderInput(e));
+      DOM.pjSlider.addEventListener('change', (e) => this.onPjSliderChange(e));
+    }
+    if (DOM.pjForm) {
+      DOM.pjForm.addEventListener('submit', (e) => this.onPjFormSubmit(e));
+    }
+    if (DOM.btnPjFirst) DOM.btnPjFirst.onclick = () => this.goToPage(1);
+    if (DOM.btnPjLast) DOM.btnPjLast.onclick = () => this.goToPage(appState.get('totalPages'));
+    if (DOM.btnPjReturn) DOM.btnPjReturn.onclick = () => this.returnToPreviousPage();
+    if (DOM.btnPjToc) {
+      DOM.btnPjToc.onclick = () => {
+        this.closePageJumpDialog();
+        NotebookView.toggleSidebar();
+        NotebookView.switchTab('toc');
       };
     }
 
-    // 8. Barra de Foco Flutuante
+    // 9. Barra de Foco Flutuante
     if (DOM.floatingBar) {
       document.addEventListener('mousemove', () => this.wakeFocusBar());
       DOM.floatingBar.addEventListener('mouseenter', () => {
@@ -194,7 +222,7 @@ export const App = {
       DOM.floatingBar.addEventListener('mouseleave', () => this.wakeFocusBar());
     }
 
-    // 9. Configuração de Eventos de Entrada
+    // 10. Configuração de Eventos de Entrada
     setupKeyboardShortcuts({
       onNextPage: () => this.onNextPage(),
       onPrevPage: () => this.onPrevPage(),
@@ -209,14 +237,14 @@ export const App = {
       onFileDrop: (file) => this.handleFile(file),
       onNextPage: () => this.onNextPage(),
       onPrevPage: () => this.onPrevPage(),
-      onChangeZoom: (delta) => this.changeZoom(delta),
+      onChangeZoom: (delta, focalPoint) => this.changeZoom(delta, focalPoint),
     });
 
     setupTouchAndGestures({
       container: DOM.bookContainer,
       onNextPage: () => this.onNextPage(),
       onPrevPage: () => this.onPrevPage(),
-      onSetZoom: (zoom) => this.setZoom(zoom),
+      onSetZoom: (zoom, focalPoint) => this.setZoom(zoom, focalPoint),
       onChangeZoom: (delta) => this.changeZoom(delta),
     });
   },
@@ -251,6 +279,7 @@ export const App = {
     [
       DOM.btnZoomOut,
       DOM.btnZoomIn,
+      DOM.btnZoomPreset,
       DOM.btnToggleSidebar,
       DOM.btnToggleFocus,
       DOM.themeSelector,
@@ -260,9 +289,16 @@ export const App = {
       DOM.mobileBtnHighlight,
       DOM.mobileBtnFocus,
       DOM.mobileBtnSidebar,
+      DOM.mobileBtnPage,
+      DOM.hudBtnZoomOut,
+      DOM.hudBtnZoomIn,
+      DOM.hudBtnPreset,
+      DOM.hudBtnFit,
     ].forEach((el) => {
       if (el) el.disabled = false;
     });
+
+    if (DOM.zoomHud) DOM.zoomHud.classList.remove('hidden');
 
     if (DOM.loading) DOM.loading.style.display = 'flex';
 
@@ -291,8 +327,11 @@ export const App = {
 
       if (DOM.totalPages) DOM.totalPages.textContent = String(pdfDoc.numPages);
       if (DOM.pageInput) DOM.pageInput.max = String(pdfDoc.numPages);
+      if (DOM.mobilePageText) DOM.mobilePageText.textContent = `Pág. ${pageNum}/${pdfDoc.numPages}`;
+      if (DOM.mobileBtnPage) DOM.mobileBtnPage.disabled = false;
 
       this.updateBodyMode();
+      this.updateZoomUI();
       await this.renderPages(pageNum);
 
       showToast('Documento carregado e pronto para estudo!', 'check-circle-2');
@@ -322,7 +361,6 @@ export const App = {
     if (targetPage > totalPages) targetPage = totalPages;
 
     // No modo duas páginas (livro aberto), a página da esquerda é SEMPRE ímpar (1, 3, 5...)
-    // Se o usuário clicar em uma página par (ex: 4), o spread renderiza a 3 na esquerda e a 4 na direita
     const leftPageNum = singlePage
       ? targetPage
       : (targetPage % 2 === 0 ? targetPage - 1 : targetPage);
@@ -333,13 +371,9 @@ export const App = {
     if (DOM.pageInput) DOM.pageInput.value = String(targetPage);
     if (DOM.btnPrev) DOM.btnPrev.disabled = leftPageNum <= 1;
     if (DOM.mobileBtnPrev) DOM.mobileBtnPrev.disabled = leftPageNum <= 1;
+    if (DOM.mobileBtnPage) DOM.mobileBtnPage.disabled = false;
 
     if (DOM.pdfViewer) DOM.pdfViewer.innerHTML = '';
-
-    if (appState.get('zoomLevel') > 1.0 && DOM.bookContainer) {
-      DOM.bookContainer.scrollTop = 0;
-      DOM.bookContainer.scrollLeft = 0;
-    }
 
     let indicatorText = `${leftPageNum}`;
 
@@ -383,6 +417,11 @@ export const App = {
       }
     }
 
+    // Atualiza o texto do botão mobile
+    if (DOM.mobilePageText) {
+      DOM.mobilePageText.textContent = `Pág. ${indicatorText}/${totalPages}`;
+    }
+
     // Atualiza a barra linear de progresso de leitura (%)
     const currentEffectivePage = singlePage ? targetPage : Math.min(totalPages, leftPageNum + 1);
     const progressPercent = totalPages > 0 ? Math.min(100, Math.max(1, Math.round((currentEffectivePage / totalPages) * 100))) : 0;
@@ -391,9 +430,9 @@ export const App = {
       progressBar.style.width = `${progressPercent}%`;
     }
 
-    // Atualiza o indicador de página com porcentagem de leitura
+    // Atualiza o indicador de página com porcentagem de leitura e seta indicadora
     if (DOM.indicator) {
-      DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages} (${progressPercent}%)`;
+      DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages} (${progressPercent}%) ▾`;
       DOM.indicator.style.opacity = '1';
       setTimeout(() => {
         if (appState.get('zoomLevel') <= 1.0 && DOM.indicator) {
@@ -402,8 +441,9 @@ export const App = {
       }, 3000);
     }
 
-    // Atualiza o caderno de anotações
+    // Atualiza o caderno de anotações e interface de zoom
     NotebookView.render();
+    this.updateZoomUI();
     appState.set({ isRendering: false });
   },
 
@@ -464,42 +504,243 @@ export const App = {
   },
 
   /**
-   * Define o nível de zoom absoluto
+   * Define o nível de zoom absoluto preservando o ponto focal
    * @param {number} targetZoom
+   * @param {Object} [focalPoint] { clientX, clientY }
    */
-  setZoom(targetZoom) {
+  setZoom(targetZoom, focalPoint = null) {
     const current = appState.get('zoomLevel');
     const clamped = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, targetZoom));
     const newZoom = Math.round(clamped * 100) / 100;
     if (Math.abs(newZoom - current) < 0.02) return;
 
+    // Calcula razão focal para ancorar a posição de leitura sem resetar para o topo
+    let ratioX = 0.5;
+    let ratioY = 0.5;
+    const container = DOM.bookContainer;
+
+    if (container && container.scrollWidth > 0 && container.scrollHeight > 0) {
+      if (focalPoint && typeof focalPoint.clientX === 'number') {
+        const rect = container.getBoundingClientRect();
+        const focusX = focalPoint.clientX - rect.left + container.scrollLeft;
+        const focusY = focalPoint.clientY - rect.top + container.scrollTop;
+        ratioX = focusX / container.scrollWidth;
+        ratioY = focusY / container.scrollHeight;
+      } else {
+        const centerX = container.scrollLeft + container.clientWidth / 2;
+        const centerY = container.scrollTop + container.clientHeight / 2;
+        ratioX = centerX / container.scrollWidth;
+        ratioY = centerY / container.scrollHeight;
+      }
+    }
+
     const wasSingle = appState.isSinglePageMode();
     appState.set({ zoomLevel: newZoom });
     this.updateBodyMode();
-
-    if (newZoom > 1.0) {
-      if (DOM.topMenu) DOM.topMenu.classList.add('hidden');
-      if (DOM.floatingBar) DOM.floatingBar.classList.add('faded');
-      if (DOM.sidebar) DOM.sidebar.classList.add('hidden');
-    } else {
-      if (DOM.floatingBar) DOM.floatingBar.classList.add('visible');
-      this.wakeFocusBar();
-    }
+    this.updateZoomUI();
 
     let pageNum = appState.get('pageNum');
     if (wasSingle && !appState.isSinglePageMode() && pageNum % 2 === 0) {
       pageNum -= 1;
     }
-    this.renderPages(pageNum);
+
+    this.renderPages(pageNum).then(() => {
+      if (container && newZoom > 1.0) {
+        const newScrollLeft = ratioX * container.scrollWidth - container.clientWidth / 2;
+        const newScrollTop = ratioY * container.scrollHeight - container.clientHeight / 2;
+        container.scrollLeft = Math.max(0, newScrollLeft);
+        container.scrollTop = Math.max(0, newScrollTop);
+      }
+    });
   },
 
   /**
    * Altera o nível de zoom relativamente
    * @param {number} delta
+   * @param {Object} [focalPoint]
    */
-  changeZoom(delta) {
+  changeZoom(delta, focalPoint = null) {
     const current = appState.get('zoomLevel');
-    this.setZoom(current + delta);
+    this.setZoom(current + delta, focalPoint);
+  },
+
+  /**
+   * Alterna entre modo Ajustar à Largura (Textos) e Ajustar à Página (Imagens/Mangás)
+   */
+  toggleZoomMode() {
+    const currentMode = appState.get('zoomMode') || ZOOM_MODES.FIT_WIDTH;
+    const nextMode = currentMode === ZOOM_MODES.FIT_WIDTH ? ZOOM_MODES.FIT_PAGE : ZOOM_MODES.FIT_WIDTH;
+    appState.set({ zoomMode: nextMode, zoomLevel: 1.0 });
+    this.updateBodyMode();
+    this.updateZoomUI();
+    this.renderPages(appState.get('pageNum'));
+
+    showToast(
+      nextMode === ZOOM_MODES.FIT_PAGE
+        ? 'Modo: Ajustar à Página (Imagens & Mangás)'
+        : 'Modo: Ajustar à Largura (Textos Contínuos)',
+      'scaling',
+    );
+  },
+
+  /**
+   * Atualiza a exibição visual de Zoom no Top Bar e no HUD Flutuante
+   */
+  updateZoomUI() {
+    const zoomLevel = appState.get('zoomLevel') || 1.0;
+    const zoomMode = appState.get('zoomMode') || ZOOM_MODES.FIT_WIDTH;
+    const hasDoc = !!appState.get('pdfDoc');
+    const zoomPercent = `${Math.round(zoomLevel * 100)}%`;
+
+    if (DOM.zoomPresetLabel) {
+      DOM.zoomPresetLabel.textContent = zoomLevel === 1.0
+        ? (zoomMode === ZOOM_MODES.FIT_PAGE ? 'Página' : 'Largura')
+        : zoomPercent;
+    }
+    if (DOM.hudZoomText) {
+      DOM.hudZoomText.textContent = zoomLevel === 1.0
+        ? (zoomMode === ZOOM_MODES.FIT_PAGE ? 'Pág. Int.' : 'Largura')
+        : zoomPercent;
+    }
+
+    if (DOM.btnZoomOut) DOM.btnZoomOut.disabled = !hasDoc || zoomLevel <= ZOOM_LIMITS.MIN;
+    if (DOM.btnZoomIn) DOM.btnZoomIn.disabled = !hasDoc || zoomLevel >= ZOOM_LIMITS.MAX;
+    if (DOM.hudBtnZoomOut) DOM.hudBtnZoomOut.disabled = !hasDoc || zoomLevel <= ZOOM_LIMITS.MIN;
+    if (DOM.hudBtnZoomIn) DOM.hudBtnZoomIn.disabled = !hasDoc || zoomLevel >= ZOOM_LIMITS.MAX;
+    if (DOM.btnZoomPreset) DOM.btnZoomPreset.disabled = !hasDoc;
+  },
+
+  /**
+   * Abre a gaveta modal de navegação rápida de páginas
+   */
+  openPageJumpDialog() {
+    const pdfDoc = appState.get('pdfDoc');
+    if (!pdfDoc || !DOM.pageJumpDialog) return;
+
+    const current = appState.get('pageNum') || 1;
+    const total = appState.get('totalPages') || pdfDoc.numPages || 1;
+    const percent = Math.min(100, Math.max(1, Math.round((current / total) * 100)));
+
+    if (DOM.pjCurrentNum) DOM.pjCurrentNum.textContent = String(current);
+    if (DOM.pjTotalNum) DOM.pjTotalNum.textContent = String(total);
+    if (DOM.pjPercent) DOM.pjPercent.textContent = `${percent}%`;
+
+    if (DOM.pjSlider) {
+      DOM.pjSlider.min = '1';
+      DOM.pjSlider.max = String(total);
+      DOM.pjSlider.value = String(current);
+    }
+
+    if (DOM.pjNumberInput) {
+      DOM.pjNumberInput.min = '1';
+      DOM.pjNumberInput.max = String(total);
+      DOM.pjNumberInput.value = '';
+      DOM.pjNumberInput.placeholder = `1 a ${total}`;
+    }
+
+    const historyPage = appState.get('pageJumpHistory');
+    if (DOM.btnPjReturn) {
+      if (historyPage && historyPage !== current) {
+        DOM.btnPjReturn.classList.remove('hidden');
+        if (DOM.pjReturnText) DOM.pjReturnText.textContent = `Voltar à pág. ${historyPage}`;
+      } else {
+        DOM.btnPjReturn.classList.add('hidden');
+      }
+    }
+
+    if (DOM.btnPjLast && DOM.pjLastText) {
+      DOM.pjLastText.textContent = `Fim (${total})`;
+    }
+
+    refreshIcons(DOM.pageJumpDialog);
+    DOM.pageJumpDialog.showModal();
+
+    setTimeout(() => {
+      DOM.pjNumberInput?.focus();
+    }, 60);
+  },
+
+  /**
+   * Fecha a gaveta de salto de páginas
+   */
+  closePageJumpDialog() {
+    if (DOM.pageJumpDialog?.open) {
+      DOM.pageJumpDialog.close();
+    }
+  },
+
+  onPjSliderInput(e) {
+    const val = parseInt(e.target.value, 10);
+    const total = appState.get('totalPages') || 1;
+    if (DOM.pjCurrentNum) DOM.pjCurrentNum.textContent = String(val);
+    if (DOM.pjPercent) DOM.pjPercent.textContent = `${Math.min(100, Math.max(1, Math.round((val / total) * 100)))}%`;
+  },
+
+  onPjSliderChange(e) {
+    const targetPage = parseInt(e.target.value, 10);
+    if (!isNaN(targetPage)) {
+      this.goToPage(targetPage, true);
+    }
+  },
+
+  onPjFormSubmit() {
+    if (!DOM.pjNumberInput) return;
+    const val = parseInt(DOM.pjNumberInput.value, 10);
+    if (isNaN(val)) return;
+    this.goToPage(val, true);
+  },
+
+  /**
+   * Navega diretamente para uma página específica
+   * @param {number} targetPage
+   * @param {boolean} [trackHistory=true]
+   */
+  goToPage(targetPage, trackHistory = true) {
+    const pdfDoc = appState.get('pdfDoc');
+    if (!pdfDoc) return;
+    const total = appState.get('totalPages') || pdfDoc.numPages || 1;
+    let page = parseInt(targetPage, 10);
+    if (isNaN(page) || page < 1) page = 1;
+    if (page > total) page = total;
+
+    const currentPage = appState.get('pageNum') || 1;
+    if (trackHistory && currentPage !== page) {
+      appState.set({ pageJumpHistory: currentPage });
+    }
+
+    this.closePageJumpDialog();
+
+    if (!appState.isSinglePageMode() && page % 2 === 0) {
+      page -= 1;
+    }
+
+    this.renderPages(page);
+    showToast(`Página ${page} de ${total}`, 'book-open');
+  },
+
+  /**
+   * Retorna à página em que o leitor estava antes do último salto
+   */
+  returnToPreviousPage() {
+    const history = appState.get('pageJumpHistory');
+    if (history) {
+      this.goToPage(history, false);
+    }
+  },
+
+  /**
+   * Trata o clique na barra linear de progresso para salto proporcional rápido
+   * @param {MouseEvent} e
+   */
+  onProgressBarClick(e) {
+    const pdfDoc = appState.get('pdfDoc');
+    if (!pdfDoc || !DOM.readingProgressBarContainer) return;
+    const total = appState.get('totalPages') || pdfDoc.numPages || 1;
+    const rect = DOM.readingProgressBarContainer.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const targetPage = Math.max(1, Math.round(ratio * total));
+    this.goToPage(targetPage, true);
   },
 
   updateBodyMode() {

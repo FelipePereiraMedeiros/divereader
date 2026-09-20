@@ -105,7 +105,7 @@
         <span>Processando documento...</span>
       </div>
 
-      <div id="discreet-indicator">Pág. - / -</div>
+      <div id="discreet-indicator" role="button" tabindex="0" title="Toque para navegar pelas páginas">Pág. - / -</div>
 
       <!-- ESTADO VAZIO (EMPTY STATE) -->
       <div id="empty-state">
@@ -172,9 +172,12 @@
             <option value="theme-dark">🌙 Noturno</option>
           </select>
 
-          <div style="display: flex; gap: 4px">
+          <div style="display: flex; gap: 4px; align-items: center;">
             <button id="btn-zoom-out" class="btn-icon" title="Afastar (Zoom Out)" disabled>
               <i data-lucide="zoom-out" style="width: 16px; height: 16px"></i>
+            </button>
+            <button id="btn-zoom-preset" class="btn-ghost" title="Alternar Ajustar à Largura / Ajustar à Página" disabled style="padding: 2px 6px; font-size: 11px; font-weight: 600; min-height: 28px;">
+              <span id="zoom-preset-label">100%</span>
             </button>
             <button id="btn-zoom-in" class="btn-icon" title="Aproximar (Zoom In)" disabled>
               <i data-lucide="zoom-in" style="width: 16px; height: 16px"></i>
@@ -315,33 +318,119 @@
         </aside>
       </main>
 
+      <!-- HUD FLUTUANTE DE ZOOM (DESKTOP & MOBILE) -->
+      <div id="zoom-hud" class="zoom-hud" aria-label="Controle de Zoom">
+        <button id="hud-btn-zoom-out" class="hud-btn" title="Afastar (−)">
+          <i data-lucide="minus"></i>
+        </button>
+        <button id="hud-btn-preset" class="hud-btn hud-preset-btn" title="Alternar Modo de Zoom (Largura / Página)">
+          <span id="hud-zoom-text">100%</span>
+        </button>
+        <button id="hud-btn-zoom-in" class="hud-btn" title="Aproximar (+)">
+          <i data-lucide="plus"></i>
+        </button>
+        <button id="hud-btn-fit" class="hud-btn" title="Alternar Ajustar à Largura / Ajustar à Página Inteira">
+          <i data-lucide="maximize-2"></i>
+        </button>
+      </div>
+
       <!-- BARRA DE NAVEGAÇÃO INFERIOR PARA MOBILE -->
       <nav id="mobile-nav-bar" aria-label="Navegação Mobile">
         <button id="mobile-btn-prev" title="Página Anterior" disabled>
           <i data-lucide="chevron-left"></i>
           <span>Anterior</span>
         </button>
+        <button id="mobile-btn-page" class="mobile-nav-page-btn" title="Ir para Página / Navegar" disabled>
+          <i data-lucide="compass"></i>
+          <span id="mobile-page-text">Pág. -/-</span>
+        </button>
         <button id="mobile-btn-highlight" title="Grifar Seleção" disabled>
           <i data-lucide="highlighter"></i>
           <span>Grifar</span>
-        </button>
-        <button id="mobile-btn-focus" title="Modo Foco (Tela Cheia)" disabled>
-          <i data-lucide="maximize-2"></i>
-          <span>Foco</span>
         </button>
         <button id="mobile-btn-sidebar" title="Abrir Caderno" disabled>
           <i data-lucide="pen-line"></i>
           <span>Caderno</span>
         </button>
-        <button id="mobile-btn-theme" title="Trocar Tema">
-          <i data-lucide="sun-moon"></i>
-          <span>Tema</span>
+        <button id="mobile-btn-focus" title="Modo Foco (Tela Cheia)" disabled>
+          <i data-lucide="maximize-2"></i>
+          <span>Foco</span>
         </button>
         <button id="mobile-btn-next" title="Próxima Página" disabled>
           <i data-lucide="chevron-right"></i>
           <span>Próxima</span>
         </button>
       </nav>
+
+      <!-- GAVETA / DIÁLOGO DE NAVEGAÇÃO DIRETA DE PÁGINAS (ESTILO KINDLE) -->
+      <dialog id="page-jump-dialog" class="page-jump-dialog" closedby="any" aria-modal="true">
+        <div class="page-jump-content">
+          <div class="page-jump-header">
+            <div class="pj-title-group">
+              <i data-lucide="compass" style="width: 18px; height: 18px; color: var(--primary)"></i>
+              <span>Navegação do Documento</span>
+            </div>
+            <button id="btn-close-page-jump" class="btn-ghost btn-icon" title="Fechar">
+              <i data-lucide="x" style="width: 18px; height: 18px"></i>
+            </button>
+          </div>
+
+          <div class="page-jump-body">
+            <!-- Indicador Grande de Página & Progresso -->
+            <div class="pj-progress-display">
+              <div class="pj-page-badge">
+                Página <b id="pj-current-num">1</b> de <span id="pj-total-num">1</span>
+              </div>
+              <span class="pj-percent-badge" id="pj-percent">1%</span>
+            </div>
+
+            <!-- Scrubber Slider tipo Kindle -->
+            <div class="pj-slider-container">
+              <input type="range" id="pj-slider" min="1" max="1" value="1" step="1" aria-label="Deslizar para mudar de página" />
+            </div>
+
+            <!-- Campo Numérico Direto -->
+            <form id="pj-form" class="pj-input-row" onsubmit="event.preventDefault()">
+              <label for="pj-number-input">Ir diretamente para:</label>
+              <div class="pj-input-group">
+                <input
+                  type="number"
+                  id="pj-number-input"
+                  min="1"
+                  max="1"
+                  placeholder="Nº da página"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                />
+                <button type="submit" id="btn-pj-go" class="btn-primary">
+                  <i data-lucide="arrow-right" style="width: 14px; height: 14px"></i>
+                  <span>Ir</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Atalhos Rápidos & Histórico de Retorno -->
+            <div class="pj-shortcuts">
+              <button type="button" id="btn-pj-first" class="pj-chip" title="Ir para a primeira página">
+                <i data-lucide="chevrons-left" style="width: 14px; height: 14px"></i>
+                <span>Início (1)</span>
+              </button>
+              <button type="button" id="btn-pj-return" class="pj-chip pj-chip-return hidden" title="Retornar à página anterior ao salto">
+                <i data-lucide="undo-2" style="width: 14px; height: 14px"></i>
+                <span id="pj-return-text">Voltar pág. -</span>
+              </button>
+              <button type="button" id="btn-pj-last" class="pj-chip" title="Ir para a última página">
+                <i data-lucide="chevrons-right" style="width: 14px; height: 14px"></i>
+                <span id="pj-last-text">Fim</span>
+              </button>
+              <button type="button" id="btn-pj-toc" class="pj-chip" title="Abrir Sumário do Documento">
+                <i data-lucide="list" style="width: 14px; height: 14px"></i>
+                <span>Sumário</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </dialog>
 
       <!-- DIÁLOGO DE CONFIRMAÇÃO MODAL -->
       <dialog id="confirm-dialog" closedby="any" aria-modal="true"></dialog>

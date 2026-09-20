@@ -110,11 +110,44 @@ describe('Touch Events and Gestures', () => {
     ];
     container.dispatchEvent(touchEnd);
 
-    // Base zoom era 1.0, com 2x distância deve acionar onSetZoom com 2.0
+    // Base zoom era 1.0, com 2x distância deve acionar onSetZoom com 2.0 e ponto focal calculado
     expect(onSetZoom).toHaveBeenCalledTimes(1);
-    expect(onSetZoom).toHaveBeenCalledWith(2.0);
+    expect(onSetZoom).toHaveBeenCalledWith(2.0, { clientX: 150, clientY: 100 });
     // Não deve disparar navegação de página acidental
     expect(onNextPage).not.toHaveBeenCalled();
     expect(onPrevPage).not.toHaveBeenCalled();
+  });
+
+  it('deve alternar zoom inteligente (smart double-tap) ao dar dois toques rápidos', () => {
+    // Primeiro toque
+    const t1 = new Event('touchend');
+    t1.touches = [];
+    t1.changedTouches = [{ clientX: 180, clientY: 220 }];
+    container.dispatchEvent(t1);
+
+    // Segundo toque 100ms depois na mesma posição
+    const t2 = new Event('touchend');
+    t2.touches = [];
+    t2.changedTouches = [{ clientX: 182, clientY: 221 }];
+    container.dispatchEvent(t2);
+
+    expect(onSetZoom).toHaveBeenCalledTimes(1);
+    expect(onSetZoom).toHaveBeenCalledWith(1.8, { clientX: 182, clientY: 221 });
+
+    // Se já estiver com zoom > 1.0, próximo duplo toque deve restaurar para 1.0
+    appState.set({ zoomLevel: 1.8 });
+
+    const t3 = new Event('touchend');
+    t3.touches = [];
+    t3.changedTouches = [{ clientX: 180, clientY: 220 }];
+    container.dispatchEvent(t3);
+
+    const t4 = new Event('touchend');
+    t4.touches = [];
+    t4.changedTouches = [{ clientX: 181, clientY: 220 }];
+    container.dispatchEvent(t4);
+
+    expect(onSetZoom).toHaveBeenCalledTimes(2);
+    expect(onSetZoom).toHaveBeenLastCalledWith(1.0);
   });
 });

@@ -42,14 +42,14 @@ export function setupMouseEvents({
     container.addEventListener(
       'wheel',
       (e) => {
-        // Ctrl + Wheel = Zoom
+        // Ctrl + Wheel = Zoom com Ponto Focal
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
           if (zoomWheelCD) return;
           zoomWheelCD = setTimeout(() => {
             zoomWheelCD = null;
           }, 100);
-          onChangeZoom(e.deltaY < 0 ? 0.25 : -0.25);
+          onChangeZoom(e.deltaY < 0 ? 0.2 : -0.2, { clientX: e.clientX, clientY: e.clientY });
           return;
         }
 
@@ -74,5 +74,56 @@ export function setupMouseEvents({
       },
       { passive: false },
     );
+
+    // ==========================================
+    // Hand Tool / Pan Livre quando com Zoom aplicado
+    // ==========================================
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+    let scrollStartX = 0;
+    let scrollStartY = 0;
+
+    container.addEventListener('mousedown', (e) => {
+      const zoomLevel = appState.get('zoomLevel') || 1.0;
+      if (zoomLevel <= 1.05) return;
+
+      // Não inicia pan se o clique foi em grifos, tooltips ou botões
+      if (
+        e.target.closest('#sidebar') ||
+        e.target.closest('dialog') ||
+        e.target.closest('#quick-highlight-tooltip') ||
+        e.target.closest('.highlight-rect') ||
+        e.target.closest('button') ||
+        e.button !== 0 // apenas botão esquerdo
+      ) {
+        return;
+      }
+
+      isPanning = true;
+      document.body.classList.add('is-panning');
+      startX = e.clientX;
+      startY = e.clientY;
+      scrollStartX = container.scrollLeft;
+      scrollStartY = container.scrollTop;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      container.scrollLeft = scrollStartX - dx;
+      container.scrollTop = scrollStartY - dy;
+    });
+
+    const stopPanning = () => {
+      if (isPanning) {
+        isPanning = false;
+        document.body.classList.remove('is-panning');
+      }
+    };
+
+    window.addEventListener('mouseup', stopPanning);
+    window.addEventListener('mouseleave', stopPanning);
   }
 }
