@@ -4,11 +4,18 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 5px;
   background: transparent;
   z-index: 60;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
   overflow: hidden;
+  transition: height var(--transition-fast), background-color var(--transition-fast);
+}
+
+#reading-progress-bar-container:hover {
+  height: 8px;
+  background-color: rgba(2, 132, 199, 0.08);
 }
 
 #reading-progress-bar {

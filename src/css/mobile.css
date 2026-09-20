@@ -173,6 +173,87 @@
   height: 18px;
 }
 
+#mobile-nav-bar button.mobile-nav-page-btn {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+#mobile-nav-bar button.mobile-nav-page-btn #mobile-page-text {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ========================================================= */
+/* HUD FLUTUANTE DE ZOOM (DESKTOP & MOBILE)                  */
+/* ========================================================= */
+
+.zoom-hud {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--ui-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px;
+  z-index: 250;
+  backdrop-filter: blur(12px);
+  opacity: 0.92;
+  transition: opacity var(--transition-normal), transform var(--transition-normal), bottom var(--transition-normal);
+}
+
+.zoom-hud:hover,
+.zoom-hud:focus-within {
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+.zoom-hud.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(16px);
+}
+
+.hud-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+  touch-action: manipulation;
+}
+
+.hud-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.hud-btn:active {
+  transform: scale(0.92);
+}
+
+.hud-btn i {
+  width: 15px;
+  height: 15px;
+}
+
+.hud-preset-btn {
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
 /* Mobile Tap Zones for Fast Page Flip */
 .mobile-tap-zone {
   position: absolute;
@@ -383,6 +464,44 @@
 
   body.focus-mode #floating-focus-bar {
     bottom: 16px;
+  }
+
+  .zoom-hud {
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    right: 12px;
+    scale: 0.92;
+    transform-origin: bottom right;
+  }
+
+  body.focus-mode .zoom-hud {
+    bottom: 16px;
+  }
+
+  /* Bottom Sheet de Salto de Página no Mobile */
+  dialog.page-jump-dialog {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    animation: sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes sheetSlideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
 }
 

@@ -17,10 +17,16 @@ export const POMODORO_DEFAULTS = {
   SNOOZE_MINUTES: 5,
 };
 
+export const ZOOM_MODES = {
+  FIT_WIDTH: 'fit-width',
+  FIT_PAGE: 'fit-page',
+  CUSTOM: 'custom',
+};
+
 export const ZOOM_LIMITS = {
-  MIN: 1.0,
+  MIN: 0.5,
   MAX: 4.0,
-  STEP: 0.25,
+  STEP: 0.2,
 };
 
 export const EVENTS = {

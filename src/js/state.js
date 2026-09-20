@@ -2,7 +2,7 @@
  * Estado Reativo Centralizado da Aplicação
  */
 
-import { EVENTS, THEMES } from './constants.js';
+import { EVENTS, THEMES, ZOOM_MODES } from './constants.js';
 
 class StateManager {
   constructor() {
@@ -17,6 +17,8 @@ class StateManager {
       manualNotes: {}, // Object.<number, string>
       outline: [], // Array<{ title: string, pageNum: number|null, items: Array }>
       zoomLevel: 1.0,
+      zoomMode: ZOOM_MODES.FIT_WIDTH,
+      pageJumpHistory: null,
       activeHighlightColor: 'yellow',
       theme: THEMES.LIGHT,
       isSidebarOpen: false,

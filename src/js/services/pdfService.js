@@ -3,7 +3,7 @@
  */
 
 import { appState } from '../state.js';
-import { EVENTS } from '../constants.js';
+import { EVENTS, ZOOM_MODES } from '../constants.js';
 
 export const PdfService = {
   /**
@@ -31,23 +31,34 @@ export const PdfService = {
   },
 
   /**
-   * Calcula a escala apropriada para a página no container (com Fit to Width no Mobile)
+   * Calcula a escala apropriada para a página no container (suportando Fit to Width e Fit to Page)
    * @param {Object} viewport Viewport em escala 1.0
    * @param {boolean} forceSingle
    * @param {HTMLElement} container
    * @param {number} zoomLevel
+   * @param {string} [zoomMode]
    * @returns {number}
    */
-  getScale(viewport, forceSingle, container, zoomLevel = 1.0) {
+  getScale(viewport, forceSingle, container, zoomLevel = 1.0, zoomMode = null) {
     if (!container) return 1.0 * zoomLevel;
     const containerWidth = container.clientWidth || 800;
     const containerHeight = container.clientHeight || 600;
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 820;
+    const effectiveMode = zoomMode || appState.get('zoomMode') || ZOOM_MODES.FIT_WIDTH;
 
-    // No modo mobile com página única, ajusta para cobrir 100% da largura da tela
+    // No modo mobile
     if (isMobile && forceSingle) {
       const mobileTargetWidth = containerWidth - (containerWidth < 480 ? 4 : 12);
       const scaleX = mobileTargetWidth / viewport.width;
+
+      if (effectiveMode === ZOOM_MODES.FIT_PAGE) {
+        // Enquadra a página inteira na tela útil (ótimo para mangás, quadrinhos e diagramas)
+        const mobileTargetHeight = containerHeight - 16;
+        const scaleY = mobileTargetHeight / viewport.height;
+        return Math.max(0.2, Math.min(scaleX, scaleY) * zoomLevel);
+      }
+
+      // FIT_WIDTH padrão: aproveita toda a largura para texto nítido e legível
       return Math.max(0.2, scaleX * zoomLevel);
     }
 
@@ -58,8 +69,14 @@ export const PdfService = {
 
     const scaleX = widthTarget / viewport.width;
     const scaleY = heightTarget / viewport.height;
-    const baseScale = Math.min(scaleX, scaleY) * 0.98;
 
+    if (effectiveMode === ZOOM_MODES.FIT_WIDTH) {
+      // Ajuste à largura confortável: texto com boa leitura contínua
+      return Math.max(0.2, scaleX * zoomLevel);
+    }
+
+    // FIT_PAGE ou padrão: enquadra a página inteira no campo de visão
+    const baseScale = Math.min(scaleX, scaleY) * 0.98;
     return Math.max(0.2, baseScale * zoomLevel);
   },
 

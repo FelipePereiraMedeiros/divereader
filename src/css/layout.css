@@ -260,16 +260,43 @@ input[type="file"] {
   left: 20px;
   background-color: var(--indicator-bg);
   color: var(--indicator-text);
-  padding: 5px 14px;
+  padding: 6px 16px;
   border-radius: var(--radius-pill);
   font-size: 12px;
   font-weight: 600;
   opacity: 0;
-  transition: opacity var(--transition-normal);
-  pointer-events: none;
+  transition: opacity var(--transition-normal), transform var(--transition-fast), background-color var(--transition-fast);
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
   z-index: 150;
   backdrop-filter: blur(8px);
   letter-spacing: 0.5px;
+  box-shadow: var(--shadow-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#discreet-indicator:hover {
+  opacity: 1 !important;
+  transform: scale(1.05);
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+#discreet-indicator:active {
+  transform: scale(0.95);
+}
+
+/* Grab & Pan no modo Zoom */
+body.zoomed-mode #book-container {
+  cursor: grab;
+}
+
+body.zoomed-mode.is-panning #book-container,
+body.zoomed-mode #book-container:active {
+  cursor: grabbing;
 }
 
 /* Drag Overlay & Loading */

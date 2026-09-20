@@ -22,6 +22,8 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
   let pinchStartDist = 0;
   let pinchStartZoom = 1.0;
   let pinchScaleRatio = 1.0;
+  let pinchCenterX = 0;
+  let pinchCenterY = 0;
   let lastPinchEndTime = 0;
 
   // Estado de Duplo Toque
@@ -38,7 +40,7 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
     'touchstart',
     (e) => {
       // Ignora se o toque for em componentes de interface flutuantes
-      if (e.target.closest('#sidebar') || e.target.closest('dialog') || e.target.closest('#quick-highlight-tooltip')) {
+      if (e.target.closest('#sidebar') || e.target.closest('dialog') || e.target.closest('#quick-highlight-tooltip') || e.target.closest('#zoom-hud')) {
         return;
       }
 
@@ -50,6 +52,8 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
         pinchStartDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
         pinchStartZoom = appState.get('zoomLevel') || 1.0;
         pinchScaleRatio = 1.0;
+        pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
+        pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
 
         // Oculta tooltips e cancela seleções para evitar artefatos visuais
         QuickHighlightTooltip.hide();
@@ -80,11 +84,13 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         const currentDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+        pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
+        pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
 
         if (pinchStartDist > 0) {
           pinchScaleRatio = currentDist / pinchStartDist;
           // Limites visuais elásticos durante o gesto
-          const clampedRatio = Math.max(0.6, Math.min(3.0, pinchScaleRatio));
+          const clampedRatio = Math.max(0.5, Math.min(3.5, pinchScaleRatio));
 
           const viewer = getViewer();
           if (viewer) {
@@ -102,7 +108,7 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
   // 3. TOUCHEND / CANCEL: Finalização de Gestos
   // ==========================================
   const handleTouchEnd = async (e) => {
-    if (e.target.closest('#sidebar') || e.target.closest('dialog') || e.target.closest('#quick-highlight-tooltip')) {
+    if (e.target.closest('#sidebar') || e.target.closest('dialog') || e.target.closest('#quick-highlight-tooltip') || e.target.closest('#zoom-hud')) {
       return;
     }
 
@@ -120,7 +126,7 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
           viewer.style.transition = '';
         }
 
-        // Se a escala mudou significativamente (> 8%), aplica o novo zoom re-renderizando o PDF
+        // Se a escala mudou significativamente (> 8%), aplica o novo zoom preservando o centro
         if (Math.abs(pinchScaleRatio - 1.0) > 0.08) {
           const targetZoom = Math.max(
             ZOOM_LIMITS.MIN,
@@ -128,7 +134,7 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
           );
 
           if (typeof onSetZoom === 'function') {
-            onSetZoom(targetZoom);
+            onSetZoom(targetZoom, { clientX: pinchCenterX, clientY: pinchCenterY });
           } else if (typeof onChangeZoom === 'function') {
             onChangeZoom(targetZoom - pinchStartZoom);
           }
@@ -157,9 +163,9 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
       const selection = window.getSelection();
       if (selection && selection.toString().trim().length > 0) return;
 
-      // Se houver zoom aplicado (> 1.0), permite pan/scroll livre em vez de mudar de página
+      // Se houver zoom aplicado (> 1.05), permite pan/scroll livre em vez de mudar de página
       const currentZoom = appState.get('zoomLevel') || 1.0;
-      if (currentZoom <= 1.0) {
+      if (currentZoom <= 1.05) {
         // Gesto horizontal expressivo (> 50px) e com predominância horizontal
         if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
           if (diffX > 0) {
@@ -172,13 +178,13 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
       }
 
       // ----------------------------------------------------
-      // Duplo Toque para Deletar Grifo
+      // Duplo Toque: Deleção de Grifo OU Smart Zoom
       // ----------------------------------------------------
       const currentTime = Date.now();
       const tapLength = currentTime - lastTapTime;
       const dist = Math.hypot(touch.clientX - lastTapX, touch.clientY - lastTapY);
 
-      if (tapLength < 400 && tapLength > 0 && dist < 35) {
+      if (lastTapTime > 0 && tapLength <= 400 && tapLength >= 0 && dist < 35) {
         const match = HighlightService.findHighlightAtPoint(touch.clientX, touch.clientY, e.target);
         if (match) {
           if (e.cancelable) e.preventDefault();
@@ -203,6 +209,24 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
             NotebookView.render();
             showToast('Grifo removido.', 'eraser');
           }
+        } else {
+          // SMART DOUBLE-TAP ZOOM (Estilo Kindle / Acrobat Reader)
+          // Se estiver no zoom normal, aproxima com foco no ponto tocado
+          // Se já estiver com zoom, afasta de volta para o tamanho padrão ajustado
+          if (e.cancelable) e.preventDefault();
+          if (currentZoom <= 1.05) {
+            if (typeof onSetZoom === 'function') {
+              onSetZoom(1.8, { clientX: touch.clientX, clientY: touch.clientY });
+              showToast('Zoom Inteligente (1.8x)', 'zoom-in');
+            }
+          } else {
+            if (typeof onSetZoom === 'function') {
+              onSetZoom(1.0);
+              showToast('Ajustado à tela', 'minimize-2');
+            }
+          }
+          lastTapTime = 0;
+          return;
         }
       }
 
