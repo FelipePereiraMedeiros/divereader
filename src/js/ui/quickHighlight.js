@@ -156,10 +156,8 @@ export const QuickHighlightTooltip = {
       const centerX = rect.left + rect.width / 2;
       const bottomSpace = window.innerHeight - rect.bottom;
 
-      // Por padrão, posicionamos SEMPRE ABAIXO (placement = 'bottom').
-      // Motivo arquitetural: Navegadores como Opera (popup de pesquisa/cópia nativo), Edge (mini-menu)
-      // e navegadores mobile abrem seus popups nativos SEMPRE ACIMA do texto selecionado.
-      // Posicionando abaixo, o DiveReader fica 100% visível, acessível e sem nenhuma sobreposição!
+      // Se o espaço abaixo for insuficiente (< 60px), posiciona acima da seleção
+      const placement = bottomSpace < 60 ? 'top' : 'bottom';
       const targetY = placement === 'bottom' ? rect.bottom : rect.top;
       const targetX = centerX;
 
@@ -182,7 +180,6 @@ export const QuickHighlightTooltip = {
     this.tooltipEl.classList.toggle('placement-bottom', placement === 'bottom');
     this.tooltipEl.classList.toggle('placement-top', placement === 'top');
     this.tooltipEl.style.display = 'flex';
-    refreshIcons(this.tooltipEl);
   },
 
   hide() {

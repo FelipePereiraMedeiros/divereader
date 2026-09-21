@@ -518,8 +518,10 @@ export const App = {
     const target = single ? pages[0] : pages.length > 1 ? pages[1] : pages[0];
 
     if (target && appState.get('zoomLevel') <= 1.0) {
+      DOM.pdfViewer?.classList.add('flipping');
       target.classList.add('flip-next');
       setTimeout(() => {
+        DOM.pdfViewer?.classList.remove('flipping');
         appState.set({ isRendering: false });
         this.renderPages(currentPage + (single ? 1 : 2));
       }, 350);
@@ -544,8 +546,10 @@ export const App = {
     const target = pages[0];
 
     if (target && appState.get('zoomLevel') <= 1.0) {
+      DOM.pdfViewer?.classList.add('flipping');
       target.classList.add('flip-prev');
       setTimeout(() => {
+        DOM.pdfViewer?.classList.remove('flipping');
         appState.set({ isRendering: false });
         const nextPage = Math.max(1, currentPage - (single ? 1 : 2));
         this.renderPages(nextPage);

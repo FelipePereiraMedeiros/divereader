@@ -8,13 +8,25 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   padding: 0;
   height: 100%;
   height: 100dvh;
+  width: 100vw;
   overflow: hidden;
+  position: fixed; /* Evita o bounce elástico no Safari iOS e estabiliza layouts com teclados virtuais */
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
   background-color: var(--ui-bg);
   color: var(--text-color);
   font-family: var(--font-ui);
@@ -25,11 +37,6 @@ body {
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
   user-select: none;
-}
-
-body {
-  display: flex;
-  flex-direction: column;
   transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 

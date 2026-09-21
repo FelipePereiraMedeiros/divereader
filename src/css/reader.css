@@ -33,8 +33,14 @@
   gap: 16px;
   margin: auto;
   transition: transform var(--transition-normal);
-  perspective: 2000px;
+  perspective: none;
   min-height: 100%;
+}
+
+#pdf-viewer.flipping,
+#pdf-viewer:has(.flip-next),
+#pdf-viewer:has(.flip-prev) {
+  perspective: 2000px;
 }
 
 body.zoomed-mode #pdf-viewer {
@@ -53,6 +59,9 @@ body.zoomed-mode #pdf-viewer {
   backface-visibility: hidden;
   transform-style: preserve-3d;
   transition: box-shadow var(--transition-normal);
+  /* Cria um novo contexto de empilhamento e isola o mix-blend-mode dentro da página */
+  isolation: isolate;
+  contain: layout style;
 }
 
 .page-wrapper canvas {
@@ -61,6 +70,8 @@ body.zoomed-mode #pdf-viewer {
   height: auto;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  transform: translateZ(0); /* Força camada própria no compositor gráfico */
+  backface-visibility: hidden;
   text-rendering: optimizeLegibility;
   transition: filter var(--transition-normal), opacity var(--transition-normal);
   filter: contrast(102%) brightness(99%);
@@ -144,6 +155,8 @@ body.zoomed-mode #pdf-viewer {
   cursor: pointer;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  /* Elimina o cálculo repetido de reflow ao passar o cursor */
+  will-change: background-color, box-shadow;
   transition:
     background-color var(--transition-fast),
     box-shadow var(--transition-fast),

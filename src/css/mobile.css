@@ -15,22 +15,23 @@
   pointer-events: auto;
   align-items: center;
   gap: 6px;
-  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), top 0.16s ease, left 0.16s ease;
+  /* Retira-se a transição de left/top para evitar atraso visual e deslizamento relativo ao texto */
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
-/* Posição Padrão (Acima da seleção) */
-#quick-highlight-tooltip,
+/* Posição Acima da seleção */
 #quick-highlight-tooltip.placement-top {
   transform: translate(-50%, -100%);
-  margin-top: -10px;
-  animation: tooltipPop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  margin-top: -8px;
+  animation: tooltipPop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Posição Invertida (Abaixo da seleção quando houver conflito de extensão/borda) */
+/* Posição Padrão / Abaixo da seleção (evita conflito com menus nativos de browser) */
+#quick-highlight-tooltip,
 #quick-highlight-tooltip.placement-bottom {
   transform: translate(-50%, 0);
-  margin-top: 10px;
-  animation: tooltipPopBottom 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  margin-top: 8px;
+  animation: tooltipPopBottom 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes tooltipPop {

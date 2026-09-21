@@ -194,6 +194,8 @@
   background: var(--ui-bg);
   min-height: 0;
   overflow: hidden;
+  /* Isola layout, estilo e pintura da aba ativa para evitar layout thrashing global */
+  contain: content;
 }
 
 .tab-content.active {
@@ -206,6 +208,7 @@
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px;
   gap: 16px;
 }
@@ -360,6 +363,7 @@
   flex-grow: 1;
   padding: 14px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-color);
@@ -650,6 +654,7 @@
 .toc-container {
   padding: 14px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   height: 100%;
   display: flex;
   flex-direction: column;
