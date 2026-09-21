@@ -36,7 +36,11 @@ export const HighlightService = {
       return { success: false, message: 'Selecione um texto antes de grifar.' };
     }
 
-    textExtracted = textExtracted.replace(/[\r\n]+/g, ' ').trim();
+    // Reconstitui palavras quebradas por hífen no final de linha e normaliza espaços
+    textExtracted = textExtracted
+      .replace(/([\p{L}\p{N}]+)-\s*[\r\n]+\s*([\p{L}\p{N}]+)/gu, '$1$2')
+      .replace(/[\r\n]+/g, ' ')
+      .trim();
     if (textExtracted.length < 2) {
       return { success: false, message: 'Selecione um texto válido para grifar.' };
     }

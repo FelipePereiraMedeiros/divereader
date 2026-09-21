@@ -150,4 +150,28 @@ describe('Touch Events and Gestures', () => {
     expect(onSetZoom).toHaveBeenCalledTimes(2);
     expect(onSetZoom).toHaveBeenLastCalledWith(1.0);
   });
+
+  it('não deve acionar smart zoom no duplo toque se o toque ocorrer sobre a camada de texto', () => {
+    const textLayer = document.createElement('div');
+    textLayer.className = 'textLayer';
+    const span = document.createElement('span');
+    span.textContent = 'Palavra selecionável';
+    textLayer.appendChild(span);
+    container.appendChild(textLayer);
+
+    // Primeiro toque sobre o span da textLayer
+    const t1 = new Event('touchend');
+    t1.touches = [];
+    t1.changedTouches = [{ clientX: 180, clientY: 220 }];
+    span.dispatchEvent(t1);
+
+    // Segundo toque rápido sobre o mesmo span
+    const t2 = new Event('touchend');
+    t2.touches = [];
+    t2.changedTouches = [{ clientX: 181, clientY: 220 }];
+    span.dispatchEvent(t2);
+
+    // Não deve acionar onSetZoom pois o usuário está realizando seleção de palavra
+    expect(onSetZoom).not.toHaveBeenCalled();
+  });
 });

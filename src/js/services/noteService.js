@@ -5,18 +5,26 @@
 import { appState } from '../state.js';
 import { Storage } from '../storage.js';
 import { EVENTS } from '../constants.js';
+import { PageSynthesis } from '../models/Note.js';
 
 export const NoteService = {
   /**
-   * Salva a síntese manual da página atual
+   * Salva a síntese manual da página atual utilizando o modelo PageSynthesis
    * @param {number} pageNum
-   * @param {string} content
+   * @param {string|PageSynthesis} content
    */
   savePageSynthesis(pageNum, content) {
     const allNotes = appState.get('manualNotes') || {};
+    const textContent = typeof content === 'string' ? content : (content?.content || '');
+    const synthesis = new PageSynthesis({
+      pageNum: Number(pageNum),
+      content: textContent,
+      updatedAt: new Date().toISOString(),
+    });
+
     const updated = {
       ...allNotes,
-      [pageNum]: content,
+      [pageNum]: synthesis,
     };
 
     appState.set({ manualNotes: updated }, EVENTS.NOTES_UPDATED);
@@ -30,7 +38,9 @@ export const NoteService = {
    */
   getPageSynthesis(pageNum) {
     const allNotes = appState.get('manualNotes') || {};
-    return allNotes[pageNum] || '';
+    const note = allNotes[pageNum];
+    if (!note) return '';
+    return typeof note === 'string' ? note : (note.content || '');
   },
 
   /**
@@ -54,7 +64,8 @@ export const NoteService = {
 
     for (const p of pages) {
       const pageHighlights = highlights[p] || [];
-      const pageSynthesis = (manualNotes[p] || '').trim();
+      const rawSynthesis = manualNotes[p];
+      const pageSynthesis = (typeof rawSynthesis === 'string' ? rawSynthesis : (rawSynthesis?.content || '')).trim();
 
       if (pageHighlights.length === 0 && !pageSynthesis) continue;
 
@@ -101,15 +112,21 @@ export const NoteService = {
 
     const pages = Array.from(pageSet).sort((a, b) => a - b);
 
-    let md = `# 📖 Fichamento de Leitura\n\n`;
-    md += `- **Documento:** \`${fileName}\`\n`;
-    md += `- **Data da Exportação:** ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n`;
-    md += `- **Total de Páginas com Anotações:** ${pages.length}\n\n`;
+    // Frontmatter padrão para interoperabilidade (Obsidian / Zettelkasten / PKM)
+    let md = `---\n`;
+    md += `title: "${fileName}"\n`;
+    md += `type: reading-notes\n`;
+    md += `source: DiveReader\n`;
+    md += `export_date: ${new Date().toISOString()}\n`;
+    md += `total_annotated_pages: ${pages.length}\n`;
     md += `---\n\n`;
+
+    md += `# 📖 Fichamento de Leitura: ${fileName}\n\n`;
 
     for (const p of pages) {
       const pageHighlights = highlights[p] || [];
-      const pageSynthesis = (manualNotes[p] || '').trim();
+      const rawSynthesis = manualNotes[p];
+      const pageSynthesis = (typeof rawSynthesis === 'string' ? rawSynthesis : (rawSynthesis?.content || '')).trim();
 
       if (pageHighlights.length === 0 && !pageSynthesis) continue;
 
@@ -118,9 +135,10 @@ export const NoteService = {
       if (pageHighlights.length > 0) {
         md += `### 📌 Citações & Grifos\n\n`;
         pageHighlights.forEach((h) => {
-          md += `> "${h.text}"\n`;
+          const tag = h.color ? ` #${h.color}` : '';
+          md += `> "${h.text}"${tag}\n`;
           if (h.note && h.note.trim()) {
-            md += `> \n> **Nota:** *${h.note.trim()}*\n`;
+            md += `>\n> **Nota:** *${h.note.trim()}*\n`;
           }
           md += `\n`;
         });

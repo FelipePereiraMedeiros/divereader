@@ -20,7 +20,9 @@ export class Highlight {
     rects = [],
     color = 'yellow',
     note = '',
+    tags = [],
     createdAt = new Date().toISOString(),
+    updatedAt = new Date().toISOString(),
   }) {
     this.id = id;
     this.pageNum = Number(pageNum);
@@ -28,7 +30,9 @@ export class Highlight {
     this.rects = Array.isArray(rects) ? rects : [];
     this.color = color;
     this.note = note;
+    this.tags = Array.isArray(tags) ? tags : [];
     this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
   }
 
   /**
@@ -59,7 +63,9 @@ export class Highlight {
       rects: this.rects,
       color: this.color,
       note: this.note,
+      tags: this.tags,
       createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
     };
   }
 

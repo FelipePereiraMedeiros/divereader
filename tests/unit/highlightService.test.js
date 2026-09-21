@@ -189,4 +189,31 @@ describe('Highlight Service & Model', () => {
     expect(result?.highlightId).toBe('hl_geo');
     expect(result?.pageNum).toBe(1);
   });
+
+  it('deve reconstituir palavras quebradas por hífen em final de linha ao adicionar grifo', () => {
+    const pageWrapper = document.createElement('div');
+    pageWrapper.className = 'page-wrapper';
+    pageWrapper.dataset.page = '1';
+    pageWrapper.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 500,
+      height: 800,
+      right: 500,
+      bottom: 800,
+    });
+    document.body.appendChild(pageWrapper);
+
+    const dummyRange = {
+      commonAncestorContainer: pageWrapper,
+      getClientRects: () => [{ left: 10, top: 20, width: 200, height: 16 }],
+      toString: () => 'desenvolvi-\n  mento sustentável',
+    };
+
+    const result = HighlightService.addHighlight(dummyRange, null, 'yellow');
+    expect(result.success).toBe(true);
+    expect(result.highlight.text).toBe('desenvolvimento sustentável');
+
+    document.body.removeChild(pageWrapper);
+  });
 });

@@ -19,6 +19,14 @@ export class PageSynthesis {
     this.updatedAt = updatedAt;
   }
 
+  /**
+   * Retorna o conteúdo textual da síntese para interoperabilidade
+   * @returns {string}
+   */
+  toString() {
+    return this.content;
+  }
+
   toJSON() {
     return {
       pageNum: this.pageNum,
@@ -28,6 +36,10 @@ export class PageSynthesis {
   }
 
   static fromJSON(data) {
+    if (!data) return null;
+    if (typeof data === 'string') {
+      return new PageSynthesis({ pageNum: 0, content: data });
+    }
     return new PageSynthesis(data);
   }
 }

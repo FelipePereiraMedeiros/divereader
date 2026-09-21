@@ -5,6 +5,9 @@
 import { appState } from '../state.js';
 import { EVENTS, ZOOM_MODES } from '../constants.js';
 
+// Controle interno de tarefas de renderização ativas para cancelamento imediato
+const activeRenderTasks = new Map();
+
 export const PdfService = {
   /**
    * Inicializa o worker do PDF.js
@@ -81,6 +84,74 @@ export const PdfService = {
   },
 
   /**
+   * Renderiza a página no elemento canvas com suporte a cancelamento de tarefas anteriores
+   * e aceleração de rasterização com alpha: false
+   * @param {any} page Instância da página do PDF.js
+   * @param {Object} viewport
+   * @param {HTMLCanvasElement} canvas
+   * @param {number} pageNum
+   */
+  async renderCanvas(page, viewport, canvas, pageNum) {
+    // Cancela renderização pendente da mesma página se o utilizador redimensionar/navegar rapidamente
+    if (activeRenderTasks.has(pageNum)) {
+      try {
+        const prevTask = activeRenderTasks.get(pageNum);
+        if (prevTask && typeof prevTask.cancel === 'function') {
+          prevTask.cancel();
+        }
+      } catch (e) {
+        // Ignora falhas de cancelamento de tarefas já finalizadas
+      }
+      activeRenderTasks.delete(pageNum);
+    }
+
+    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const renderScale = Math.min(Math.max(dpr, 1), 2.5);
+
+    canvas.width = Math.floor(viewport.width * renderScale);
+    canvas.height = Math.floor(viewport.height * renderScale);
+    canvas.style.width = `${viewport.width}px`;
+    canvas.style.height = `${viewport.height}px`;
+
+    const canvasContext = canvas.getContext('2d', { alpha: false });
+    const transform = renderScale !== 1 ? [renderScale, 0, 0, renderScale, 0, 0] : null;
+
+    const renderTask = page.render({
+      canvasContext,
+      viewport,
+      transform,
+    });
+
+    activeRenderTasks.set(pageNum, renderTask);
+
+    try {
+      await renderTask.promise;
+    } catch (error) {
+      if (error?.name !== 'RenderingCancelledException') {
+        throw error;
+      }
+    } finally {
+      if (activeRenderTasks.get(pageNum) === renderTask) {
+        activeRenderTasks.delete(pageNum);
+      }
+    }
+  },
+
+  /**
+   * Cancela todas as tarefas de renderização pendentes (ao trocar de documento ou redimensionar)
+   */
+  cancelAllPendingRenders() {
+    for (const [pageNum, task] of activeRenderTasks.entries()) {
+      try {
+        if (task && typeof task.cancel === 'function') {
+          task.cancel();
+        }
+      } catch (e) {}
+    }
+    activeRenderTasks.clear();
+  },
+
+  /**
    * Constrói o wrapper DOM completo para uma página PDF (Canvas + Highlights + TextLayer)
    * @param {number} pageNum
    * @param {boolean} forceSingle
@@ -104,14 +175,7 @@ export const PdfService = {
     wrapper.dataset.page = String(pageNum);
 
     // 1. Camada Canvas (Visual do PDF em Alta Resolução / Subpixel Sharpness)
-    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
-    const renderScale = Math.min(Math.max(dpr, 1), 2.5);
-
     const canvas = document.createElement('canvas');
-    canvas.width = Math.floor(viewport.width * renderScale);
-    canvas.height = Math.floor(viewport.height * renderScale);
-    canvas.style.width = `${viewport.width}px`;
-    canvas.style.height = `${viewport.height}px`;
     wrapper.appendChild(canvas);
 
     // 2. Camada de Grifos (Marca-texto amarelo)
@@ -126,15 +190,8 @@ export const PdfService = {
     textLayer.style.height = `${viewport.height}px`;
     wrapper.appendChild(textLayer);
 
-    // Renderiza Canvas com transform para displays de alta densidade
-    const canvasContext = canvas.getContext('2d');
-    const transform = renderScale !== 1 ? [renderScale, 0, 0, renderScale, 0, 0] : null;
-
-    await page.render({
-      canvasContext,
-      viewport,
-      transform,
-    }).promise;
+    // Renderiza o Canvas de forma segura e cancelável
+    await this.renderCanvas(page, viewport, canvas, pageNum);
 
     // 3. Renderiza Text Content no TextLayer (com renderTextLayer oficial ou fallback calibrado)
     const textContent = await page.getTextContent();

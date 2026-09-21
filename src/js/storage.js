@@ -17,6 +17,67 @@ export const Storage = {
   },
 
   /**
+   * Gera uma chave segura baseada no hash SHA-256 dos primeiros 64KB do arquivo,
+   * permitindo ao leitor renomear o arquivo no disco sem perder anotações e histórico.
+   * Suporta migração automática da chave legada (baseada em nome e tamanho).
+   * @param {string} fileName
+   * @param {number} fileSize
+   * @param {ArrayBuffer} [arrayBuffer]
+   * @returns {Promise<string>}
+   */
+  async resolveFileKey(fileName, fileSize, arrayBuffer) {
+    const legacyKey = this.generateFileKey(fileName, fileSize);
+
+    if (!arrayBuffer || typeof crypto === 'undefined' || !crypto.subtle) {
+      return legacyKey;
+    }
+
+    try {
+      const slice = arrayBuffer.slice(0, 64 * 1024);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', slice);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+      const hashKey = `${STORAGE_PREFIX}sha_${hashHex}`;
+
+      // Migra dados caso a chave legada exista e a hashKey ainda não possua dados
+      this.migrateLegacyKeyToHashKey(legacyKey, hashKey);
+
+      return hashKey;
+    } catch (e) {
+      console.warn('Falha ao calcular hash SHA-256, utilizando chave padrão:', e);
+      return legacyKey;
+    }
+  },
+
+  /**
+   * Migra os dados da chave legada para a chave persistente por hash
+   * @param {string} legacyKey
+   * @param {string} hashKey
+   */
+  migrateLegacyKeyToHashKey(legacyKey, hashKey) {
+    if (!legacyKey || !hashKey || legacyKey === hashKey) return;
+
+    try {
+      const hashHighlights = localStorage.getItem(`${hashKey}_highlights_v2`);
+      const hashNotes = localStorage.getItem(`${hashKey}_notes_v2`);
+      const hashPage = localStorage.getItem(`${hashKey}_page`);
+
+      // Se já existem dados associados à hashKey, não sobrescreve
+      if (hashHighlights || hashNotes || hashPage) return;
+
+      const suffixes = ['_page', '_highlights_v2', '_notes_v2', '_highlights', '_anotacoes'];
+      for (const suffix of suffixes) {
+        const val = localStorage.getItem(`${legacyKey}${suffix}`);
+        if (val !== null) {
+          localStorage.setItem(`${hashKey}${suffix}`, val);
+        }
+      }
+    } catch (e) {
+      console.warn('Erro na migração para hashKey:', e);
+    }
+  },
+
+  /**
    * Salva a última página lida
    * @param {string} fileKey
    * @param {number} pageNum

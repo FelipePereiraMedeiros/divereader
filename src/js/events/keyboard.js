@@ -4,37 +4,96 @@
 
 import { appState } from '../state.js';
 
-export function setupKeyboardShortcuts({ onNextPage, onPrevPage, onChangeZoom, onToggleMenu, onToggleSidebar }) {
+export function setupKeyboardShortcuts({
+  onNextPage,
+  onPrevPage,
+  onGoToPage,
+  onChangeZoom,
+  onResetZoom,
+  onToggleMenu,
+  onToggleSidebar,
+}) {
   document.addEventListener('keydown', (e) => {
-    // Zoom com atalhos de teclado (Ctrl + / Ctrl -)
+    // 1. Zoom via teclado (Ctrl/Cmd + [+] / [-] / [0])
     if (e.ctrlKey || e.metaKey) {
-      if (['+', '=', '-'].includes(e.key)) {
+      if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
         e.preventDefault();
-        onChangeZoom(e.key === '-' ? -0.25 : 0.25);
+        onChangeZoom(0.25);
+        return;
+      }
+      if (e.key === '-' || e.code === 'NumpadSubtract') {
+        e.preventDefault();
+        onChangeZoom(-0.25);
+        return;
+      }
+      if (e.key === '0' || e.code === 'Numpad0') {
+        e.preventDefault();
+        if (typeof onResetZoom === 'function') {
+          onResetZoom();
+        } else {
+          onChangeZoom(null, { reset: true });
+        }
         return;
       }
     }
 
-    // Se estiver digitando em campo de texto, não dispara atalhos de navegação
-    if (['TEXTAREA', 'INPUT'].includes(document.activeElement?.tagName)) {
+    // 2. Previne disparos quando o usuário edita notas, inputs ou campos contentEditable
+    const activeEl = document.activeElement;
+    const activeTag = activeEl?.tagName;
+    if (['TEXTAREA', 'INPUT'].includes(activeTag) || activeEl?.isContentEditable) {
       return;
     }
 
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc) return;
 
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      onPrevPage();
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      onNextPage();
-    } else if (e.key === 'f' || e.key === 'F') {
-      e.preventDefault();
-      onToggleMenu();
-    } else if (e.key === 'c' || e.key === 'C') {
-      e.preventDefault();
-      onToggleSidebar();
+    switch (e.key) {
+      case 'ArrowLeft':
+      case 'PageUp':
+      case 'j':
+      case 'J':
+        e.preventDefault();
+        onPrevPage();
+        break;
+
+      case 'ArrowRight':
+      case 'PageDown':
+      case 'k':
+      case 'K':
+      case ' ': // Barra de espaço avança página (padrão PDF readers)
+        e.preventDefault();
+        onNextPage();
+        break;
+
+      case 'Home':
+        e.preventDefault();
+        if (typeof onGoToPage === 'function') {
+          onGoToPage(1);
+        } else {
+          appState.emit('NAVIGATE_PAGE', 1);
+        }
+        break;
+
+      case 'End':
+        e.preventDefault();
+        if (typeof onGoToPage === 'function') {
+          onGoToPage(pdfDoc.numPages);
+        } else {
+          appState.emit('NAVIGATE_PAGE', pdfDoc.numPages);
+        }
+        break;
+
+      case 'f':
+      case 'F':
+        e.preventDefault();
+        onToggleMenu();
+        break;
+
+      case 'c':
+      case 'C':
+        e.preventDefault();
+        onToggleSidebar();
+        break;
     }
   });
 }

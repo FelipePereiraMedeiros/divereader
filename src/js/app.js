@@ -14,7 +14,7 @@ import { QuickHighlightTooltip } from './ui/quickHighlight.js';
 import { showToast } from './ui/toast.js';
 import { DOM, refreshIcons } from './ui/dom.js';
 import { setupKeyboardShortcuts } from './events/keyboard.js';
-import { setupMouseEvents } from './events/mouse.js';
+import { setupMouseEvents, applyFocalZoom } from './events/mouse.js';
 import { setupTouchAndGestures } from './events/touch.js';
 import { EVENTS, ZOOM_LIMITS, ZOOM_MODES } from './constants.js';
 
@@ -226,7 +226,9 @@ export const App = {
     setupKeyboardShortcuts({
       onNextPage: () => this.onNextPage(),
       onPrevPage: () => this.onPrevPage(),
-      onChangeZoom: (delta) => this.changeZoom(delta),
+      onGoToPage: (p) => this.renderPages(p),
+      onChangeZoom: (delta, opts) => this.changeZoom(delta, opts),
+      onResetZoom: () => this.setZoom(1.0),
       onToggleMenu: () => this.toggleFocusMode(),
       onToggleSidebar: () => NotebookView.toggleSidebar(),
     });
@@ -304,6 +306,9 @@ export const App = {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
+      const fileKey = await Storage.resolveFileKey(file.name, file.size, arrayBuffer);
+      appState.set({ fileKey });
+
       const pdfDoc = await PdfService.loadDocument(arrayBuffer);
       const outline = await PdfService.getOutline(pdfDoc);
 
@@ -373,6 +378,7 @@ export const App = {
     if (DOM.mobileBtnPrev) DOM.mobileBtnPrev.disabled = leftPageNum <= 1;
     if (DOM.mobileBtnPage) DOM.mobileBtnPage.disabled = false;
 
+    PdfService.cancelAllPendingRenders();
     if (DOM.pdfViewer) DOM.pdfViewer.innerHTML = '';
 
     let indicatorText = `${leftPageNum}`;
@@ -514,26 +520,7 @@ export const App = {
     const newZoom = Math.round(clamped * 100) / 100;
     if (Math.abs(newZoom - current) < 0.02) return;
 
-    // Calcula razão focal para ancorar a posição de leitura sem resetar para o topo
-    let ratioX = 0.5;
-    let ratioY = 0.5;
     const container = DOM.bookContainer;
-
-    if (container && container.scrollWidth > 0 && container.scrollHeight > 0) {
-      if (focalPoint && typeof focalPoint.clientX === 'number') {
-        const rect = container.getBoundingClientRect();
-        const focusX = focalPoint.clientX - rect.left + container.scrollLeft;
-        const focusY = focalPoint.clientY - rect.top + container.scrollTop;
-        ratioX = focusX / container.scrollWidth;
-        ratioY = focusY / container.scrollHeight;
-      } else {
-        const centerX = container.scrollLeft + container.clientWidth / 2;
-        const centerY = container.scrollTop + container.clientHeight / 2;
-        ratioX = centerX / container.scrollWidth;
-        ratioY = centerY / container.scrollHeight;
-      }
-    }
-
     const wasSingle = appState.isSinglePageMode();
     appState.set({ zoomLevel: newZoom });
     this.updateBodyMode();
@@ -546,10 +533,16 @@ export const App = {
 
     this.renderPages(pageNum).then(() => {
       if (container && newZoom > 1.0) {
-        const newScrollLeft = ratioX * container.scrollWidth - container.clientWidth / 2;
-        const newScrollTop = ratioY * container.scrollHeight - container.clientHeight / 2;
-        container.scrollLeft = Math.max(0, newScrollLeft);
-        container.scrollTop = Math.max(0, newScrollTop);
+        if (focalPoint && typeof focalPoint.clientX === 'number') {
+          applyFocalZoom(container, newZoom, current, focalPoint);
+        } else {
+          const centerX = container.clientWidth / 2;
+          const centerY = container.clientHeight / 2;
+          applyFocalZoom(container, newZoom, current, {
+            clientX: container.getBoundingClientRect().left + centerX,
+            clientY: container.getBoundingClientRect().top + centerY,
+          });
+        }
       }
     });
   },
@@ -560,6 +553,10 @@ export const App = {
    * @param {Object} [focalPoint]
    */
   changeZoom(delta, focalPoint = null) {
+    if (delta === null || (focalPoint && focalPoint.reset)) {
+      this.setZoom(1.0);
+      return;
+    }
     const current = appState.get('zoomLevel');
     this.setZoom(current + delta, focalPoint);
   },

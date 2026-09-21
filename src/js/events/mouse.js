@@ -4,6 +4,27 @@
 
 import { appState } from '../state.js';
 
+/**
+ * Ajusta scrollLeft e scrollTop do contêiner para manter o ponto sob o cursor estático durante o zoom
+ * @param {HTMLElement} container
+ * @param {number} newScale
+ * @param {number} currentScale
+ * @param {{ clientX: number, clientY: number }} focalPoint
+ */
+export function applyFocalZoom(container, newScale, currentScale, focalPoint) {
+  if (!container || !focalPoint || currentScale <= 0) return;
+
+  const rect = container.getBoundingClientRect();
+  const mouseX = focalPoint.clientX - rect.left;
+  const mouseY = focalPoint.clientY - rect.top;
+
+  const scaleRatio = newScale / currentScale;
+
+  // Ajusta a translação das barras de deslocamento para manter o ponto focal fixo
+  container.scrollLeft = (container.scrollLeft + mouseX) * scaleRatio - mouseX;
+  container.scrollTop = (container.scrollTop + mouseY) * scaleRatio - mouseY;
+}
+
 export function setupMouseEvents({
   container,
   dragOverlay,
@@ -76,7 +97,7 @@ export function setupMouseEvents({
     );
 
     // ==========================================
-    // Hand Tool / Pan Livre quando com Zoom aplicado
+    // Hand Tool / Pan Livre via PointerEvents com setPointerCapture
     // ==========================================
     let isPanning = false;
     let startX = 0;
@@ -84,7 +105,7 @@ export function setupMouseEvents({
     let scrollStartX = 0;
     let scrollStartY = 0;
 
-    container.addEventListener('mousedown', (e) => {
+    container.addEventListener('pointerdown', (e) => {
       const zoomLevel = appState.get('zoomLevel') || 1.0;
       if (zoomLevel <= 1.05) return;
 
@@ -95,7 +116,7 @@ export function setupMouseEvents({
         e.target.closest('#quick-highlight-tooltip') ||
         e.target.closest('.highlight-rect') ||
         e.target.closest('button') ||
-        e.button !== 0 // apenas botão esquerdo
+        e.button !== 0 // apenas botão primário
       ) {
         return;
       }
@@ -106,9 +127,13 @@ export function setupMouseEvents({
       startY = e.clientY;
       scrollStartX = container.scrollLeft;
       scrollStartY = container.scrollTop;
+
+      try {
+        container.setPointerCapture(e.pointerId);
+      } catch (err) {}
     });
 
-    window.addEventListener('mousemove', (e) => {
+    container.addEventListener('pointermove', (e) => {
       if (!isPanning) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
@@ -116,14 +141,19 @@ export function setupMouseEvents({
       container.scrollTop = scrollStartY - dy;
     });
 
-    const stopPanning = () => {
+    const stopPanning = (e) => {
       if (isPanning) {
         isPanning = false;
         document.body.classList.remove('is-panning');
+        if (e && typeof e.pointerId === 'number') {
+          try {
+            container.releasePointerCapture(e.pointerId);
+          } catch (err) {}
+        }
       }
     };
 
-    window.addEventListener('mouseup', stopPanning);
-    window.addEventListener('mouseleave', stopPanning);
+    container.addEventListener('pointerup', stopPanning);
+    container.addEventListener('pointercancel', stopPanning);
   }
 }

@@ -184,7 +184,9 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
       const tapLength = currentTime - lastTapTime;
       const dist = Math.hypot(touch.clientX - lastTapX, touch.clientY - lastTapY);
 
-      if (lastTapTime > 0 && tapLength <= 400 && tapLength >= 0 && dist < 35) {
+      const hasActiveSelection = selection && selection.toString().trim().length > 0;
+
+      if (!hasActiveSelection && lastTapTime > 0 && tapLength <= 350 && tapLength >= 0 && dist < 30) {
         const match = HighlightService.findHighlightAtPoint(touch.clientX, touch.clientY, e.target);
         if (match) {
           if (e.cancelable) e.preventDefault();
@@ -210,24 +212,32 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
             showToast('Grifo removido.', 'eraser');
           }
         } else {
-          // SMART DOUBLE-TAP ZOOM (Estilo Kindle / Acrobat Reader)
-          // Se estiver no zoom normal, aproxima com foco no ponto tocado
-          // Se já estiver com zoom, afasta de volta para o tamanho padrão ajustado
-          if (e.cancelable) e.preventDefault();
-          if (currentZoom <= 1.05) {
-            if (typeof onSetZoom === 'function') {
-              onSetZoom(1.8, { clientX: touch.clientX, clientY: touch.clientY });
-              showToast('Zoom Inteligente (1.8x)', 'zoom-in');
-            }
-          } else {
-            if (typeof onSetZoom === 'function') {
-              onSetZoom(1.0);
-              showToast('Ajustado à tela', 'minimize-2');
+          // Apenas aplica zoom inteligente se o toque NÃO foi sobre nós de texto selecionáveis
+          const elementUnderTouch = typeof document.elementFromPoint === 'function'
+            ? document.elementFromPoint(touch.clientX, touch.clientY)
+            : null;
+          const isTextSpan = elementUnderTouch?.closest('.textLayer') || e.target?.closest('.textLayer');
+
+          if (!isTextSpan) {
+            // SMART DOUBLE-TAP ZOOM (Estilo Kindle / Acrobat Reader)
+            // Se estiver no zoom normal, aproxima com foco no ponto tocado
+            // Se já estiver com zoom, afasta de volta para o tamanho padrão ajustado
+            if (e.cancelable) e.preventDefault();
+            if (currentZoom <= 1.05) {
+              if (typeof onSetZoom === 'function') {
+                onSetZoom(1.8, { clientX: touch.clientX, clientY: touch.clientY });
+                showToast('Zoom Inteligente (1.8x)', 'zoom-in');
+              }
+            } else {
+              if (typeof onSetZoom === 'function') {
+                onSetZoom(1.0);
+                showToast('Ajustado à tela', 'minimize-2');
+              }
             }
           }
-          lastTapTime = 0;
-          return;
         }
+        lastTapTime = 0;
+        return;
       }
 
       lastTapTime = currentTime;

@@ -193,4 +193,21 @@ describe('Storage Module', () => {
     expect(highlightsFromV2[28][0].text).toBe(highlightsFromV1[28][0].text);
     expect(notesFromV2[27]).toBe(notesFromV1[27]);
   });
+
+  it('deve gerar chave baseada em hash SHA-256 e migrar dados da chave legada se existentes', async () => {
+    const legacyKey = 'dr2_antigo_nome.pdf_1024';
+    localStorage.setItem(`${legacyKey}_page`, '42');
+    localStorage.setItem(`${legacyKey}_notes_v2`, JSON.stringify({ 42: 'Anotação antiga' }));
+
+    const dummyBuffer = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]).buffer;
+    const resolvedKey = await Storage.resolveFileKey('novo_nome.pdf', 1024, dummyBuffer);
+
+    expect(resolvedKey).toContain('dr2_sha_');
+
+    // Executa a migração explícita da chave legada para a nova chave de hash
+    Storage.migrateLegacyKeyToHashKey(legacyKey, resolvedKey);
+
+    expect(Storage.loadPage(resolvedKey)).toBe(42);
+    expect(Storage.loadManualNotes(resolvedKey)[42]).toBe('Anotação antiga');
+  });
 });

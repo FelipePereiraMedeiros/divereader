@@ -10,6 +10,7 @@ export const PomodoroService = {
   remainingSeconds: POMODORO_DEFAULTS.WORK_MINUTES * 60,
   isRunning: false,
   timerId: null,
+  endTime: null, // Âncora de tempo absoluto para eliminar deriva
 
   /**
    * Alterna entre Iniciar e Pausar o cronômetro
@@ -31,16 +32,23 @@ export const PomodoroService = {
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
+    this.endTime = Date.now() + this.remainingSeconds * 1000;
 
     this.timerId = setInterval(() => {
-      if (this.remainingSeconds > 0) {
-        this.remainingSeconds--;
-        appState.emit(EVENTS.POMODORO_TICK, this.getState());
+      const now = Date.now();
+      const diff = Math.max(0, Math.ceil((this.endTime - now) / 1000));
+
+      if (diff > 0) {
+        if (diff !== this.remainingSeconds) {
+          this.remainingSeconds = diff;
+          appState.emit(EVENTS.POMODORO_TICK, this.getState());
+        }
       } else {
+        this.remainingSeconds = 0;
         this.pause();
         appState.emit(EVENTS.POMODORO_FINISHED, this.getState());
       }
-    }, 1000);
+    }, 250);
 
     appState.emit(EVENTS.POMODORO_TICK, this.getState());
   },
@@ -53,7 +61,12 @@ export const PomodoroService = {
       clearInterval(this.timerId);
       this.timerId = null;
     }
+    if (this.isRunning && this.endTime) {
+      const now = Date.now();
+      this.remainingSeconds = Math.max(0, Math.ceil((this.endTime - now) / 1000));
+    }
     this.isRunning = false;
+    this.endTime = null;
     appState.emit(EVENTS.POMODORO_TICK, this.getState());
   },
 
@@ -68,6 +81,7 @@ export const PomodoroService = {
     if (this.remainingSeconds < 60) this.remainingSeconds = 60;
 
     this.totalSeconds = this.remainingSeconds;
+    this.endTime = null;
     appState.emit(EVENTS.POMODORO_TICK, this.getState());
   },
 
@@ -79,6 +93,7 @@ export const PomodoroService = {
     this.pause();
     this.totalSeconds = minutes * 60;
     this.remainingSeconds = this.totalSeconds;
+    this.endTime = null;
     appState.emit(EVENTS.POMODORO_TICK, this.getState());
   },
 

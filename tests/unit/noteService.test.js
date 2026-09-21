@@ -20,6 +20,15 @@ describe('Note Service', () => {
     expect(NoteService.getPageSynthesis(1)).toBe('Primeira síntese do capítulo');
   });
 
+  it('deve salvar síntese manual como instância estruturada de PageSynthesis com updatedAt', () => {
+    NoteService.savePageSynthesis(2, 'Síntese estruturada');
+    const savedObj = appState.get('manualNotes')[2];
+    expect(savedObj.pageNum).toBe(2);
+    expect(savedObj.content).toBe('Síntese estruturada');
+    expect(savedObj.updatedAt).toBeDefined();
+    expect(NoteService.getPageSynthesis(2)).toBe('Síntese estruturada');
+  });
+
   it('deve retornar mensagem padrão ao compilar fichamento vazio', () => {
     const compiled = NoteService.compileGlobalDossier();
     expect(compiled).toBe('Nenhuma anotação ou grifo feito ainda.');
@@ -67,5 +76,26 @@ describe('Note Service', () => {
     expect(md).toContain('> **Nota:** *Steve Jobs quote*');
     expect(md).toContain('### ✍️ Síntese da Página');
     expect(md).toContain('Síntese da página 5');
+  });
+
+  it('deve incluir metadados YAML frontmatter e tags semânticas de cor no Markdown gerado', () => {
+    const hl = new Highlight({
+      id: 'hl_color',
+      pageNum: 3,
+      text: 'Texto importante',
+      color: 'yellow',
+    });
+
+    appState.set({
+      fileName: 'meu_artigo.pdf',
+      highlights: { 3: [hl] },
+    });
+
+    const md = NoteService.generateMarkdown();
+    expect(md).toContain('---');
+    expect(md).toContain('title: "meu_artigo.pdf"');
+    expect(md).toContain('type: reading-notes');
+    expect(md).toContain('source: DiveReader');
+    expect(md).toContain('> "Texto importante" #yellow');
   });
 });
