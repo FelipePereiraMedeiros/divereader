@@ -2,7 +2,7 @@
  * Estado Reativo Centralizado da Aplicação
  */
 
-import { EVENTS, READING_MODES, THEMES, ZOOM_MODES } from './constants.js';
+import { EVENTS, THEMES, ZOOM_MODES } from './constants.js';
 
 class StateManager {
   constructor() {
@@ -13,13 +13,6 @@ class StateManager {
       pageNum: 1,
       totalPages: 0,
       isRendering: false,
-      readingMode: READING_MODES.SPREAD, // 'spread' | 'single' | 'continuous'
-      readingStats: {
-        pagesReadThisSession: 0,
-        pageStartTime: Date.now(),
-        pageDurations: [], // array de segundos gastos por página
-        estimatedRemainingMinutes: null,
-      },
       highlights: {}, // Object.<number, Highlight[]>
       manualNotes: {}, // Object.<number, string>
       outline: [], // Array<{ title: string, pageNum: number|null, items: Array }>
@@ -35,7 +28,6 @@ class StateManager {
       searchQuery: '',
       activeColorFilter: 'all', // 'all' | 'yellow' | 'green' | 'pink' | 'blue' | 'purple'
     };
-
 
     this.listeners = new Map();
   }
@@ -105,16 +97,7 @@ class StateManager {
    */
   isSinglePageMode() {
     if (typeof window === 'undefined') return true;
-    if (this.state.readingMode === READING_MODES.SINGLE) return true;
     return window.innerWidth <= 900 || this.state.zoomLevel > 1.0;
-  }
-
-  /**
-   * Verifica se o layout atual está em modo de rolagem contínua vertical
-   * @returns {boolean}
-   */
-  isContinuousScrollMode() {
-    return this.state.readingMode === READING_MODES.CONTINUOUS;
   }
 }
 

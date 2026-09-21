@@ -9,13 +9,6 @@ export const THEMES = {
   LIGHT: 'theme-light',
   SEPIA: 'theme-sepia',
   DARK: 'theme-dark',
-  OLED: 'theme-oled',
-};
-
-export const READING_MODES = {
-  SPREAD: 'spread',
-  SINGLE: 'single',
-  CONTINUOUS: 'continuous',
 };
 
 export const POMODORO_DEFAULTS = {
@@ -44,7 +37,4 @@ export const EVENTS = {
   THEME_CHANGED: 'theme_changed',
   POMODORO_TICK: 'pomodoro_tick',
   POMODORO_FINISHED: 'pomodoro_finished',
-  READING_MODE_CHANGED: 'reading_mode_changed',
-  SEARCH_TRIGGERED: 'search_triggered',
 };
-
