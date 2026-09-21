@@ -16,6 +16,7 @@ import { DOM, refreshIcons } from './ui/dom.js';
 import { setupKeyboardShortcuts } from './events/keyboard.js';
 import { setupMouseEvents, applyFocalZoom } from './events/mouse.js';
 import { setupTouchAndGestures } from './events/touch.js';
+import { cachePdfDocument, getLastCachedPdf } from './storage/indexedDB.js';
 import { EVENTS, ZOOM_LIMITS, ZOOM_MODES } from './constants.js';
 
 export const App = {
@@ -63,6 +64,16 @@ export const App = {
     });
 
     console.log('DiveReader Pro 2.0 inicializado com sucesso.');
+
+    // Restauração de sessão persistente via cache IndexedDB
+    try {
+      const cached = await getLastCachedPdf();
+      if (cached && cached.arrayBuffer && !appState.get('pdfDoc')) {
+        await this.loadPdfBuffer(cached.arrayBuffer, cached.fileName, cached.fileSize, true);
+      }
+    } catch (err) {
+      console.warn('Não foi possível restaurar sessão anterior do IndexedDB:', err);
+    }
   },
 
   /**
@@ -260,7 +271,7 @@ export const App = {
   },
 
   /**
-   * Processa o carregamento de um arquivo PDF
+   * Processa o carregamento de um arquivo PDF a partir de um File do sistema
    * @param {File} file
    */
   async handleFile(file) {
@@ -268,16 +279,33 @@ export const App = {
       return showToast('Por favor, selecione um arquivo PDF válido.', 'file-warning');
     }
 
-    const fileKey = Storage.generateFileKey(file.name, file.size);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      await this.loadPdfBuffer(arrayBuffer, file.name, file.size, false);
+    } catch (err) {
+      console.error('Erro ao ler arquivo PDF:', err);
+      showToast('Falha ao ler o arquivo do disco.', 'alert-circle');
+    }
+  },
+
+  /**
+   * Carrega um ArrayBuffer de PDF no leitor e sincroniza com o cache IndexedDB
+   * @param {ArrayBuffer} arrayBuffer
+   * @param {string} fileName
+   * @param {number} fileSize
+   * @param {boolean} isFromCache
+   */
+  async loadPdfBuffer(arrayBuffer, fileName, fileSize, isFromCache = false) {
+    const fileKey = Storage.generateFileKey(fileName, fileSize);
 
     appState.set({
-      fileName: file.name,
+      fileName,
       fileKey,
       zoomLevel: 1.0,
     });
 
     if (DOM.fileTitle) {
-      DOM.fileTitle.textContent = file.name;
+      DOM.fileTitle.textContent = fileName;
       DOM.fileTitle.style.display = 'block';
     }
 
@@ -313,16 +341,22 @@ export const App = {
     if (DOM.loading) DOM.loading.style.display = 'flex';
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const fileKey = await Storage.resolveFileKey(file.name, file.size, arrayBuffer);
-      appState.set({ fileKey });
+      const resolvedKey = await Storage.resolveFileKey(fileName, fileSize, arrayBuffer);
+      appState.set({ fileKey: resolvedKey });
+
+      // Persiste no cache IndexedDB para reabertura automática instantânea
+      if (!isFromCache) {
+        cachePdfDocument(resolvedKey, fileName, fileSize, arrayBuffer).catch((err) => {
+          console.warn('Falha ao salvar no cache IndexedDB:', err);
+        });
+      }
 
       const pdfDoc = await PdfService.loadDocument(arrayBuffer);
       const outline = await PdfService.getOutline(pdfDoc);
 
-      const savedPage = Storage.loadPage(fileKey);
-      const savedHighlights = Storage.loadHighlights(fileKey);
-      const savedNotes = Storage.loadManualNotes(fileKey);
+      const savedPage = Storage.loadPage(resolvedKey);
+      const savedHighlights = Storage.loadHighlights(resolvedKey);
+      const savedNotes = Storage.loadManualNotes(resolvedKey);
 
       let pageNum = savedPage || 1;
       if (!appState.isSinglePageMode() && pageNum % 2 === 0) {
@@ -347,7 +381,12 @@ export const App = {
       this.updateZoomUI();
       await this.renderPages(pageNum);
 
-      showToast('Documento carregado e pronto para estudo!', 'check-circle-2');
+      showToast(
+        isFromCache
+          ? 'Sessão anterior restaurada com sucesso!'
+          : 'Documento carregado e pronto para estudo!',
+        'check-circle-2'
+      );
     } catch (error) {
       console.error('Erro ao carregar PDF:', error);
       showToast('Erro ao processar o arquivo PDF.', 'alert-circle');

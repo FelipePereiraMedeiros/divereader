@@ -4,7 +4,7 @@
 
 /* Selection Quick Highlight Tooltip */
 #quick-highlight-tooltip {
-  position: absolute;
+  position: fixed;
   z-index: 600;
   display: none;
   background: var(--ui-bg);

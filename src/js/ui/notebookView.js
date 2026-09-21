@@ -11,6 +11,19 @@ import { showToast } from './toast.js';
 import { DOM, refreshIcons } from './dom.js';
 import { EVENTS } from '../constants.js';
 
+// Templates SVG pré-compilados para eliminar Layout Thrashing na renderização de listas longas de grifos
+const SVG_ICONS = {
+  QUOTE: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path></svg>`,
+  EYE: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+  TRASH: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
+  BOOK: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`,
+  EXTERNAL_LINK: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>`,
+  HIGHLIGHTER: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="m9 11-6 6v3h3l6-6"></path><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"></path></svg>`,
+  MESSAGE: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; color: var(--primary); flex-shrink: 0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`,
+  PEN: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg>`,
+  SEARCH_X: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 4px; display: inline-block;"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="8" x2="14" y1="8" y2="14"></line><line x1="14" x2="8" y1="8" y2="14"></line></svg>`,
+};
+
 export const NotebookView = {
   /** Callback opcional de navegação externa */
   onNavigatePage: null,
@@ -261,7 +274,7 @@ export const NotebookView = {
         const isFiltering = !!searchQuery || activeColorFilter !== 'all';
         container.innerHTML = `
           <div class="empty-highlights-hint">
-            <i data-lucide="${isFiltering ? 'search-x' : 'highlighter'}" style="width: 20px; height: 20px; margin-bottom: 4px; display: inline-block;"></i>
+            ${isFiltering ? SVG_ICONS.SEARCH_X : SVG_ICONS.HIGHLIGHTER}
             <p style="margin: 0;">${isFiltering ? 'Nenhum grifo corresponde ao filtro atual.' : 'Nenhum grifo nesta página.'}</p>
             <p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.8;">${isFiltering ? 'Tente limpar a busca ou selecionar outra cor.' : 'Selecione qualquer trecho de texto no PDF para grifar!'}</p>
           </div>
@@ -299,13 +312,13 @@ export const NotebookView = {
             </div>
             <div class="highlight-actions">
               <button class="btn-abnt" title="Copiar citação formatada ABNT">
-                <i data-lucide="quote" style="width: 12px; height: 12px;"></i> Copiar ABNT
+                ${SVG_ICONS.QUOTE} Copiar ABNT
               </button>
               <button class="btn-locate" title="Localizar no documento">
-                <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver no PDF
+                ${SVG_ICONS.EYE} Ver no PDF
               </button>
               <button class="btn-del" title="Excluir este grifo">
-                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Excluir
+                ${SVG_ICONS.TRASH} Excluir
               </button>
             </div>
           `;
@@ -348,7 +361,7 @@ export const NotebookView = {
           if (btnDel) {
             btnDel.onclick = async () => {
               const choice = await DialogService.confirmHighlightDeletion({
-                title: 'Excluir Grifo do Caderno',
+                title: 'Excluir Grifo',
                 message: 'Você deseja excluir este grifo também da página do PDF?',
                 quoteText: h.text,
                 hasNote: !!(h.note && h.note.trim()),
@@ -364,8 +377,8 @@ export const NotebookView = {
             };
           }
 
-          // Evento: Input da nota vinculada ao grifo
-          const noteInput = card.querySelector('input');
+          // Evento: Editar Nota do Grifo em Tempo Real
+          const noteInput = card.querySelector('.highlight-card-note input');
           if (noteInput) {
             let inputTimeout;
             noteInput.oninput = () => {
@@ -379,8 +392,6 @@ export const NotebookView = {
           container.appendChild(card);
         });
       }
-
-      refreshIcons(container);
     }
 
     // Atualiza a síntese manual da página
@@ -525,10 +536,10 @@ export const NotebookView = {
       header.className = 'global-page-header';
       header.innerHTML = `
         <span class="page-tag">
-          <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Página ${pageNum}
+          ${SVG_ICONS.BOOK} Página ${pageNum}
         </span>
         <button class="btn-jump-page" title="Ir para a página ${pageNum}">
-          <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Ir para página
+          ${SVG_ICONS.EXTERNAL_LINK} Ir para página
         </button>
       `;
 
@@ -546,7 +557,7 @@ export const NotebookView = {
         const quotesSection = document.createElement('div');
         quotesSection.innerHTML = `
           <div class="global-section-title">
-            <i data-lucide="highlighter" style="width: 12px; height: 12px;"></i> Citações Grifadas (${matchingHighlights.length})
+            ${SVG_ICONS.HIGHLIGHTER} Citações Grifadas (${matchingHighlights.length})
           </div>
         `;
 
@@ -566,7 +577,7 @@ export const NotebookView = {
             </div>
             <div class="global-quote-text">"${highlightedQuote}"</div>
             <div class="global-quote-note-edit">
-              <i data-lucide="message-square" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
+              ${SVG_ICONS.MESSAGE}
               <input 
                 type="text" 
                 class="global-quote-note-input" 
@@ -578,13 +589,13 @@ export const NotebookView = {
             </div>
             <div class="global-quote-actions">
               <button class="btn-abnt" title="Copiar citação ABNT">
-                <i data-lucide="quote" style="width: 11px; height: 11px;"></i> Copiar ABNT
+                ${SVG_ICONS.QUOTE} Copiar ABNT
               </button>
               <button class="btn-locate" title="Ver grifo no PDF">
-                <i data-lucide="eye" style="width: 11px; height: 11px;"></i> Ver no PDF
+                ${SVG_ICONS.EYE} Ver no PDF
               </button>
               <button class="btn-del" title="Excluir este grifo">
-                <i data-lucide="trash-2" style="width: 11px; height: 11px;"></i> Excluir
+                ${SVG_ICONS.TRASH} Excluir
               </button>
             </div>
           `;
@@ -665,7 +676,7 @@ export const NotebookView = {
         const synthesisSection = document.createElement('div');
         synthesisSection.innerHTML = `
           <div class="global-section-title">
-            <i data-lucide="pen-tool" style="width: 12px; height: 12px;"></i> Síntese da Página
+            ${SVG_ICONS.PEN} Síntese da Página
           </div>
           <textarea 
             class="global-synthesis-textarea" 
@@ -693,7 +704,5 @@ export const NotebookView = {
 
       globalViewEl.appendChild(pageCard);
     });
-
-    refreshIcons(globalViewEl);
   },
 };

@@ -160,12 +160,8 @@ export const QuickHighlightTooltip = {
       // Motivo arquitetural: Navegadores como Opera (popup de pesquisa/cópia nativo), Edge (mini-menu)
       // e navegadores mobile abrem seus popups nativos SEMPRE ACIMA do texto selecionado.
       // Posicionando abaixo, o DiveReader fica 100% visível, acessível e sem nenhuma sobreposição!
-      const placement = bottomSpace < 60 ? 'top' : 'bottom';
-
-      const targetY = placement === 'bottom'
-        ? window.scrollY + rect.bottom
-        : window.scrollY + rect.top;
-      const targetX = window.scrollX + centerX;
+      const targetY = placement === 'bottom' ? rect.bottom : rect.top;
+      const targetX = centerX;
 
       this.show(targetX, targetY, placement);
     } catch (e) {
