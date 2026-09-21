@@ -174,4 +174,61 @@ describe('Touch Events and Gestures', () => {
     // Não deve acionar onSetZoom pois o usuário está realizando seleção de palavra
     expect(onSetZoom).not.toHaveBeenCalled();
   });
+
+  it('deve permitir mover a visão da página (pan com 1 dedo) quando o zoom for maior que 1.01', () => {
+    appState.set({ zoomLevel: 1.5 });
+    container.scrollLeft = 50;
+    container.scrollTop = 50;
+
+    // Toque com 1 dedo
+    const touchStart = new Event('touchstart');
+    touchStart.touches = [{ clientX: 100, clientY: 100 }];
+    container.dispatchEvent(touchStart);
+
+    // Arrasto com 1 dedo: moveu 30px para a esquerda (dx = -30) e 20px para cima (dy = -20)
+    const touchMove = new Event('touchmove');
+    touchMove.touches = [{ clientX: 70, clientY: 80 }];
+    container.dispatchEvent(touchMove);
+
+    expect(container.scrollLeft).toBe(80); // 50 - (-30) = 80
+    expect(container.scrollTop).toBe(70);  // 50 - (-20) = 70
+
+    const touchEnd = new Event('touchend');
+    touchEnd.touches = [];
+    touchEnd.changedTouches = [{ clientX: 70, clientY: 80 }];
+    container.dispatchEvent(touchEnd);
+
+    // Não deve acionar navegação de página quando o zoom estiver ativo
+    expect(onNextPage).not.toHaveBeenCalled();
+    expect(onPrevPage).not.toHaveBeenCalled();
+  });
+
+  it('deve ajustar zoom em incrementos de 1% e fixar no valor final ao terminar a pinça', () => {
+    // Distância inicial: 100px (100 a 200)
+    const touchStart = new Event('touchstart');
+    touchStart.touches = [
+      { clientX: 100, clientY: 100 },
+      { clientX: 200, clientY: 100 },
+    ];
+    container.dispatchEvent(touchStart);
+
+    // Distância final: 115px (1.15x = aumento exato de 15%, 1% em 1%)
+    const touchMove = new Event('touchmove');
+    touchMove.touches = [
+      { clientX: 92.5, clientY: 100 },
+      { clientX: 207.5, clientY: 100 },
+    ];
+    container.dispatchEvent(touchMove);
+
+    const touchEnd = new Event('touchend');
+    touchEnd.touches = [];
+    touchEnd.changedTouches = [
+      { clientX: 92.5, clientY: 100 },
+      { clientX: 207.5, clientY: 100 },
+    ];
+    container.dispatchEvent(touchEnd);
+
+    expect(onSetZoom).toHaveBeenCalledTimes(1);
+    expect(onSetZoom).toHaveBeenCalledWith(1.15, { clientX: 150, clientY: 100 });
+  });
 });

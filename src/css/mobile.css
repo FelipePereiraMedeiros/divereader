@@ -406,6 +406,8 @@
   }
 
   .page-wrapper {
+    flex-shrink: 0;
+    flex-grow: 0;
     margin: 0 auto;
     border-radius: 2px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -418,8 +420,9 @@
 
   #pdf-viewer {
     gap: 0;
-    margin: 0 auto;
-    width: 100%;
+    margin: auto;
+    width: max-content;
+    min-width: 100%;
   }
 
   /* Mobile Sidebar as full height drawer / slide-over */

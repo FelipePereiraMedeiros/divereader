@@ -291,11 +291,13 @@ input[type="file"] {
 /* Grab & Pan no modo Zoom */
 body.zoomed-mode #book-container {
   cursor: grab;
+  scroll-behavior: auto !important;
 }
 
 body.zoomed-mode.is-panning #book-container,
 body.zoomed-mode #book-container:active {
   cursor: grabbing;
+  scroll-behavior: auto !important;
 }
 
 /* Drag Overlay & Loading */

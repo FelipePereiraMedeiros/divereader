@@ -35,6 +35,8 @@
   transition: transform var(--transition-normal);
   perspective: none;
   min-height: 100%;
+  width: max-content;
+  min-width: 100%;
 }
 
 #pdf-viewer.flipping,
@@ -44,8 +46,8 @@
 }
 
 body.zoomed-mode #pdf-viewer {
-  margin: 0 auto;
-  padding: 24px;
+  margin: auto;
+  padding: 16px;
   perspective: none;
 }
 
@@ -62,12 +64,14 @@ body.zoomed-mode #pdf-viewer {
   /* Cria um novo contexto de empilhamento e isola o mix-blend-mode dentro da página */
   isolation: isolate;
   contain: layout style;
+  flex-shrink: 0;
+  flex-grow: 0;
 }
 
 .page-wrapper canvas {
   display: block;
-  max-width: 100%;
-  height: auto;
+  width: 100%;
+  height: 100%;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   transform: translateZ(0); /* Força camada própria no compositor gráfico */

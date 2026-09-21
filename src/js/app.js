@@ -589,7 +589,7 @@ export const App = {
     const current = appState.get('zoomLevel');
     const clamped = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, targetZoom));
     const newZoom = Math.round(clamped * 100) / 100;
-    if (Math.abs(newZoom - current) < 0.02) return;
+    if (Math.abs(newZoom - current) < 0.005) return;
 
     const container = DOM.bookContainer;
     const wasSingle = appState.isSinglePageMode();
