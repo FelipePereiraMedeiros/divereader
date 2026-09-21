@@ -38,6 +38,14 @@ export const App = {
       onNavigatePage: (pageNum) => this.renderPages(pageNum),
     });
     QuickHighlightTooltip.init();
+
+    // Listener global para navegação direta de página via eventos
+    appState.on('NAVIGATE_PAGE', (pageNum) => {
+      if (typeof pageNum === 'number' && !isNaN(pageNum)) {
+        this.renderPages(pageNum);
+      }
+    });
+
     this.initEventListeners();
     this.initPomodoro();
     window.app = this;
