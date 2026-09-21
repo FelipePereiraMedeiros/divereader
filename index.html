@@ -3,8 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description"
     content="DiveReader Pro - O Leitor Definitivo para Estudos e Fichamentos Acadêmicos em PDF" />
   <title>DiveReader Pro | O Leitor Definitivo para Estudos</title>
@@ -107,25 +106,23 @@
         Ambiente de leitura profunda e fichamento acadêmico em PDF. Abra ou arraste seu documento para começar seus
         estudos.
       </p>
-      <label class="file-upload-label" style="margin-top: 8px">
+      <button type="button" id="btn-empty-open" class="file-upload-label" style="margin-top: 8px">
         <i data-lucide="folder-open" style="width: 18px; height: 18px"></i>
         <span>Escolher Arquivo PDF</span>
-        <input type="file" id="empty-file-input" accept=".pdf"
-          onchange="document.getElementById('file-input').files = this.files; document.getElementById('file-input').dispatchEvent(new Event('change'))" />
-      </label>
+      </button>
     </div>
 
     <!-- BARRA DE FOCO FLUTUANTE -->
     <div id="floating-focus-bar">
-      <button onclick="document.getElementById('btn-toggle-sidebar').click()" title="Meu Caderno">
+      <button id="btn-focus-sidebar" title="Meu Caderno">
         <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
       </button>
       <div class="divider-v"></div>
-      <button onclick="document.getElementById('btn-highlight').click()" title="Grifar Seleção">
+      <button id="btn-focus-highlight" title="Grifar Seleção">
         <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
       </button>
       <div class="divider-v"></div>
-      <button onclick="document.getElementById('btn-toggle-focus').click()" title="Sair do Modo Foco">
+      <button id="btn-focus-toggle" title="Sair do Modo Foco">
         <i data-lucide="maximize" style="width: 16px; height: 16px"></i>
       </button>
     </div>

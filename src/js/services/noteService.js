@@ -16,7 +16,7 @@ export const NoteService = {
   savePageSynthesis(pageNum, content) {
     const allNotes = appState.get('manualNotes') || {};
     const textContent = typeof content === 'string' ? content : (content?.content || '');
-    const synthesis = new PageSynthesis({
+    const instance = new PageSynthesis({
       pageNum: Number(pageNum),
       content: textContent,
       updatedAt: new Date().toISOString(),
@@ -24,7 +24,7 @@ export const NoteService = {
 
     const updated = {
       ...allNotes,
-      [pageNum]: synthesis,
+      [pageNum]: instance.toJSON(),
     };
 
     appState.set({ manualNotes: updated }, EVENTS.NOTES_UPDATED);

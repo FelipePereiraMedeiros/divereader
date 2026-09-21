@@ -89,6 +89,10 @@ export const App = {
       });
     }
 
+    if (DOM.btnEmptyOpen) {
+      DOM.btnEmptyOpen.onclick = () => DOM.fileInput?.click();
+    }
+
     // 2. Seletor de Tema
     if (DOM.themeSelector) {
       DOM.themeSelector.addEventListener('change', (e) => {
@@ -126,6 +130,12 @@ export const App = {
 
     if (DOM.indicator) {
       DOM.indicator.onclick = () => this.openPageJumpDialog();
+      DOM.indicator.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.openPageJumpDialog();
+        }
+      });
     }
 
     if (DOM.readingProgressBarContainer) {
@@ -239,6 +249,16 @@ export const App = {
         DOM.floatingBar.classList.remove('faded');
       });
       DOM.floatingBar.addEventListener('mouseleave', () => this.wakeFocusBar());
+    }
+
+    if (DOM.btnFocusSidebar) {
+      DOM.btnFocusSidebar.onclick = () => NotebookView.toggleSidebar();
+    }
+    if (DOM.btnFocusHighlight) {
+      DOM.btnFocusHighlight.onclick = () => DOM.btnHighlight?.click();
+    }
+    if (DOM.btnFocusToggle) {
+      DOM.btnFocusToggle.onclick = () => this.toggleFocusMode();
     }
 
     // 10. Configuração de Eventos de Entrada
@@ -871,6 +891,12 @@ export const App = {
         const running = PomodoroService.toggle();
         showToast(running ? 'Pomodoro iniciado!' : 'Pomodoro pausado', running ? 'play' : 'pause');
       };
+      DOM.pomodoroWidget.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          DOM.pomodoroWidget.click();
+        }
+      });
     }
 
     // Mini controles (-5, reset, +5)

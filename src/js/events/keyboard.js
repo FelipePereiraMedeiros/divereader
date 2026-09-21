@@ -37,10 +37,14 @@ export function setupKeyboardShortcuts({
       }
     }
 
-    // 2. Previne disparos quando o usuário edita notas, inputs ou campos contentEditable
+    // 2. Previne disparos quando o usuário edita notas, inputs, botões ou elementos com role=button
     const activeEl = document.activeElement;
     const activeTag = activeEl?.tagName;
-    if (['TEXTAREA', 'INPUT'].includes(activeTag) || activeEl?.isContentEditable) {
+    if (
+      ['TEXTAREA', 'INPUT', 'BUTTON', 'SELECT'].includes(activeTag) ||
+      activeEl?.isContentEditable ||
+      activeEl?.getAttribute('role') === 'button'
+    ) {
       return;
     }
 

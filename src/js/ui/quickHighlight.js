@@ -156,9 +156,9 @@ export const QuickHighlightTooltip = {
       const centerX = rect.left + rect.width / 2;
       const bottomSpace = window.innerHeight - rect.bottom;
 
-      // Se o espaço abaixo for insuficiente (< 60px), posiciona acima da seleção
-      const placement = bottomSpace < 60 ? 'top' : 'bottom';
-      const targetY = placement === 'bottom' ? rect.bottom : rect.top;
+      // Se o espaço abaixo for insuficiente (< 70px), posiciona acima da seleção
+      const placement = bottomSpace < 70 ? 'top' : 'bottom';
+      const targetY = placement === 'bottom' ? rect.bottom + 8 : rect.top - 8;
       const targetX = centerX;
 
       this.show(targetX, targetY, placement);

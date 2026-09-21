@@ -9,6 +9,7 @@ export const DOM = {
   bookContainer: document.getElementById('book-container'),
   pdfViewer: document.getElementById('pdf-viewer'),
   emptyState: document.getElementById('empty-state'),
+  btnEmptyOpen: document.getElementById('btn-empty-open'),
   sidebar: document.getElementById('sidebar'),
   loading: document.getElementById('loading-msg'),
   dragOverlay: document.getElementById('drag-overlay'),
@@ -33,6 +34,9 @@ export const DOM = {
   // Indicador Discreto, Barra Flutuante & Barra de Progresso
   indicator: document.getElementById('discreet-indicator'),
   floatingBar: document.getElementById('floating-focus-bar'),
+  btnFocusSidebar: document.getElementById('btn-focus-sidebar'),
+  btnFocusHighlight: document.getElementById('btn-focus-highlight'),
+  btnFocusToggle: document.getElementById('btn-focus-toggle'),
   readingProgressBar: document.getElementById('reading-progress-bar'),
   readingProgressBarContainer: document.getElementById('reading-progress-bar-container'),
 

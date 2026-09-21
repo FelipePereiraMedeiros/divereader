@@ -22,7 +22,7 @@
 /* Posição Acima da seleção */
 #quick-highlight-tooltip.placement-top {
   transform: translate(-50%, -100%);
-  margin-top: -8px;
+  margin-top: 0;
   animation: tooltipPop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -30,7 +30,7 @@
 #quick-highlight-tooltip,
 #quick-highlight-tooltip.placement-bottom {
   transform: translate(-50%, 0);
-  margin-top: 8px;
+  margin-top: 0;
   animation: tooltipPopBottom 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
