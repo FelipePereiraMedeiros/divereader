@@ -193,3 +193,54 @@
   --indicator-bg: rgba(62, 47, 29, 0.9);
   --indicator-text: #f6efd8;
 }
+
+.theme-oled {
+  --ui-bg: #000000;
+  --ui-surface: #0a0a0a;
+  --text-color: #f8fafc;
+  --text-muted: #a1a1aa;
+  --text-subtle: #71717a;
+  --border-color: #18181b;
+  --border-focus: #38bdf8;
+
+  --workspace-bg: #000000;
+  --page-bg: #000000;
+  --page-shadow: 0 0 0 1px #27272a, 0 16px 36px rgba(0, 0, 0, 0.95);
+
+  --primary: #38bdf8;
+  --primary-hover: #7dd3fc;
+  --primary-light: rgba(56, 189, 248, 0.15);
+
+  --highlight-color: rgba(250, 204, 21, 0.35);
+  --highlight-color-hover: rgba(250, 204, 21, 0.65);
+  --highlight-border: #facc15;
+  --highlight-pulse: rgba(250, 204, 21, 0.7);
+
+  --hl-yellow-bg: rgba(250, 204, 21, 0.35);
+  --hl-yellow-hover: rgba(250, 204, 21, 0.65);
+  --hl-yellow-border: #facc15;
+  --hl-yellow-pulse: rgba(250, 204, 21, 0.7);
+
+  --hl-green-bg: rgba(74, 222, 128, 0.35);
+  --hl-green-hover: rgba(34, 197, 94, 0.65);
+  --hl-green-border: #22c55e;
+  --hl-green-pulse: rgba(34, 197, 94, 0.7);
+
+  --hl-pink-bg: rgba(244, 114, 182, 0.35);
+  --hl-pink-hover: rgba(236, 72, 153, 0.65);
+  --hl-pink-border: #ec4899;
+  --hl-pink-pulse: rgba(236, 72, 153, 0.7);
+
+  --hl-blue-bg: rgba(56, 189, 248, 0.35);
+  --hl-blue-hover: rgba(14, 165, 233, 0.65);
+  --hl-blue-border: #38bdf8;
+  --hl-blue-pulse: rgba(14, 165, 233, 0.7);
+
+  --hl-purple-bg: rgba(192, 132, 252, 0.35);
+  --hl-purple-hover: rgba(168, 85, 247, 0.65);
+  --hl-purple-border: #c084fc;
+  --hl-purple-pulse: rgba(168, 85, 247, 0.7);
+
+  --indicator-bg: #09090b;
+  --indicator-text: #f8fafc;
+}

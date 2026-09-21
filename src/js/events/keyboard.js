@@ -8,12 +8,21 @@ export function setupKeyboardShortcuts({
   onNextPage,
   onPrevPage,
   onGoToPage,
-  onChangeZoom,
   onResetZoom,
   onToggleMenu,
   onToggleSidebar,
+  onSearch,
 }) {
   document.addEventListener('keydown', (e) => {
+    // 0. Busca no Documento (Ctrl/Cmd + F)
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      e.preventDefault();
+      if (typeof onSearch === 'function') {
+        onSearch();
+      }
+      return;
+    }
+
     // 1. Zoom via teclado (Ctrl/Cmd + [+] / [-] / [0])
     if (e.ctrlKey || e.metaKey) {
       if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
