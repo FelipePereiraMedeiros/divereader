@@ -114,7 +114,7 @@ body.zoomed-mode #pomodoro-container:hover {
   transform: translateX(-50%) rotate(0deg);
   border-radius: 2px;
   z-index: 2;
-  transition: transform 1s linear;
+  transition: transform 0.25s linear;
 }
 
 .clock-center {

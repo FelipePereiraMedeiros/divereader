@@ -27,6 +27,23 @@ const SVG_ICONS = {
 export const NotebookView = {
   /** Callback opcional de navegação externa */
   onNavigatePage: null,
+  notepadSaveTimeout: null,
+  lastNotepadPage: null,
+
+  /**
+   * Salva imediatamente qualquer síntese pendente no notepad antes de mudar de página
+   */
+  flushPendingSynthesis() {
+    if (this.notepadSaveTimeout) {
+      clearTimeout(this.notepadSaveTimeout);
+      this.notepadSaveTimeout = null;
+      const page = this.lastNotepadPage || appState.get('pageNum') || 1;
+      const notepad = DOM.notepad || document.getElementById('notepad');
+      if (notepad) {
+        NoteService.savePageSynthesis(page, notepad.value);
+      }
+    }
+  },
 
   COLOR_LABELS: {
     yellow: '🟡 Conceito',
@@ -78,18 +95,22 @@ export const NotebookView = {
       this.render();
     });
 
-    // Campo de Busca em Tempo Real
+    // Campo de Busca em Tempo Real com Debounce
     const searchInput = DOM.notebookSearchInput || document.getElementById('notebook-search-input');
     const clearBtn = DOM.btnClearSearch || document.getElementById('btn-clear-search');
 
     if (searchInput) {
+      let searchTimeout = null;
       searchInput.addEventListener('input', (e) => {
         const query = e.target.value;
-        appState.set({ searchQuery: query });
         if (clearBtn) {
           clearBtn.classList.toggle('hidden', !query);
         }
-        this.render();
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          appState.set({ searchQuery: query });
+          this.render();
+        }, 150);
       });
     }
 
@@ -129,14 +150,15 @@ export const NotebookView = {
       DOM.tabBtnToc.onclick = () => this.switchTab('toc');
     }
 
-    // Auto-save da Síntese Manual
+    // Auto-save da Síntese Manual com Registro de Página Ativa
     if (DOM.notepad) {
-      let saveTimeout;
       DOM.notepad.addEventListener('input', () => {
-        clearTimeout(saveTimeout);
-        const currentPage = appState.get('pageNum') || 1;
-        saveTimeout = setTimeout(() => {
-          NoteService.savePageSynthesis(currentPage, DOM.notepad.value);
+        clearTimeout(this.notepadSaveTimeout);
+        this.lastNotepadPage = appState.get('pageNum') || 1;
+        const page = this.lastNotepadPage;
+        this.notepadSaveTimeout = setTimeout(() => {
+          this.notepadSaveTimeout = null;
+          NoteService.savePageSynthesis(page, DOM.notepad.value);
         }, 250);
       });
     }
@@ -348,10 +370,13 @@ export const NotebookView = {
             };
           }
 
-          // Evento: Ver no PDF (pisca o grifo)
+          // Evento: Ver no PDF (pisca o grifo e fecha a sidebar no mobile para exibição)
           const btnLocate = card.querySelector('.btn-locate');
           if (btnLocate) {
             btnLocate.onclick = () => {
+              if (typeof window !== 'undefined' && window.innerWidth <= 820) {
+                this.toggleSidebar(false);
+              }
               HighlightService.flashHighlight(hPageNum, h.id);
             };
           }
@@ -377,14 +402,14 @@ export const NotebookView = {
             };
           }
 
-          // Evento: Editar Nota do Grifo em Tempo Real
+          // Evento: Editar Nota do Grifo em Tempo Real (Silencioso para não destruir foco)
           const noteInput = card.querySelector('.highlight-card-note input');
           if (noteInput) {
             let inputTimeout;
             noteInput.oninput = () => {
               clearTimeout(inputTimeout);
               inputTimeout = setTimeout(() => {
-                HighlightService.updateHighlightNote(hPageNum, h.id, noteInput.value);
+                HighlightService.updateHighlightNote(hPageNum, h.id, noteInput.value, { silent: true });
               }, 400);
             };
           }
@@ -614,14 +639,14 @@ export const NotebookView = {
             };
           }
 
-          // Ação: Editar Nota da Citação em Tempo Real
+          // Ação: Editar Nota da Citação em Tempo Real (Silenciosa para preservar foco)
           const noteInput = item.querySelector('.global-quote-note-input');
           if (noteInput) {
             let noteTimer;
             noteInput.oninput = () => {
               clearTimeout(noteTimer);
               noteTimer = setTimeout(() => {
-                HighlightService.updateHighlightNote(pageNum, h.id, noteInput.value);
+                HighlightService.updateHighlightNote(pageNum, h.id, noteInput.value, { silent: true });
                 if (appState.get('pageNum') === pageNum) {
                   const cardInput = (DOM.highlightsContainer || document).querySelector(
                     `input[data-highlight-id="${h.id}"]`,
@@ -634,11 +659,14 @@ export const NotebookView = {
             };
           }
 
-          // Ação: Localizar e piscar no PDF
+          // Ação: Localizar e piscar no PDF (com auto-fechamento no mobile)
           const btnLocate = item.querySelector('.btn-locate');
           if (btnLocate) {
             btnLocate.onclick = () => {
               this.navigateTo(pageNum);
+              if (typeof window !== 'undefined' && window.innerWidth <= 820) {
+                this.toggleSidebar(false);
+              }
               setTimeout(() => HighlightService.flashHighlight(pageNum, h.id), 350);
             };
           }

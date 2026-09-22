@@ -128,4 +128,32 @@ export const PomodoroService = {
       isRunning: this.isRunning,
     };
   },
+
+  /**
+   * Toca um sinal sonoro harmônico suave via Web Audio API ao término do ciclo
+   */
+  playChime() {
+    try {
+      if (typeof window === 'undefined') return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const notes = [523.25, 659.25, 783.99]; // Acorde Maior C5, E5, G5
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.15);
+        gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.15);
+        gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + idx * 0.15 + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.15 + 0.85);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.15);
+        osc.stop(ctx.currentTime + idx * 0.15 + 0.9);
+      });
+    } catch (e) {
+      // Ignora falhas em navegadores sem suporte a áudio ou restrições de autoplay
+    }
+  },
 };

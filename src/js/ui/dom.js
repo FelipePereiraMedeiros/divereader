@@ -2,113 +2,137 @@
  * Cache centralizado de referências DOM e utilitários
  */
 
-export const DOM = {
+const SELECTOR_MAP = {
   // Contêineres Principais
-  app: document.querySelector('.app-container'),
-  topMenu: document.getElementById('top-menu'),
-  bookContainer: document.getElementById('book-container'),
-  pdfViewer: document.getElementById('pdf-viewer'),
-  emptyState: document.getElementById('empty-state'),
-  btnEmptyOpen: document.getElementById('btn-empty-open'),
-  sidebar: document.getElementById('sidebar'),
-  loading: document.getElementById('loading-msg'),
-  dragOverlay: document.getElementById('drag-overlay'),
-  toastContainer: document.getElementById('toast-container'),
+  app: '.app-container',
+  topMenu: 'top-menu',
+  bookContainer: 'book-container',
+  pdfViewer: 'pdf-viewer',
+  emptyState: 'empty-state',
+  btnEmptyOpen: 'btn-empty-open',
+  sidebar: 'sidebar',
+  loading: 'loading-msg',
+  dragOverlay: 'drag-overlay',
+  toastContainer: 'toast-container',
 
   // Elementos do Top Bar
-  fileInput: document.getElementById('file-input'),
-  fileTitle: document.getElementById('file-title'),
-  themeSelector: document.getElementById('theme-selector'),
-  btnZoomOut: document.getElementById('btn-zoom-out'),
-  btnZoomIn: document.getElementById('btn-zoom-in'),
-  btnPrev: document.getElementById('btn-prev'),
-  btnNext: document.getElementById('btn-next'),
-  pageInput: document.getElementById('page-input'),
-  totalPages: document.getElementById('total-pages'),
-  btnHighlight: document.getElementById('btn-highlight'),
-  btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
-  btnToggleFocus: document.getElementById('btn-toggle-focus'),
-  btnExportBackup: document.getElementById('btn-export-backup'),
-  importBackupInput: document.getElementById('import-backup-input'),
+  fileInput: 'file-input',
+  fileTitle: 'file-title',
+  themeSelector: 'theme-selector',
+  btnZoomOut: 'btn-zoom-out',
+  btnZoomIn: 'btn-zoom-in',
+  btnPrev: 'btn-prev',
+  btnNext: 'btn-next',
+  pageInput: 'page-input',
+  totalPages: 'total-pages',
+  btnHighlight: 'btn-highlight',
+  btnToggleSidebar: 'btn-toggle-sidebar',
+  btnToggleFocus: 'btn-toggle-focus',
+  btnExportBackup: 'btn-export-backup',
+  importBackupInput: 'import-backup-input',
 
   // Indicador Discreto, Barra Flutuante & Barra de Progresso
-  indicator: document.getElementById('discreet-indicator'),
-  floatingBar: document.getElementById('floating-focus-bar'),
-  btnFocusSidebar: document.getElementById('btn-focus-sidebar'),
-  btnFocusHighlight: document.getElementById('btn-focus-highlight'),
-  btnFocusToggle: document.getElementById('btn-focus-toggle'),
-  readingProgressBar: document.getElementById('reading-progress-bar'),
-  readingProgressBarContainer: document.getElementById('reading-progress-bar-container'),
+  indicator: 'discreet-indicator',
+  floatingBar: 'floating-focus-bar',
+  btnFocusSidebar: 'btn-focus-sidebar',
+  btnFocusHighlight: 'btn-focus-highlight',
+  btnFocusToggle: 'btn-focus-toggle',
+  readingProgressBar: 'reading-progress-bar',
+  readingProgressBarContainer: 'reading-progress-bar-container',
 
   // Caderno de Estudos (Sidebar)
-  tabBtnPage: document.getElementById('tab-btn-page'),
-  tabBtnGlobal: document.getElementById('tab-btn-global'),
-  tabBtnToc: document.getElementById('tab-btn-toc'),
-  tabPage: document.getElementById('tab-page'),
-  tabGlobal: document.getElementById('tab-global'),
-  tabToc: document.getElementById('tab-toc'),
-  highlightsContainer: document.getElementById('page-highlights-list'),
-  notepad: document.getElementById('notepad'),
-  globalView: document.getElementById('global-view'),
-  tocList: document.getElementById('toc-list'),
-  btnCopyGlobal: document.getElementById('btn-copy-global'),
-  btnDownloadNotes: document.getElementById('btn-download-notes'),
-  btnCloseSidebar: document.getElementById('btn-close-sidebar'),
-  notebookSearchInput: document.getElementById('notebook-search-input'),
-  btnClearSearch: document.getElementById('btn-clear-search'),
-  colorFilterChips: document.getElementById('color-filter-chips'),
+  tabBtnPage: 'tab-btn-page',
+  tabBtnGlobal: 'tab-btn-global',
+  tabBtnToc: 'tab-btn-toc',
+  tabPage: 'tab-page',
+  tabGlobal: 'tab-global',
+  tabToc: 'tab-toc',
+  highlightsContainer: 'page-highlights-list',
+  notepad: 'notepad',
+  globalView: 'global-view',
+  tocList: 'toc-list',
+  btnCopyGlobal: 'btn-copy-global',
+  btnDownloadNotes: 'btn-download-notes',
+  btnCloseSidebar: 'btn-close-sidebar',
+  notebookSearchInput: 'notebook-search-input',
+  btnClearSearch: 'btn-clear-search',
+  colorFilterChips: 'color-filter-chips',
 
   // Pomodoro
-  pomodoroContainer: document.getElementById('pomodoro-container'),
-  pomodoroWidget: document.getElementById('pomodoro-widget'),
-  pomodoroText: document.getElementById('pomodoro-text'),
-  pomodoroHand: document.getElementById('clock-hand'),
-  pomodoroFace: document.getElementById('clock-face'),
-  pomodoroControls: document.getElementById('pomodoro-controls'),
-  pomodoroAlert: document.getElementById('pomodoro-alert'),
+  pomodoroContainer: 'pomodoro-container',
+  pomodoroWidget: 'pomodoro-widget',
+  pomodoroText: 'pomodoro-text',
+  pomodoroHand: 'clock-hand',
+  pomodoroFace: 'clock-face',
+  pomodoroControls: 'pomodoro-controls',
+  pomodoroAlert: 'pomodoro-alert',
 
   // Mobile
-  mobileNavBar: document.getElementById('mobile-nav-bar'),
-  mobileBtnPrev: document.getElementById('mobile-btn-prev'),
-  mobileBtnNext: document.getElementById('mobile-btn-next'),
-  mobileBtnPage: document.getElementById('mobile-btn-page'),
-  mobilePageText: document.getElementById('mobile-page-text'),
-  mobileBtnHighlight: document.getElementById('mobile-btn-highlight'),
-  mobileBtnFocus: document.getElementById('mobile-btn-focus'),
-  mobileBtnSidebar: document.getElementById('mobile-btn-sidebar'),
-  mobileBtnTheme: document.getElementById('mobile-btn-theme'),
-  quickHighlightTooltip: document.getElementById('quick-highlight-tooltip'),
-  btnQuickHighlight: document.getElementById('btn-quick-highlight'),
+  mobileNavBar: 'mobile-nav-bar',
+  mobileBtnPrev: 'mobile-btn-prev',
+  mobileBtnNext: 'mobile-btn-next',
+  mobileBtnPage: 'mobile-btn-page',
+  mobilePageText: 'mobile-page-text',
+  mobileBtnHighlight: 'mobile-btn-highlight',
+  mobileBtnFocus: 'mobile-btn-focus',
+  mobileBtnSidebar: 'mobile-btn-sidebar',
+  quickHighlightTooltip: 'quick-highlight-tooltip',
 
   // Zoom Controls & HUD
-  btnZoomPreset: document.getElementById('btn-zoom-preset'),
-  zoomPresetLabel: document.getElementById('zoom-preset-label'),
-  zoomHud: document.getElementById('zoom-hud'),
-  hudBtnZoomOut: document.getElementById('hud-btn-zoom-out'),
-  hudBtnPreset: document.getElementById('hud-btn-preset'),
-  hudZoomText: document.getElementById('hud-zoom-text'),
-  hudBtnZoomIn: document.getElementById('hud-btn-zoom-in'),
-  hudBtnFit: document.getElementById('hud-btn-fit'),
+  btnZoomPreset: 'btn-zoom-preset',
+  zoomPresetLabel: 'zoom-preset-label',
+  zoomHud: 'zoom-hud',
+  hudBtnZoomOut: 'hud-btn-zoom-out',
+  hudBtnPreset: 'hud-btn-preset',
+  hudZoomText: 'hud-zoom-text',
+  hudBtnZoomIn: 'hud-btn-zoom-in',
+  hudBtnFit: 'hud-btn-fit',
 
   // Salto de Página (Page Jump Bottom Sheet)
-  pageJumpDialog: document.getElementById('page-jump-dialog'),
-  btnClosePageJump: document.getElementById('btn-close-page-jump'),
-  pjSlider: document.getElementById('pj-slider'),
-  pjCurrentNum: document.getElementById('pj-current-num'),
-  pjTotalNum: document.getElementById('pj-total-num'),
-  pjPercent: document.getElementById('pj-percent'),
-  pjForm: document.getElementById('pj-form'),
-  pjNumberInput: document.getElementById('pj-number-input'),
-  btnPjGo: document.getElementById('btn-pj-go'),
-  btnPjFirst: document.getElementById('btn-pj-first'),
-  btnPjReturn: document.getElementById('btn-pj-return'),
-  pjReturnText: document.getElementById('pj-return-text'),
-  btnPjLast: document.getElementById('btn-pj-last'),
-  btnPjToc: document.getElementById('btn-pj-toc'),
+  pageJumpDialog: 'page-jump-dialog',
+  btnClosePageJump: 'btn-close-page-jump',
+  pjSlider: 'pj-slider',
+  pjCurrentNum: 'pj-current-num',
+  pjTotalNum: 'pj-total-num',
+  pjPercent: 'pj-percent',
+  pjForm: 'pj-form',
+  pjNumberInput: 'pj-number-input',
+  btnPjGo: 'btn-pj-go',
+  btnPjFirst: 'btn-pj-first',
+  btnPjReturn: 'btn-pj-return',
+  pjReturnText: 'pj-return-text',
+  btnPjLast: 'btn-pj-last',
+  btnPjToc: 'btn-pj-toc',
 
   // Diálogo de Confirmação
-  confirmDialog: document.getElementById('confirm-dialog'),
+  confirmDialog: 'confirm-dialog',
 };
+
+const overrides = new Map();
+
+/**
+ * Proxy dinâmico que busca elementos sob demanda e suporta atribuição em testes
+ */
+export const DOM = new Proxy(SELECTOR_MAP, {
+  get(target, prop) {
+    if (overrides.has(prop)) {
+      return overrides.get(prop);
+    }
+    const selectorOrId = target[prop];
+    if (!selectorOrId || typeof document === 'undefined') return null;
+    if (selectorOrId.startsWith('.')) {
+      return document.querySelector(selectorOrId);
+    }
+    return document.getElementById(selectorOrId);
+  },
+  set(target, prop, value) {
+    overrides.set(prop, value);
+    return true;
+  },
+  has(target, prop) {
+    return prop in target || overrides.has(prop);
+  },
+});
 
 /**
  * Atualiza os ícones do Lucide em todo o documento ou dentro de um elemento específico

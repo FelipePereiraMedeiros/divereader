@@ -61,21 +61,26 @@ export const HighlightService = {
     const pageHighlights = allHighlights[pageNum] || [];
 
     // Checagem de Colisão / Duplo Grifo
+    let collidingCount = 0;
     for (let i = 0; i < rects.length; i++) {
       const r = rects[i];
       const centerX = (r.left - wrapperRect.left + r.width / 2) / wrapperRect.width;
       const centerY = (r.top - wrapperRect.top + r.height / 2) / wrapperRect.height;
 
-      const isCollision = pageHighlights.some((h) => h.containsPoint(centerX, centerY));
-      if (isCollision) {
-        try {
-          const winSel = window.getSelection();
-          if (winSel && typeof winSel.removeAllRanges === 'function') {
-            winSel.removeAllRanges();
-          }
-        } catch (err) {}
-        return { success: false, message: 'Este trecho já foi grifado.' };
+      if (pageHighlights.some((h) => h.containsPoint(centerX, centerY))) {
+        collidingCount++;
       }
+    }
+
+    const exactMatch = pageHighlights.some((h) => h.text.trim() === textExtracted.trim());
+    if (exactMatch || (rects.length > 0 && collidingCount === rects.length)) {
+      try {
+        const winSel = window.getSelection();
+        if (winSel && typeof winSel.removeAllRanges === 'function') {
+          winSel.removeAllRanges();
+        }
+      } catch (err) {}
+      return { success: false, message: 'Este trecho já foi grifado.' };
     }
 
     const highlightId = `hl_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -286,8 +291,9 @@ export const HighlightService = {
    * @param {number} pageNum
    * @param {string} highlightId
    * @param {string} note
+   * @param {{ silent?: boolean }} [options]
    */
-  updateHighlightNote(pageNum, highlightId, note) {
+  updateHighlightNote(pageNum, highlightId, note, options = {}) {
     const allHighlights = appState.get('highlights') || {};
     const pageList = allHighlights[pageNum] || [];
 
@@ -303,8 +309,28 @@ export const HighlightService = {
       [pageNum]: updatedList,
     };
 
-    appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
+    if (options.silent) {
+      appState.set({ highlights: updatedHighlights });
+    } else {
+      appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
+    }
     Storage.saveHighlights(appState.get('fileKey'), updatedHighlights);
+  },
+
+  /**
+   * Alias de compatibilidade para createFromSelection com suporte a ordem flexível de parâmetros
+   */
+  addHighlight(selectionOrRange, customTextOrColor = null, maybeColor = 'yellow') {
+    let color = 'yellow';
+    let customText = null;
+    if (typeof customTextOrColor === 'string' && ['yellow', 'green', 'pink', 'blue', 'purple'].includes(customTextOrColor)) {
+      color = customTextOrColor;
+      customText = typeof maybeColor === 'string' && !['yellow', 'green', 'pink', 'blue', 'purple'].includes(maybeColor) ? maybeColor : null;
+    } else {
+      customText = customTextOrColor;
+      if (typeof maybeColor === 'string') color = maybeColor;
+    }
+    return this.createFromSelection(selectionOrRange, color, customText);
   },
 
   /**

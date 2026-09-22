@@ -31,14 +31,6 @@ export const QuickHighlightTooltip = {
         e.stopPropagation();
         const color = swatchBtn.dataset.color || 'yellow';
         this.executeHighlight(color);
-        return;
-      }
-
-      const defaultBtn = e.target.closest('#btn-quick-highlight');
-      if (defaultBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.executeHighlight('yellow');
       }
     });
 
@@ -62,64 +54,6 @@ export const QuickHighlightTooltip = {
       },
       { passive: true },
     );
-  },
-
-  /**
-   * Identifica se há algum elemento estranho (extensão de navegador) nas coordenadas fornecidas
-   * @param {number} x Coordenada X na viewport
-   * @param {number} y Coordenada Y na viewport
-   * @returns {boolean}
-   */
-  isForeignOverlayAt(x, y) {
-    if (typeof document === 'undefined' || !document.elementsFromPoint) return false;
-    try {
-      const elements = document.elementsFromPoint(x, y);
-      if (!elements || elements.length === 0) return false;
-
-      for (const el of elements) {
-        if (!el || el === document.body || el === document.documentElement) continue;
-
-        // Elementos legítimos do DiveReader são ignorados
-        if (
-          el.closest('#book-container') ||
-          el.closest('#sidebar') ||
-          el.closest('#top-menu') ||
-          el.closest('#mobile-nav-bar') ||
-          el.closest('#pomodoro-container') ||
-          el.closest('#quick-highlight-tooltip') ||
-          el.closest('.page-wrapper') ||
-          el.closest('#drag-overlay') ||
-          el.closest('#toast-container')
-        ) {
-          continue;
-        }
-
-        const tag = el.tagName.toLowerCase();
-        const id = (el.id || '').toLowerCase();
-        const className = typeof el.className === 'string' ? el.className.toLowerCase() : '';
-
-        if (
-          tag.includes('-') ||
-          id.includes('translate') ||
-          id.includes('grammarly') ||
-          id.includes('deepl') ||
-          id.includes('popover') ||
-          id.includes('tooltip') ||
-          className.includes('translate') ||
-          className.includes('grammarly') ||
-          className.includes('deepl') ||
-          className.includes('popup') ||
-          className.includes('popover') ||
-          window.getComputedStyle(el).position === 'fixed' ||
-          window.getComputedStyle(el).position === 'absolute'
-        ) {
-          return true;
-        }
-      }
-    } catch (err) {
-      // Coordenadas fora da viewport
-    }
-    return false;
   },
 
   handleSelectionChange() {

@@ -67,6 +67,15 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
         pinchCenterX = (touch1.clientX + touch2.clientX) / 2;
         pinchCenterY = (touch1.clientY + touch2.clientY) / 2;
 
+        // Fixa a origem de transformação no início da pinça para eliminar tremores dinâmicos
+        const viewer = getViewer();
+        if (viewer) {
+          const viewerRect = viewer.getBoundingClientRect();
+          const originX = pinchCenterX - viewerRect.left;
+          const originY = pinchCenterY - viewerRect.top;
+          viewer.style.transformOrigin = `${originX}px ${originY}px`;
+        }
+
         // Oculta tooltips e cancela seleções para evitar artefatos visuais
         QuickHighlightTooltip.hide();
         window.getSelection()?.removeAllRanges();
@@ -120,10 +129,6 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
           const visualRatio = currentPinchZoom / pinchStartZoom;
           const viewer = getViewer();
           if (viewer) {
-            const viewerRect = viewer.getBoundingClientRect();
-            const originX = pinchCenterX - viewerRect.left;
-            const originY = pinchCenterY - viewerRect.top;
-            viewer.style.transformOrigin = `${originX}px ${originY}px`;
             viewer.style.transform = `scale(${visualRatio})`;
             viewer.style.transition = 'none';
           }
@@ -221,8 +226,8 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
 
       const currentZoom = appState.get('zoomLevel') || 1.0;
       if (currentZoom <= 1.05) {
-        // Gesto horizontal expressivo (> 50px) e com predominância horizontal
-        if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
+        // Gesto horizontal expressivo (> 70px) e com forte predominância horizontal (2.0x)
+        if (Math.abs(diffX) > 70 && Math.abs(diffX) > Math.abs(diffY) * 2.0) {
           if (diffX > 0) {
             onNextPage(); // Swipe para a esquerda -> Próxima página
           } else {

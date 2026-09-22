@@ -35,19 +35,32 @@ export function setupMouseEvents({
 }) {
   // Drag & Drop de arquivos PDF
   if (dragOverlay) {
-    document.addEventListener('dragover', (e) => {
+    let dragCounter = 0;
+
+    document.addEventListener('dragenter', (e) => {
       e.preventDefault();
+      dragCounter++;
       dragOverlay.classList.add('active');
     });
 
+    document.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!dragOverlay.classList.contains('active')) {
+        dragOverlay.classList.add('active');
+      }
+    });
+
     document.addEventListener('dragleave', (e) => {
-      if (e.clientX === 0 || e.clientY === 0) {
+      e.preventDefault();
+      dragCounter = Math.max(0, dragCounter - 1);
+      if (dragCounter === 0) {
         dragOverlay.classList.remove('active');
       }
     });
 
     document.addEventListener('drop', (e) => {
       e.preventDefault();
+      dragCounter = 0;
       dragOverlay.classList.remove('active');
       if (e.dataTransfer?.files?.length > 0) {
         onFileDrop(e.dataTransfer.files[0]);

@@ -110,7 +110,7 @@ export const App = {
     if (DOM.hudBtnZoomOut) DOM.hudBtnZoomOut.onclick = () => this.changeZoom(-ZOOM_LIMITS.STEP);
     if (DOM.hudBtnZoomIn) DOM.hudBtnZoomIn.onclick = () => this.changeZoom(ZOOM_LIMITS.STEP);
     if (DOM.hudBtnPreset) DOM.hudBtnPreset.onclick = () => this.toggleZoomMode();
-    if (DOM.hudBtnFit) DOM.hudBtnFit.onclick = () => this.toggleZoomMode();
+    if (DOM.hudBtnFit) DOM.hudBtnFit.onclick = () => this.toggleFocusMode();
 
     // 4. Navegação de Páginas (Top Bar, Mobile & Indicador Discreto)
     if (DOM.btnPrev) DOM.btnPrev.onclick = () => this.onPrevPage();
@@ -295,7 +295,8 @@ export const App = {
    * @param {File} file
    */
   async handleFile(file) {
-    if (!file || file.type !== 'application/pdf') {
+    const isPdf = file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+    if (!isPdf) {
       return showToast('Por favor, selecione um arquivo PDF válido.', 'file-warning');
     }
 
@@ -506,10 +507,10 @@ export const App = {
     // Atualiza o indicador de página com porcentagem de leitura e seta indicadora
     if (DOM.indicator) {
       DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages} (${progressPercent}%) ▾`;
-      DOM.indicator.style.opacity = '1';
+      DOM.indicator.classList.add('visible');
       setTimeout(() => {
         if (appState.get('zoomLevel') <= 1.0 && DOM.indicator) {
-          DOM.indicator.style.opacity = '0';
+          DOM.indicator.classList.remove('visible');
         }
       }, 3000);
     }
@@ -524,6 +525,7 @@ export const App = {
    * Avança para a próxima página com animação
    */
   onNextPage() {
+    NotebookView.flushPendingSynthesis();
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc || appState.get('isRendering')) return;
 
@@ -554,6 +556,7 @@ export const App = {
    * Volta para a página anterior com animação
    */
   onPrevPage() {
+    NotebookView.flushPendingSynthesis();
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc || appState.get('isRendering')) return;
 
@@ -586,13 +589,34 @@ export const App = {
    * @param {Object} [focalPoint] { clientX, clientY }
    */
   setZoom(targetZoom, focalPoint = null) {
-    const current = appState.get('zoomLevel');
+    const current = appState.get('zoomLevel') || 1.0;
     const clamped = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, targetZoom));
     const newZoom = Math.round(clamped * 100) / 100;
     if (Math.abs(newZoom - current) < 0.005) return;
 
     const container = DOM.bookContainer;
     const wasSingle = appState.isSinglePageMode();
+
+    // Captura o ponto focal antes de esvaziar o container para manter a visão estável
+    let targetScrollLeft = 0;
+    let targetScrollTop = 0;
+    let hasTargetScroll = false;
+
+    if (container && newZoom > 1.0 && current > 0) {
+      const rect = container.getBoundingClientRect();
+      const focalX = (focalPoint && typeof focalPoint.clientX === 'number')
+        ? focalPoint.clientX - rect.left
+        : container.clientWidth / 2;
+      const focalY = (focalPoint && typeof focalPoint.clientY === 'number')
+        ? focalPoint.clientY - rect.top
+        : container.clientHeight / 2;
+
+      const scaleRatio = newZoom / current;
+      targetScrollLeft = Math.max(0, (container.scrollLeft + focalX) * scaleRatio - focalX);
+      targetScrollTop = Math.max(0, (container.scrollTop + focalY) * scaleRatio - focalY);
+      hasTargetScroll = true;
+    }
+
     appState.set({ zoomLevel: newZoom });
     this.updateBodyMode();
     this.updateZoomUI();
@@ -603,17 +627,9 @@ export const App = {
     }
 
     this.renderPages(pageNum).then(() => {
-      if (container && newZoom > 1.0) {
-        if (focalPoint && typeof focalPoint.clientX === 'number') {
-          applyFocalZoom(container, newZoom, current, focalPoint);
-        } else {
-          const centerX = container.clientWidth / 2;
-          const centerY = container.clientHeight / 2;
-          applyFocalZoom(container, newZoom, current, {
-            clientX: container.getBoundingClientRect().left + centerX,
-            clientY: container.getBoundingClientRect().top + centerY,
-          });
-        }
+      if (container && hasTargetScroll) {
+        container.scrollLeft = targetScrollLeft;
+        container.scrollTop = targetScrollTop;
       }
     });
   },
@@ -764,6 +780,7 @@ export const App = {
    * @param {boolean} [trackHistory=true]
    */
   goToPage(targetPage, trackHistory = true) {
+    NotebookView.flushPendingSynthesis();
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc) return;
     const total = appState.get('totalPages') || pdfDoc.numPages || 1;
@@ -879,6 +896,7 @@ export const App = {
     });
 
     appState.on(EVENTS.POMODORO_FINISHED, () => {
+      PomodoroService.playChime();
       if (DOM.pomodoroAlert) {
         DOM.pomodoroAlert.classList.remove('hidden');
         refreshIcons(DOM.pomodoroAlert);

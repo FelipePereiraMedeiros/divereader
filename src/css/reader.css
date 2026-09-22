@@ -9,8 +9,18 @@
   z-index: 60;
   pointer-events: auto;
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
   transition: height var(--transition-fast), background-color var(--transition-fast);
+}
+
+/* Área de toque expandida para dispositivos touch (WCAG 2.5.5) */
+#reading-progress-bar-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
 }
 
 #reading-progress-bar-container:hover {
@@ -24,6 +34,7 @@
   background: linear-gradient(90deg, var(--primary) 0%, #38bdf8 50%, var(--highlight-border) 100%);
   box-shadow: 0 0 8px var(--primary-light);
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 #pdf-viewer {

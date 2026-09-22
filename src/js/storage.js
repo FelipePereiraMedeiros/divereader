@@ -33,14 +33,46 @@ export const Storage = {
     }
 
     try {
-      const slice = arrayBuffer.slice(0, 64 * 1024);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', slice);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+      // 1. Calcula hash legado (64KB puros) para checar se já há dados salvos nessa versão
+      const slice64 = arrayBuffer.slice(0, 64 * 1024);
+      const oldHashBuffer = await crypto.subtle.digest('SHA-256', slice64);
+      const oldHashHex = Array.from(new Uint8Array(oldHashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+        .slice(0, 16);
+      const oldHashKey = `${STORAGE_PREFIX}sha_${oldHashHex}`;
+
+      // Se já existem dados sob o oldHashKey, mantém compatibilidade total
+      if (
+        localStorage.getItem(`${oldHashKey}_highlights_v2`) ||
+        localStorage.getItem(`${oldHashKey}_notes_v2`) ||
+        localStorage.getItem(`${oldHashKey}_page`)
+      ) {
+        return oldHashKey;
+      }
+
+      // 2. Cria hash composto blindado contra colisão (64KB iniciais + fileSize + fileName + 16KB finais)
+      const meta = new TextEncoder().encode(`__size:${fileSize}__name:${fileName}__tail:`);
+      const tailSlice = arrayBuffer.byteLength > 64 * 1024
+        ? new Uint8Array(arrayBuffer.slice(Math.max(0, arrayBuffer.byteLength - 16 * 1024)))
+        : new Uint8Array(0);
+      const headSlice = new Uint8Array(slice64);
+
+      const combined = new Uint8Array(headSlice.length + meta.length + tailSlice.length);
+      combined.set(headSlice, 0);
+      combined.set(meta, headSlice.length);
+      combined.set(tailSlice, headSlice.length + meta.length);
+
+      const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+      const hashHex = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+        .slice(0, 16);
       const hashKey = `${STORAGE_PREFIX}sha_${hashHex}`;
 
-      // Migra dados caso a chave legada exista e a hashKey ainda não possua dados
+      // Migra dados caso a chave legada (ou oldHashKey) exista e a hashKey ainda não possua dados
       this.migrateLegacyKeyToHashKey(legacyKey, hashKey);
+      this.migrateLegacyKeyToHashKey(oldHashKey, hashKey);
 
       return hashKey;
     } catch (e) {

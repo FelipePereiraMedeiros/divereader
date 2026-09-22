@@ -264,8 +264,8 @@ input[type="file"] {
   font-size: 12px;
   font-weight: 600;
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--transition-normal), transform var(--transition-fast), background-color var(--transition-fast);
-  pointer-events: auto;
   cursor: pointer;
   user-select: none;
   z-index: 150;
@@ -277,8 +277,10 @@ input[type="file"] {
   gap: 6px;
 }
 
+#discreet-indicator.visible,
 #discreet-indicator:hover {
   opacity: 1 !important;
+  pointer-events: auto;
   transform: scale(1.05);
   background-color: var(--primary);
   color: #ffffff;
