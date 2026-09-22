@@ -512,18 +512,22 @@ export const App = {
     const current = appState.get('zoomLevel');
     const clamped = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, targetZoom));
     const newZoom = Math.round(clamped * 100) / 100;
-    if (Math.abs(newZoom - current) < 0.02) return;
+    if (Math.abs(newZoom - current) < 0.005) return;
 
     // Calcula razão focal para ancorar a posição de leitura sem resetar para o topo
     let ratioX = 0.5;
     let ratioY = 0.5;
+    let focalOffsetX = null;
+    let focalOffsetY = null;
     const container = DOM.bookContainer;
 
     if (container && container.scrollWidth > 0 && container.scrollHeight > 0) {
       if (focalPoint && typeof focalPoint.clientX === 'number') {
         const rect = container.getBoundingClientRect();
-        const focusX = focalPoint.clientX - rect.left + container.scrollLeft;
-        const focusY = focalPoint.clientY - rect.top + container.scrollTop;
+        focalOffsetX = focalPoint.clientX - rect.left;
+        focalOffsetY = focalPoint.clientY - rect.top;
+        const focusX = focalOffsetX + container.scrollLeft;
+        const focusY = focalOffsetY + container.scrollTop;
         ratioX = focusX / container.scrollWidth;
         ratioY = focusY / container.scrollHeight;
       } else {
@@ -546,8 +550,10 @@ export const App = {
 
     this.renderPages(pageNum).then(() => {
       if (container && newZoom > 1.0) {
-        const newScrollLeft = ratioX * container.scrollWidth - container.clientWidth / 2;
-        const newScrollTop = ratioY * container.scrollHeight - container.clientHeight / 2;
+        const offsetX = focalOffsetX !== null ? focalOffsetX : container.clientWidth / 2;
+        const offsetY = focalOffsetY !== null ? focalOffsetY : container.clientHeight / 2;
+        const newScrollLeft = ratioX * container.scrollWidth - offsetX;
+        const newScrollTop = ratioY * container.scrollHeight - offsetY;
         container.scrollLeft = Math.max(0, newScrollLeft);
         container.scrollTop = Math.max(0, newScrollTop);
       }

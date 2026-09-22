@@ -408,6 +408,16 @@
     margin: 0 auto;
     border-radius: 2px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    max-width: none !important;
+  }
+
+  .page-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
   }
 
   body.focus-mode .page-wrapper {
@@ -417,8 +427,16 @@
 
   #pdf-viewer {
     gap: 0;
-    margin: 0 auto;
-    width: 100%;
+    margin: auto;
+    width: max-content;
+    min-width: 100%;
+    min-height: 100%;
+    touch-action: pan-x pan-y;
+  }
+
+  body.zoomed-mode #pdf-viewer {
+    padding: 8px 4px;
+    margin: auto;
   }
 
   /* Mobile Sidebar as full height drawer / slide-over */
