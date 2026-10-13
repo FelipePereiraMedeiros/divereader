@@ -24,6 +24,9 @@ export const App = {
   renderToken: 0,
   indicatorTimer: null,
   continuousObserver: null,
+  continuousZoomLevel: null,
+  continuousZoomMode: null,
+  continuousContainerWidth: 0,
   resizeTimer: null,
   zoomDebounceTimer: null,
   prefetchTimer: null,
@@ -302,6 +305,17 @@ export const App = {
       onSetZoom: (zoom, focalPoint) => this.setZoom(zoom, focalPoint),
       onChangeZoom: (delta) => this.changeZoom(delta),
     });
+
+    // 11. Desfoca botões de interface e overlay após o clique para que o leitor permaneça ativo para navegação
+    document.addEventListener('pointerup', (e) => {
+      const btn = e.target.closest('button, .file-upload-label');
+      if (btn && !btn.closest('dialog')) {
+        setTimeout(() => {
+          btn.blur();
+          DOM.bookContainer?.focus({ preventScroll: true });
+        }, 40);
+      }
+    });
   },
 
   /**
@@ -494,6 +508,9 @@ export const App = {
    * Renderização em modo paginado (Página única ou Livro aberto de duas páginas)
    */
   async renderPagedMode(leftPageNum, targetPage, totalPages, singlePage, currentToken) {
+    this.continuousZoomLevel = null;
+    this.continuousZoomMode = null;
+    this.continuousContainerWidth = 0;
     if (this.continuousObserver) {
       this.continuousObserver.disconnect();
       this.continuousObserver = null;
@@ -575,13 +592,26 @@ export const App = {
     if (DOM.btnNext) DOM.btnNext.disabled = targetPage >= totalPages;
     if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = targetPage >= totalPages;
 
-    if (DOM.pdfViewer && !DOM.pdfViewer.classList.contains('mode-continuous')) {
+    const hadModeClass = DOM.pdfViewer?.classList.contains('mode-continuous');
+    if (DOM.pdfViewer && !hadModeClass) {
       DOM.pdfViewer.classList.add('mode-continuous');
     }
 
+    const currentZoom = appState.get('zoomLevel') || 1.0;
+    const currentMode = appState.get('zoomMode') || ZOOM_MODES.FIT_WIDTH;
+    const container = DOM.bookContainer;
+    const containerWidth = container?.clientWidth || 800;
+
     const existingWrappers = DOM.pdfViewer?.querySelectorAll('.page-wrapper') || [];
-    // Se todos os wrappers já estão montados, rola suavemente para a página solicitada
-    if (existingWrappers.length === totalPages) {
+    const isContinuousMounted = hadModeClass && existingWrappers.length === totalPages;
+
+    const layoutNeedsUpdate =
+      this.continuousZoomLevel !== currentZoom ||
+      this.continuousZoomMode !== currentMode ||
+      Math.abs(this.continuousContainerWidth - containerWidth) > 8;
+
+    // Se todos os wrappers já estão montados e a escala/tamanho não mudou, apenas rola (navegação pura)
+    if (isContinuousMounted && !layoutNeedsUpdate) {
       const targetWrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${targetPage}"]`);
       if (targetWrapper) {
         targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -592,7 +622,72 @@ export const App = {
       return;
     }
 
-    // Cria placeholders dimensionados para todas as páginas
+    this.continuousZoomLevel = currentZoom;
+    this.continuousZoomMode = currentMode;
+    this.continuousContainerWidth = containerWidth;
+
+    // Se os wrappers já estão montados e a escala/tamanho mudou, atualiza dimensões e re-renderiza visíveis
+    if (isContinuousMounted) {
+      const containerRect = container ? container.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+      const visiblePages = new Set();
+
+      existingWrappers.forEach((wrapper) => {
+        const rect = wrapper.getBoundingClientRect();
+        if (rect.bottom >= containerRect.top - 200 && rect.top <= containerRect.bottom + 200) {
+          visiblePages.add(parseInt(wrapper.dataset.page, 10));
+        }
+      });
+
+      if (visiblePages.size === 0) {
+        visiblePages.add(targetPage);
+      }
+
+      const updatePromises = [];
+      for (let i = 0; i < existingWrappers.length; i++) {
+        const wrapper = existingWrappers[i];
+        const pageNum = parseInt(wrapper.dataset.page, 10);
+        updatePromises.push(
+          (async () => {
+            try {
+              const page = await pdfDoc.getPage(pageNum);
+              const scale = PdfService.getScale(page.getViewport({ scale: 1 }), true, container, currentZoom, currentMode);
+              const viewport = page.getViewport({ scale });
+              wrapper.style.width = `${viewport.width}px`;
+              wrapper.style.height = `${viewport.height}px`;
+
+              if (visiblePages.has(pageNum)) {
+                wrapper.replaceChildren();
+                wrapper.dataset.rendered = 'false';
+                wrapper.classList.remove('page-placeholder');
+                await PdfService.populatePageWrapper(
+                  wrapper,
+                  page,
+                  viewport,
+                  pageNum,
+                  (p, layer) => HighlightService.drawPageHighlights(p, layer),
+                );
+              } else if (wrapper.dataset.rendered === 'true') {
+                wrapper.replaceChildren();
+                wrapper.dataset.rendered = 'false';
+                wrapper.classList.add('page-placeholder');
+              }
+            } catch (err) {
+              console.warn('Erro ao atualizar página no zoom contínuo:', pageNum, err);
+            }
+          })()
+        );
+      }
+
+      await Promise.all(updatePromises);
+      if (this.renderToken !== currentToken) return;
+
+      this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
+      NotebookView.render();
+      this.updateZoomUI();
+      return;
+    }
+
+    // Primeira montagem do modo contínuo: cria placeholders dimensionados para todas as páginas
     const placeholderPromises = [];
     for (let p = 1; p <= totalPages; p++) {
       placeholderPromises.push(PdfService.buildPageWrapperPlaceholder(p, true, DOM.bookContainer));
@@ -608,7 +703,7 @@ export const App = {
 
     this.setupContinuousObserver();
 
-    // Rola até a página solicitada
+    // Rola até a página solicitada na primeira montagem
     const targetWrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${targetPage}"]`);
     if (targetWrapper) {
       targetWrapper.scrollIntoView({ behavior: 'auto', block: 'start' });
@@ -867,7 +962,8 @@ export const App = {
     let targetScrollTop = 0;
     let hasTargetScroll = false;
 
-    if (container && newZoom > 1.0 && current > 0) {
+    if (container && current > 0) {
+      const isContinuous = appState.get('readingMode') === READING_MODES.CONTINUOUS;
       const isAtTop = container.scrollTop <= 6;
       const isAtLeft = container.scrollLeft <= 6;
       const hasExplicitFocal = Boolean(
@@ -899,6 +995,12 @@ export const App = {
         targetScrollLeft = Math.max(0, (container.scrollLeft + focalX) * scaleRatio - focalX);
       }
 
+      // No modo paginado (duas páginas ou página única), se o novo zoom for 1.0 ou menor, centraliza
+      if (!isContinuous && newZoom <= 1.0) {
+        targetScrollLeft = 0;
+        targetScrollTop = 0;
+      }
+
       hasTargetScroll = true;
     }
 
@@ -914,8 +1016,13 @@ export const App = {
 
     this.renderPages(pageNum).then(() => {
       if (container && hasTargetScroll) {
+        const prevBehavior = container.style.scrollBehavior;
+        container.style.scrollBehavior = 'auto';
         container.scrollLeft = targetScrollLeft;
         container.scrollTop = targetScrollTop;
+        requestAnimationFrame(() => {
+          container.style.scrollBehavior = prevBehavior;
+        });
       }
     });
   },
@@ -1154,6 +1261,12 @@ export const App = {
       clearTimeout(this.focusTimer);
       showToast('Modo Foco desativado', 'minimize');
     }
+
+    // Libera o foco do botão de modo foco e foca imediatamente a área de leitura
+    if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+      document.activeElement.blur();
+    }
+    DOM.bookContainer?.focus({ preventScroll: true });
   },
 
   wakeFocusBar() {

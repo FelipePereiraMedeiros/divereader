@@ -22,6 +22,19 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
   let panStartScrollLeft = 0;
   let panStartScrollTop = 0;
   let isSingleFingerPanning = false;
+  let longPressTimer = null;
+  let isTouchSelecting = false;
+  const LONG_PRESS_MS = 450;
+  const LONG_PRESS_TOLERANCE = 8;
+
+  const hasActiveSelection = () => {
+    const sel = window.getSelection();
+    return Boolean(sel && !sel.isCollapsed && sel.toString().trim().length > 0);
+  };
+  const clearLongPress = () => {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  };
 
   // Estado de Pinch-to-Zoom (Multitoque)
   let isPinching = false;
@@ -95,7 +108,17 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
 
         // Ativa pan com 1 dedo se o documento estiver com zoom aplicado
         const currentZoom = appState.get('zoomLevel') || 1.0;
-        isSingleFingerPanning = currentZoom > 1.01;
+        isTouchSelecting = hasActiveSelection();
+        isSingleFingerPanning = currentZoom > 1.01 && !isTouchSelecting;
+
+        // Long-press parado sobre o texto → intenção de marcar: desliga o pan
+        clearLongPress();
+        if (e.target.closest('.textLayer')) {
+          longPressTimer = setTimeout(() => {
+            isTouchSelecting = true;
+            isSingleFingerPanning = false;
+          }, LONG_PRESS_MS);
+        }
       }
     },
     { passive: true },
@@ -141,6 +164,17 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
       }
 
       // 2.2 Movimento da Visão da Página com Dedo Único (Pan)
+      if (e.touches.length === 1 && longPressTimer) {
+        const t = e.touches[0];
+        if (Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY) > LONG_PRESS_TOLERANCE) {
+          clearLongPress(); // moveu antes do tempo: é rolagem
+        }
+      }
+      // Seleção em andamento (alças nativas): nunca rola nem bloqueia o gesto
+      if (isTouchSelecting || hasActiveSelection()) {
+        isSingleFingerPanning = false;
+        return;
+      }
       if (!isPinching && e.touches.length === 1 && isSingleFingerPanning) {
         const touch = e.touches[0];
         const dx = touch.clientX - panStartX;
@@ -201,8 +235,13 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
       }
     }
 
+    clearLongPress();
     if (isSingleFingerPanning) {
       isSingleFingerPanning = false;
+    }
+    if (isTouchSelecting) {
+      isTouchSelecting = false;
+      return; // fim de uma marcação: não interpretar como swipe/duplo toque
     }
 
     // Se um gesto de pinça acabou de ocorrer, ignora swipes e toques residuais

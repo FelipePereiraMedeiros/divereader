@@ -3,6 +3,26 @@
  */
 
 import { appState } from '../state.js';
+import { showToast } from '../ui/toast.js';
+
+/**
+ * Alterna o modo do cursor entre Seleção de Texto e Mãozinha (Scroll / Pan)
+ */
+export function toggleCursorMode() {
+  const currentMode = appState.get('cursorMode') || 'select';
+  const nextMode = currentMode === 'hand' ? 'select' : 'hand';
+  appState.set({ cursorMode: nextMode });
+
+  const isHand = nextMode === 'hand';
+  document.body.classList.toggle('hand-tool-active', isHand);
+  document.body.classList.toggle('space-hand-tool', isHand);
+
+  if (isHand) {
+    showToast('Modo Scroll / Mãozinha ativado', 'hand');
+  } else {
+    showToast('Modo Seleção de Texto ativado', 'mouse-pointer-click');
+  }
+}
 
 export function setupKeyboardShortcuts({
   onNextPage,
@@ -37,14 +57,16 @@ export function setupKeyboardShortcuts({
       }
     }
 
-    // 2. Previne disparos quando o usuário edita notas, inputs, botões ou elementos com role=button
+    // 2. Previne disparos APENAS quando o usuário estiver digitando em campos de texto editáveis
     const activeEl = document.activeElement;
     const activeTag = activeEl?.tagName;
-    if (
-      ['TEXTAREA', 'INPUT', 'BUTTON', 'SELECT'].includes(activeTag) ||
-      activeEl?.isContentEditable ||
-      activeEl?.getAttribute('role') === 'button'
-    ) {
+    const isTextInput =
+      activeTag === 'TEXTAREA' ||
+      activeTag === 'SELECT' ||
+      (activeTag === 'INPUT' && !['button', 'submit', 'checkbox', 'radio', 'range'].includes(activeEl.type)) ||
+      activeEl?.isContentEditable;
+
+    if (isTextInput) {
       return;
     }
 
@@ -64,9 +86,15 @@ export function setupKeyboardShortcuts({
       case 'PageDown':
       case 'k':
       case 'K':
-      case ' ': // Barra de espaço avança página (padrão PDF readers)
         e.preventDefault();
         onNextPage();
+        break;
+
+      case ' ': // Barra de espaço: alterna o modo do cursor entre Seleção de Texto e Scroll (Mãozinha)
+        e.preventDefault();
+        if (!e.repeat) {
+          toggleCursorMode();
+        }
         break;
 
       case 'Home':

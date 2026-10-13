@@ -126,68 +126,185 @@ export function setupMouseEvents({
       { passive: false },
     );
 
-    // ==========================================
-    // Hand Tool / Pan Livre via PointerEvents com setPointerCapture
-    // ==========================================
-    let isPanning = false;
+    // =========================================================================
+    // Detecção de Intenção: Marcação de Texto × Pan
+    // Estados: idle | selecting | pan-pending | panning
+    // A intenção é definida pelo ponto de início e modificadores, não pelo overflow.
+    // =========================================================================
+    const PAN_THRESHOLD = 5;
+    const EDGE_ZONE = 40;
+    const MAX_AUTO_SPEED = 12;
+
+    let mode = 'idle';
     let startX = 0;
     let startY = 0;
     let scrollStartX = 0;
     let scrollStartY = 0;
+    let pointerId = null;
+    let lastX = 0;
+    let lastY = 0;
+    let autoSpeed = 0;
+    let autoRaf = null;
+
+    const isHandToolActive = () =>
+      document.body.classList.contains('space-hand-tool') ||
+      document.body.classList.contains('hand-tool-active') ||
+      appState.get('cursorMode') === 'hand';
+
+    const extendSelectionTo = (x, y) => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || typeof sel.extend !== 'function') return;
+      let node = null;
+      let offset = 0;
+      if (typeof document.caretPositionFromPoint === 'function') {
+        const pos = document.caretPositionFromPoint(x, y);
+        if (pos) { node = pos.offsetNode; offset = pos.offset; }
+      } else if (typeof document.caretRangeFromPoint === 'function') {
+        const r = document.caretRangeFromPoint(x, y);
+        if (r) { node = r.startContainer; offset = r.startOffset; }
+      }
+      if (node && node.parentElement?.closest('.textLayer')) {
+        try { sel.extend(node, offset); } catch (err) {}
+      }
+    };
+
+    const autoScrollStep = () => {
+      if (mode !== 'selecting' || autoSpeed === 0) {
+        autoRaf = null;
+        return;
+      }
+      container.scrollTop += autoSpeed;
+      extendSelectionTo(lastX, lastY);
+      autoRaf = requestAnimationFrame(autoScrollStep);
+    };
+
+    const stopAutoScroll = () => {
+      autoSpeed = 0;
+      if (autoRaf) cancelAnimationFrame(autoRaf);
+      autoRaf = null;
+    };
+
+    const beginPan = (e) => {
+      mode = 'panning';
+      document.body.classList.add('is-panning');
+      window.getSelection()?.removeAllRanges();
+      try { container.setPointerCapture(pointerId ?? e.pointerId); } catch (err) {}
+    };
+
+    const resetInteraction = () => {
+      if (mode === 'panning') {
+        document.body.classList.remove('is-panning');
+        if (pointerId !== null) {
+          try { container.releasePointerCapture(pointerId); } catch (err) {}
+        }
+      }
+      stopAutoScroll();
+      document.body.classList.remove('is-selecting');
+      mode = 'idle';
+      pointerId = null;
+    };
 
     container.addEventListener('pointerdown', (e) => {
-      const zoomLevel = appState.get('zoomLevel') || 1.0;
-      const isScrollable =
-        container.scrollWidth > container.clientWidth + 8 ||
-        container.scrollHeight > container.clientHeight + 8;
-
-      if (zoomLevel <= 1.05 && !isScrollable) return;
-
-      // Não inicia pan se o clique foi em grifos, tooltips ou botões
+      if (e.pointerType === 'touch') return; // Touch é tratado em touch.js
       if (
         e.target.closest('#sidebar') ||
         e.target.closest('dialog') ||
         e.target.closest('#quick-highlight-tooltip') ||
         e.target.closest('.highlight-rect') ||
         e.target.closest('button') ||
-        e.button !== 0 // apenas botão primário
+        e.target.closest('input')
       ) {
         return;
       }
 
-      isPanning = true;
-      document.body.classList.add('is-panning');
-      startX = e.clientX;
-      startY = e.clientY;
+      // Torna a área interna do leitor ativa e remove o foco de qualquer botão/overlay externo
+      if (document.activeElement !== container && !e.target.closest('input, textarea, select')) {
+        container.focus({ preventScroll: true });
+      }
+
+      startX = lastX = e.clientX;
+      startY = lastY = e.clientY;
       scrollStartX = container.scrollLeft;
       scrollStartY = container.scrollTop;
+      pointerId = e.pointerId;
 
-      try {
-        container.setPointerCapture(e.pointerId);
-      } catch (err) {}
+      // 1. Pan explícito: botão do meio, Espaço segurado ou Alt
+      const explicitPan = e.button === 1 || (e.button === 0 && (isHandToolActive() || e.altKey));
+      if (explicitPan) {
+        e.preventDefault();
+        beginPan(e);
+        return;
+      }
+      if (e.button !== 0) return;
+
+      // 2. Sobre a página → marcação de texto (nunca pan, nunca captura de ponteiro)
+      if (e.target.closest('.textLayer') || e.target.closest('.page-wrapper')) {
+        mode = 'selecting';
+        document.body.classList.add('is-selecting');
+        return;
+      }
+
+      // 3. Área neutra → pan após limiar, se houver o que rolar
+      const isScrollable =
+        container.scrollWidth > container.clientWidth + 8 ||
+        container.scrollHeight > container.clientHeight + 8;
+      if (isScrollable) {
+        mode = 'pan-pending';
+        e.preventDefault(); // evita iniciar seleção a partir do fundo
+      }
     });
 
     container.addEventListener('pointermove', (e) => {
-      if (!isPanning) return;
+      if (mode === 'idle') return;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      if (mode === 'selecting') {
+        if (!(e.buttons & 1)) {
+          resetInteraction();
+          return;
+        }
+        const rect = container.getBoundingClientRect();
+        if (e.clientY > rect.bottom - EDGE_ZONE) {
+          autoSpeed = Math.ceil(Math.min(1, (e.clientY - (rect.bottom - EDGE_ZONE)) / EDGE_ZONE) * MAX_AUTO_SPEED);
+        } else if (e.clientY < rect.top + EDGE_ZONE) {
+          autoSpeed = -Math.ceil(Math.min(1, (rect.top + EDGE_ZONE - e.clientY) / EDGE_ZONE) * MAX_AUTO_SPEED);
+        } else {
+          autoSpeed = 0;
+        }
+        if (autoSpeed !== 0 && !autoRaf) autoRaf = requestAnimationFrame(autoScrollStep);
+        if (autoSpeed === 0) stopAutoScroll();
+        return;
+      }
+
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      container.scrollLeft = scrollStartX - dx;
-      container.scrollTop = scrollStartY - dy;
+
+      if (mode === 'pan-pending') {
+        if (Math.hypot(dx, dy) < PAN_THRESHOLD) return;
+        beginPan(e);
+      }
+
+      if (mode === 'panning') {
+        container.scrollLeft = scrollStartX - dx;
+        container.scrollTop = scrollStartY - dy;
+      }
     });
 
-    const stopPanning = (e) => {
-      if (isPanning) {
-        isPanning = false;
-        document.body.classList.remove('is-panning');
-        if (e && typeof e.pointerId === 'number') {
-          try {
-            container.releasePointerCapture(e.pointerId);
-          } catch (err) {}
-        }
-      }
-    };
+    // Auto-scroll também quando o mouse sai do contêiner durante a seleção
+    window.addEventListener('pointermove', (e) => {
+      if (mode !== 'selecting' || container.contains(e.target)) return;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const rect = container.getBoundingClientRect();
+      if (e.clientY > rect.bottom) autoSpeed = MAX_AUTO_SPEED;
+      else if (e.clientY < rect.top) autoSpeed = -MAX_AUTO_SPEED;
+      else autoSpeed = 0;
+      if (autoSpeed !== 0 && !autoRaf) autoRaf = requestAnimationFrame(autoScrollStep);
+    });
 
-    container.addEventListener('pointerup', stopPanning);
-    container.addEventListener('pointercancel', stopPanning);
+    container.addEventListener('pointercancel', resetInteraction);
+    window.addEventListener('pointerup', resetInteraction);
+    window.addEventListener('blur', resetInteraction);
   }
 }
