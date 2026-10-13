@@ -19,6 +19,8 @@ const SELECTOR_MAP = {
   fileInput: 'file-input',
   fileTitle: 'file-title',
   themeSelector: 'theme-selector',
+  btnReadingMode: 'btn-reading-mode',
+  readingModeLabel: 'reading-mode-label',
   btnZoomOut: 'btn-zoom-out',
   btnZoomIn: 'btn-zoom-in',
   btnPrev: 'btn-prev',

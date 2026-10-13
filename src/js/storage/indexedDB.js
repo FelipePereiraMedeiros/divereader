@@ -67,7 +67,11 @@ export async function cachePdfDocument(key, fileName, fileSize, arrayBuffer) {
       };
 
       const req = store.put(record);
-      req.onsuccess = () => resolve(true);
+      req.onsuccess = () => {
+        // Mantém no máximo 3 documentos recentes (LRU)
+        pruneOldPdfCache(db, 3).catch(() => {});
+        resolve(true);
+      };
       req.onerror = () => resolve(false);
     });
   } catch (err) {
@@ -77,7 +81,37 @@ export async function cachePdfDocument(key, fileName, fileSize, arrayBuffer) {
 }
 
 /**
- * Obtém o último documento PDF armazenado no cache local
+ * Remove documentos antigos excedentes para evitar consumo excessivo de memória/cota
+ * @param {IDBDatabase} db
+ * @param {number} maxItems
+ */
+async function pruneOldPdfCache(db, maxItems = 3) {
+  try {
+    const tx = db.transaction(PDF_STORE, 'readwrite');
+    const store = tx.objectStore(PDF_STORE);
+    if (!store.indexNames.contains('updatedAt')) return;
+
+    const countReq = store.count();
+    countReq.onsuccess = () => {
+      let count = countReq.result;
+      if (count > maxItems) {
+        const index = store.index('updatedAt');
+        const cursorReq = index.openCursor(null, 'next'); // Mais antigos primeiro
+        cursorReq.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor && count > maxItems) {
+            cursor.delete();
+            count--;
+            cursor.continue();
+          }
+        };
+      }
+    };
+  } catch (e) {}
+}
+
+/**
+ * Obtém o último documento PDF armazenado no cache local via cursor (sem carregar todos em memória)
  * @returns {Promise<{ key: string, fileName: string, fileSize: number, arrayBuffer: ArrayBuffer, updatedAt: number }|null>}
  */
 export async function getLastCachedPdf() {
@@ -86,17 +120,29 @@ export async function getLastCachedPdf() {
     return new Promise((resolve) => {
       const tx = db.transaction(PDF_STORE, 'readonly');
       const store = tx.objectStore(PDF_STORE);
-      const req = store.getAll();
 
-      req.onsuccess = () => {
-        const list = req.result || [];
-        if (list.length === 0) return resolve(null);
-        // Ordena pelo documento mais recentemente acessado
-        list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-        resolve(list[0]);
-      };
-
-      req.onerror = () => resolve(null);
+      if (store.indexNames.contains('updatedAt')) {
+        const index = store.index('updatedAt');
+        const req = index.openCursor(null, 'prev'); // Documento mais recente primeiro
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor) {
+            resolve(cursor.value);
+          } else {
+            resolve(null);
+          }
+        };
+        req.onerror = () => resolve(null);
+      } else {
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const list = req.result || [];
+          if (list.length === 0) return resolve(null);
+          list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          resolve(list[0]);
+        };
+        req.onerror = () => resolve(null);
+      }
     });
   } catch (err) {
     return null;

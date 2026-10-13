@@ -87,17 +87,34 @@ export function setupMouseEvents({
           return;
         }
 
+        // Se estiver em modo contínuo, permite scroll natural completo
+        if (appState.get('readingMode') === 'continuous') {
+          return;
+        }
+
         // Se houver zoom aplicado, permite scroll natural
-        const zoomLevel = appState.get('zoomLevel');
+        const zoomLevel = appState.get('zoomLevel') || 1.0;
         if (!appState.get('pdfDoc') || zoomLevel > 1.0) return;
 
-        // Se não houver zoom, scroll vira a página
+        // Verifica se a página é mais alta que o contêiner (ex: modo Ajustar à Largura)
+        const hasVerticalOverflow = container.scrollHeight > container.clientHeight + 4;
+        if (hasVerticalOverflow) {
+          const atBottom = Math.ceil(container.scrollTop + container.clientHeight) >= container.scrollHeight - 2;
+          const atTop = container.scrollTop <= 0;
+
+          // Se estiver rolando dentro da página, permite rolagem vertical natural
+          if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) {
+            return;
+          }
+        }
+
+        // Se chegou na borda ou não há scroll vertical, scroll vira a página
         e.preventDefault();
         if (!scrollCooldown) {
           scrollCooldown = true;
           setTimeout(() => {
             scrollCooldown = false;
-          }, 500);
+          }, 450);
 
           if (e.deltaY > 0) {
             onNextPage();
@@ -120,7 +137,11 @@ export function setupMouseEvents({
 
     container.addEventListener('pointerdown', (e) => {
       const zoomLevel = appState.get('zoomLevel') || 1.0;
-      if (zoomLevel <= 1.05) return;
+      const isScrollable =
+        container.scrollWidth > container.clientWidth + 8 ||
+        container.scrollHeight > container.clientHeight + 8;
+
+      if (zoomLevel <= 1.05 && !isScrollable) return;
 
       // Não inicia pan se o clique foi em grifos, tooltips ou botões
       if (

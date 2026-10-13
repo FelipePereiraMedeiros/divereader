@@ -29,12 +29,19 @@ export const ZOOM_LIMITS = {
   STEP: 0.2,
 };
 
+export const READING_MODES = {
+  PAGED: 'paged',
+  CONTINUOUS: 'continuous',
+};
+
 export const EVENTS = {
   PAGE_CHANGED: 'page_changed',
   HIGHLIGHTS_UPDATED: 'highlights_updated',
   NOTES_UPDATED: 'notes_updated',
   DOCUMENT_LOADED: 'document_loaded',
   THEME_CHANGED: 'theme_changed',
+  READING_MODE_CHANGED: 'reading_mode_changed',
   POMODORO_TICK: 'pomodoro_tick',
   POMODORO_FINISHED: 'pomodoro_finished',
 };
+

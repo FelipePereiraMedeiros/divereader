@@ -420,9 +420,17 @@
 
   #pdf-viewer {
     gap: 0;
-    margin: auto;
+    margin: 0 auto;
     width: max-content;
     min-width: 100%;
+    align-items: flex-start;
+    justify-content: safe center;
+  }
+
+  body.zoomed-mode #pdf-viewer {
+    margin: 0 auto;
+    margin-top: 0;
+    align-items: flex-start;
   }
 
   /* Mobile Sidebar as full height drawer / slide-over */

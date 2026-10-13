@@ -17,10 +17,16 @@ import { setupKeyboardShortcuts } from './events/keyboard.js';
 import { setupMouseEvents, applyFocalZoom } from './events/mouse.js';
 import { setupTouchAndGestures } from './events/touch.js';
 import { cachePdfDocument, getLastCachedPdf } from './storage/indexedDB.js';
-import { EVENTS, ZOOM_LIMITS, ZOOM_MODES } from './constants.js';
+import { EVENTS, ZOOM_LIMITS, ZOOM_MODES, READING_MODES } from './constants.js';
 
 export const App = {
   focusTimer: null,
+  renderToken: 0,
+  indicatorTimer: null,
+  continuousObserver: null,
+  resizeTimer: null,
+  zoomDebounceTimer: null,
+  prefetchTimer: null,
 
   /**
    * Inicialização da aplicação
@@ -36,31 +42,35 @@ export const App = {
 
     // Inicializa componentes de UI
     NotebookView.init({
-      onNavigatePage: (pageNum) => this.renderPages(pageNum),
+      onNavigatePage: (pageNum) => this.goToPage(pageNum, true),
     });
     QuickHighlightTooltip.init();
 
     // Listener global para navegação direta de página via eventos
     appState.on('NAVIGATE_PAGE', (pageNum) => {
       if (typeof pageNum === 'number' && !isNaN(pageNum)) {
-        this.renderPages(pageNum);
+        this.goToPage(pageNum, true);
       }
     });
 
     this.initEventListeners();
     this.initPomodoro();
+    this.updateReadingModeUI();
     window.app = this;
 
-    // Redimensionamento de tela
+    // Redimensionamento de tela com debounce suave (150ms)
     window.addEventListener('resize', () => {
-      if (appState.get('pdfDoc') && !appState.get('isRendering')) {
-        this.updateBodyMode();
-        let pageNum = appState.get('pageNum');
-        if (!appState.isSinglePageMode() && pageNum % 2 === 0) {
-          pageNum -= 1;
+      clearTimeout(this.resizeTimer);
+      this.resizeTimer = setTimeout(() => {
+        if (appState.get('pdfDoc') && !appState.get('isRendering')) {
+          this.updateBodyMode();
+          let pageNum = appState.get('pageNum');
+          if (!appState.isSinglePageMode() && pageNum % 2 === 0) {
+            pageNum -= 1;
+          }
+          this.renderPages(pageNum);
         }
-        this.renderPages(pageNum);
-      }
+      }, 150);
     });
 
     console.log('DiveReader Pro 2.0 inicializado com sucesso.');
@@ -93,13 +103,17 @@ export const App = {
       DOM.btnEmptyOpen.onclick = () => DOM.fileInput?.click();
     }
 
-    // 2. Seletor de Tema
+    // 2. Seletor de Tema & Modo de Leitura
     if (DOM.themeSelector) {
       DOM.themeSelector.addEventListener('change', (e) => {
         const theme = e.target.value;
         document.body.className = theme;
         Storage.saveTheme(theme);
       });
+    }
+
+    if (DOM.btnReadingMode) {
+      DOM.btnReadingMode.onclick = () => this.toggleReadingMode();
     }
 
     // 3. Zoom (Top Bar & Floating HUD)
@@ -339,6 +353,7 @@ export const App = {
       DOM.btnZoomOut,
       DOM.btnZoomIn,
       DOM.btnZoomPreset,
+      DOM.btnReadingMode,
       DOM.btnToggleSidebar,
       DOM.btnToggleFocus,
       DOM.themeSelector,
@@ -365,9 +380,10 @@ export const App = {
       const resolvedKey = await Storage.resolveFileKey(fileName, fileSize, arrayBuffer);
       appState.set({ fileKey: resolvedKey });
 
-      // Persiste no cache IndexedDB para reabertura automática instantânea
+      // Persiste no cache IndexedDB com buffer clonado para evitar erro de buffer detached caso o worker o transfira
       if (!isFromCache) {
-        cachePdfDocument(resolvedKey, fileName, fileSize, arrayBuffer).catch((err) => {
+        const bufferClone = arrayBuffer.slice(0);
+        cachePdfDocument(resolvedKey, fileName, fileSize, bufferClone).catch((err) => {
           console.warn('Falha ao salvar no cache IndexedDB:', err);
         });
       }
@@ -378,6 +394,13 @@ export const App = {
       const savedPage = Storage.loadPage(resolvedKey);
       const savedHighlights = Storage.loadHighlights(resolvedKey);
       const savedNotes = Storage.loadManualNotes(resolvedKey);
+      const savedPrefs = Storage.loadDocPreferences(resolvedKey);
+
+      if (savedPrefs) {
+        if (typeof savedPrefs.zoomLevel === 'number') appState.set({ zoomLevel: savedPrefs.zoomLevel });
+        if (savedPrefs.zoomMode) appState.set({ zoomMode: savedPrefs.zoomMode });
+        if (savedPrefs.readingMode) appState.set({ readingMode: savedPrefs.readingMode });
+      }
 
       let pageNum = savedPage || 1;
       if (!appState.isSinglePageMode() && pageNum % 2 === 0) {
@@ -398,6 +421,7 @@ export const App = {
       if (DOM.mobilePageText) DOM.mobilePageText.textContent = `Pág. ${pageNum}/${pdfDoc.numPages}`;
       if (DOM.mobileBtnPage) DOM.mobileBtnPage.disabled = false;
 
+      this.updateReadingModeUI();
       this.updateBodyMode();
       this.updateZoomUI();
       await this.renderPages(pageNum);
@@ -419,14 +443,16 @@ export const App = {
   },
 
   /**
-   * Renderiza as páginas ativas no leitor (Normalizando Páginas Esquerda/Direita)
+   * Renderiza as páginas ativas no leitor (Normalizando Páginas Esquerda/Direita ou Modo Contínuo)
    * @param {number} num
    */
   async renderPages(num) {
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc) return;
 
+    const currentToken = ++this.renderToken;
     const totalPages = appState.get('totalPages') || pdfDoc.numPages;
+    const isContinuous = appState.get('readingMode') === READING_MODES.CONTINUOUS;
     const singlePage = appState.isSinglePageMode();
 
     let targetPage = parseInt(num, 10);
@@ -440,28 +466,54 @@ export const App = {
 
     appState.set({ isRendering: true, pageNum: leftPageNum });
     Storage.savePage(appState.get('fileKey'), leftPageNum);
+    this.saveCurrentPreferences();
 
     if (DOM.pageInput) DOM.pageInput.value = String(targetPage);
     if (DOM.btnPrev) DOM.btnPrev.disabled = leftPageNum <= 1;
     if (DOM.mobileBtnPrev) DOM.mobileBtnPrev.disabled = leftPageNum <= 1;
     if (DOM.mobileBtnPage) DOM.mobileBtnPage.disabled = false;
 
-    PdfService.cancelAllPendingRenders();
-    if (DOM.pdfViewer) DOM.pdfViewer.innerHTML = '';
+    try {
+      PdfService.cancelAllPendingRenders();
+
+      if (isContinuous) {
+        await this.renderContinuousMode(targetPage, currentToken);
+      } else {
+        await this.renderPagedMode(leftPageNum, targetPage, totalPages, singlePage, currentToken);
+      }
+    } catch (err) {
+      console.error('Erro na renderização das páginas:', err);
+    } finally {
+      if (this.renderToken === currentToken) {
+        appState.set({ isRendering: false });
+      }
+    }
+  },
+
+  /**
+   * Renderização em modo paginado (Página única ou Livro aberto de duas páginas)
+   */
+  async renderPagedMode(leftPageNum, targetPage, totalPages, singlePage, currentToken) {
+    if (this.continuousObserver) {
+      this.continuousObserver.disconnect();
+      this.continuousObserver = null;
+    }
 
     let indicatorText = `${leftPageNum}`;
+    const buildPromises = [];
 
     if (singlePage) {
       if (DOM.btnNext) DOM.btnNext.disabled = leftPageNum >= totalPages;
       if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = leftPageNum >= totalPages;
 
-      const wrapper = await PdfService.buildPageWrapper(
-        leftPageNum,
-        true,
-        DOM.bookContainer,
-        (p, layer) => HighlightService.drawPageHighlights(p, layer),
+      buildPromises.push(
+        PdfService.buildPageWrapper(
+          leftPageNum,
+          true,
+          DOM.bookContainer,
+          (p, layer) => HighlightService.drawPageHighlights(p, layer),
+        ),
       );
-      if (DOM.pdfViewer) DOM.pdfViewer.appendChild(wrapper);
     } else {
       const rightPageNum = leftPageNum + 1;
       const hasRightPage = rightPageNum <= totalPages;
@@ -470,55 +522,256 @@ export const App = {
       if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = leftPageNum >= totalPages - 1;
 
       // Página da Esquerda (Sempre ímpar: 1, 3, 5, 7...)
-      const wrapperLeft = await PdfService.buildPageWrapper(
-        leftPageNum,
-        false,
-        DOM.bookContainer,
-        (p, layer) => HighlightService.drawPageHighlights(p, layer),
-      );
-      if (DOM.pdfViewer) DOM.pdfViewer.appendChild(wrapperLeft);
-
-      // Página da Direita (Sempre par: 2, 4, 6, 8...)
-      if (hasRightPage) {
-        const wrapperRight = await PdfService.buildPageWrapper(
-          rightPageNum,
+      buildPromises.push(
+        PdfService.buildPageWrapper(
+          leftPageNum,
           false,
           DOM.bookContainer,
           (p, layer) => HighlightService.drawPageHighlights(p, layer),
+        ),
+      );
+
+      // Página da Direita (Sempre par: 2, 4, 6, 8...)
+      if (hasRightPage) {
+        buildPromises.push(
+          PdfService.buildPageWrapper(
+            rightPageNum,
+            false,
+            DOM.bookContainer,
+            (p, layer) => HighlightService.drawPageHighlights(p, layer),
+          ),
         );
-        if (DOM.pdfViewer) DOM.pdfViewer.appendChild(wrapperRight);
         indicatorText += ` & ${rightPageNum}`;
       }
     }
 
-    // Atualiza o texto do botão mobile
+    const wrappers = await Promise.all(buildPromises);
+
+    // Descarta se uma renderização mais recente foi solicitada durante os awaits
+    if (this.renderToken !== currentToken) return;
+
+    // Troca atômica de conteúdo sem flash/piscada de tela branca
+    if (DOM.pdfViewer) {
+      DOM.pdfViewer.classList.remove('mode-continuous');
+      DOM.pdfViewer.replaceChildren(...wrappers);
+    }
+
+    this.updatePageProgressUI(indicatorText, singlePage ? targetPage : Math.min(totalPages, leftPageNum + 1), totalPages);
+    NotebookView.render();
+    this.updateZoomUI();
+
+    // Pré-carregamento em background da próxima página para transição imediata
+    this.schedulePrefetch(leftPageNum + (singlePage ? 1 : 2), totalPages);
+  },
+
+  /**
+   * Renderização em modo de rolagem contínua vertical com placeholders virtuais
+   */
+  async renderContinuousMode(targetPage, currentToken) {
+    const pdfDoc = appState.get('pdfDoc');
+    if (!pdfDoc) return;
+    const totalPages = appState.get('totalPages') || pdfDoc.numPages;
+
+    if (DOM.btnNext) DOM.btnNext.disabled = targetPage >= totalPages;
+    if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = targetPage >= totalPages;
+
+    if (DOM.pdfViewer && !DOM.pdfViewer.classList.contains('mode-continuous')) {
+      DOM.pdfViewer.classList.add('mode-continuous');
+    }
+
+    const existingWrappers = DOM.pdfViewer?.querySelectorAll('.page-wrapper') || [];
+    // Se todos os wrappers já estão montados, rola suavemente para a página solicitada
+    if (existingWrappers.length === totalPages) {
+      const targetWrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${targetPage}"]`);
+      if (targetWrapper) {
+        targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
+      NotebookView.render();
+      this.updateZoomUI();
+      return;
+    }
+
+    // Cria placeholders dimensionados para todas as páginas
+    const placeholderPromises = [];
+    for (let p = 1; p <= totalPages; p++) {
+      placeholderPromises.push(PdfService.buildPageWrapperPlaceholder(p, true, DOM.bookContainer));
+    }
+
+    const placeholders = await Promise.all(placeholderPromises);
+    if (this.renderToken !== currentToken) return;
+
+    const wrappers = placeholders.map((item) => item.wrapper);
+    if (DOM.pdfViewer) {
+      DOM.pdfViewer.replaceChildren(...wrappers);
+    }
+
+    this.setupContinuousObserver();
+
+    // Rola até a página solicitada
+    const targetWrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${targetPage}"]`);
+    if (targetWrapper) {
+      targetWrapper.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+
+    this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
+    NotebookView.render();
+    this.updateZoomUI();
+  },
+
+  /**
+   * Observador de interseção para carregamento sob demanda de páginas em modo contínuo
+   */
+  setupContinuousObserver() {
+    if (this.continuousObserver) {
+      this.continuousObserver.disconnect();
+    }
+    const container = DOM.bookContainer;
+    this.continuousObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(async (entry) => {
+          const wrapper = entry.target;
+          const pageNum = parseInt(wrapper.dataset.page, 10);
+
+          if (entry.isIntersecting) {
+            if (wrapper.dataset.rendered !== 'true') {
+              const pdfDoc = appState.get('pdfDoc');
+              if (pdfDoc) {
+                try {
+                  const page = await pdfDoc.getPage(pageNum);
+                  const zoomLevel = appState.get('zoomLevel');
+                  const scale = PdfService.getScale(page.getViewport({ scale: 1 }), true, container, zoomLevel);
+                  const viewport = page.getViewport({ scale });
+                  await PdfService.populatePageWrapper(
+                    wrapper,
+                    page,
+                    viewport,
+                    pageNum,
+                    (p, layer) => HighlightService.drawPageHighlights(p, layer),
+                  );
+                } catch (e) {
+                  console.warn('Erro ao carregar página contínua:', pageNum, e);
+                }
+              }
+            }
+
+            if (entry.intersectionRatio >= 0.4 || (entry.boundingClientRect.top >= 0 && entry.boundingClientRect.top < window.innerHeight * 0.5)) {
+              this.onContinuousPageVisible(pageNum);
+            }
+          }
+        });
+      },
+      {
+        root: container,
+        rootMargin: '250px 0px 250px 0px',
+        threshold: [0, 0.25, 0.5, 0.75],
+      },
+    );
+
+    const wrappers = DOM.pdfViewer?.querySelectorAll('.page-wrapper') || [];
+    wrappers.forEach((w) => this.continuousObserver.observe(w));
+  },
+
+  onContinuousPageVisible(pageNum) {
+    const current = appState.get('pageNum');
+    if (current === pageNum) return;
+
+    appState.set({ pageNum });
+    Storage.savePage(appState.get('fileKey'), pageNum);
+    if (DOM.pageInput) DOM.pageInput.value = String(pageNum);
+
+    const totalPages = appState.get('totalPages') || 1;
+    this.updatePageProgressUI(String(pageNum), pageNum, totalPages);
+    NotebookView.render();
+  },
+
+  /**
+   * Atualiza a barra linear de progresso e o indicador de leitura com timer seguro
+   */
+  updatePageProgressUI(indicatorText, currentEffectivePage, totalPages) {
     if (DOM.mobilePageText) {
       DOM.mobilePageText.textContent = `Pág. ${indicatorText}/${totalPages}`;
     }
 
-    // Atualiza a barra linear de progresso de leitura (%)
-    const currentEffectivePage = singlePage ? targetPage : Math.min(totalPages, leftPageNum + 1);
     const progressPercent = totalPages > 0 ? Math.min(100, Math.max(1, Math.round((currentEffectivePage / totalPages) * 100))) : 0;
     const progressBar = DOM.readingProgressBar || document.getElementById('reading-progress-bar');
     if (progressBar) {
       progressBar.style.width = `${progressPercent}%`;
     }
 
-    // Atualiza o indicador de página com porcentagem de leitura e seta indicadora
+    clearTimeout(this.indicatorTimer);
     if (DOM.indicator) {
       DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages} (${progressPercent}%) ▾`;
       DOM.indicator.classList.add('visible');
-      setTimeout(() => {
+      this.indicatorTimer = setTimeout(() => {
         if (appState.get('zoomLevel') <= 1.0 && DOM.indicator) {
           DOM.indicator.classList.remove('visible');
         }
       }, 3000);
     }
+  },
 
-    // Atualiza o caderno de anotações e interface de zoom
-    NotebookView.render();
-    this.updateZoomUI();
-    appState.set({ isRendering: false });
+  /**
+   * Pré-carrega metadados e texto da próxima página no cache de forma ociosa
+   */
+  schedulePrefetch(nextPageNum, totalPages) {
+    clearTimeout(this.prefetchTimer);
+    if (nextPageNum > totalPages) return;
+    this.prefetchTimer = setTimeout(async () => {
+      const pdfDoc = appState.get('pdfDoc');
+      if (!pdfDoc) return;
+      try {
+        const page = await pdfDoc.getPage(nextPageNum);
+        await page.getTextContent();
+      } catch (e) {}
+    }, 350);
+  },
+
+  /**
+   * Alterna entre modo Paginado (Individual/Livro) e Rolagem Contínua Vertical
+   */
+  toggleReadingMode() {
+    const current = appState.get('readingMode') || READING_MODES.PAGED;
+    const next = current === READING_MODES.PAGED ? READING_MODES.CONTINUOUS : READING_MODES.PAGED;
+    appState.set({ readingMode: next });
+    this.updateReadingModeUI();
+    this.updateBodyMode();
+    const currentPage = appState.get('pageNum') || 1;
+    this.renderPages(currentPage);
+    showToast(
+      next === READING_MODES.CONTINUOUS
+        ? 'Modo: Rolagem Contínua'
+        : 'Modo: Páginas Lado a Lado / Individual',
+      next === READING_MODES.CONTINUOUS ? 'scroll' : 'book-open',
+    );
+  },
+
+  updateReadingModeUI() {
+    const mode = appState.get('readingMode') || READING_MODES.PAGED;
+    const isContinuous = mode === READING_MODES.CONTINUOUS;
+    if (DOM.readingModeLabel) {
+      DOM.readingModeLabel.textContent = isContinuous ? 'Contínuo' : 'Páginas';
+    }
+    if (DOM.btnReadingMode) {
+      DOM.btnReadingMode.title = isContinuous
+        ? 'Modo Atual: Rolagem Contínua (Clique para mudar para Páginas)'
+        : 'Modo Atual: Páginas (Clique para mudar para Rolagem Contínua)';
+      const icon = DOM.btnReadingMode.querySelector('i');
+      if (icon) {
+        icon.setAttribute('data-lucide', isContinuous ? 'scroll' : 'book-open');
+        refreshIcons(DOM.btnReadingMode);
+      }
+    }
+  },
+
+  saveCurrentPreferences() {
+    const fileKey = appState.get('fileKey');
+    if (!fileKey) return;
+    Storage.saveDocPreferences(fileKey, {
+      zoomLevel: appState.get('zoomLevel'),
+      zoomMode: appState.get('zoomMode'),
+      readingMode: appState.get('readingMode'),
+    });
   },
 
   /**
@@ -529,10 +782,17 @@ export const App = {
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc || appState.get('isRendering')) return;
 
-    const single = appState.isSinglePageMode();
-    const currentPage = appState.get('pageNum');
     const total = appState.get('totalPages');
+    const currentPage = appState.get('pageNum');
 
+    if (appState.get('readingMode') === READING_MODES.CONTINUOUS) {
+      if (currentPage < total) {
+        this.goToPage(currentPage + 1, false);
+      }
+      return;
+    }
+
+    const single = appState.isSinglePageMode();
     if (currentPage >= total - (single ? 0 : 1)) return;
 
     appState.set({ isRendering: true });
@@ -560,10 +820,15 @@ export const App = {
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc || appState.get('isRendering')) return;
 
-    const single = appState.isSinglePageMode();
     const currentPage = appState.get('pageNum');
     if (currentPage <= 1) return;
 
+    if (appState.get('readingMode') === READING_MODES.CONTINUOUS) {
+      this.goToPage(currentPage - 1, false);
+      return;
+    }
+
+    const single = appState.isSinglePageMode();
     appState.set({ isRendering: true });
     const pages = DOM.pdfViewer?.children || [];
     const target = pages[0];
@@ -603,21 +868,42 @@ export const App = {
     let hasTargetScroll = false;
 
     if (container && newZoom > 1.0 && current > 0) {
-      const rect = container.getBoundingClientRect();
-      const focalX = (focalPoint && typeof focalPoint.clientX === 'number')
-        ? focalPoint.clientX - rect.left
-        : container.clientWidth / 2;
-      const focalY = (focalPoint && typeof focalPoint.clientY === 'number')
-        ? focalPoint.clientY - rect.top
-        : container.clientHeight / 2;
+      const isAtTop = container.scrollTop <= 6;
+      const isAtLeft = container.scrollLeft <= 6;
+      const hasExplicitFocal = Boolean(
+        focalPoint &&
+        typeof focalPoint.clientX === 'number' &&
+        typeof focalPoint.clientY === 'number'
+      );
 
-      const scaleRatio = newZoom / current;
-      targetScrollLeft = Math.max(0, (container.scrollLeft + focalX) * scaleRatio - focalX);
-      targetScrollTop = Math.max(0, (container.scrollTop + focalY) * scaleRatio - focalY);
+      if (!hasExplicitFocal && isAtTop) {
+        // Se o usuário está no topo do documento e aplica zoom via botão/tecla, mantém visão no topo absoluto
+        targetScrollTop = 0;
+      } else {
+        const rect = container.getBoundingClientRect();
+        const focalY = hasExplicitFocal
+          ? focalPoint.clientY - rect.top
+          : container.clientHeight / 2;
+        const scaleRatio = newZoom / current;
+        targetScrollTop = Math.max(0, (container.scrollTop + focalY) * scaleRatio - focalY);
+      }
+
+      if (!hasExplicitFocal && isAtLeft) {
+        targetScrollLeft = 0;
+      } else {
+        const rect = container.getBoundingClientRect();
+        const focalX = hasExplicitFocal
+          ? focalPoint.clientX - rect.left
+          : container.clientWidth / 2;
+        const scaleRatio = newZoom / current;
+        targetScrollLeft = Math.max(0, (container.scrollLeft + focalX) * scaleRatio - focalX);
+      }
+
       hasTargetScroll = true;
     }
 
     appState.set({ zoomLevel: newZoom });
+    this.saveCurrentPreferences();
     this.updateBodyMode();
     this.updateZoomUI();
 
@@ -790,7 +1076,9 @@ export const App = {
 
     const currentPage = appState.get('pageNum') || 1;
     if (trackHistory && currentPage !== page) {
-      appState.set({ pageJumpHistory: currentPage });
+      const stack = [...(appState.get('pageJumpHistoryStack') || [])];
+      stack.push(currentPage);
+      appState.set({ pageJumpHistory: currentPage, pageJumpHistoryStack: stack });
     }
 
     this.closePageJumpDialog();
@@ -804,12 +1092,22 @@ export const App = {
   },
 
   /**
-   * Retorna à página em que o leitor estava antes do último salto
+   * Retorna à página em que o leitor estava antes do último salto (com suporte a histórico em pilha)
    */
   returnToPreviousPage() {
-    const history = appState.get('pageJumpHistory');
-    if (history) {
-      this.goToPage(history, false);
+    const stack = [...(appState.get('pageJumpHistoryStack') || [])];
+    if (stack.length > 0) {
+      const prev = stack.pop();
+      appState.set({
+        pageJumpHistory: stack.length > 0 ? stack[stack.length - 1] : null,
+        pageJumpHistoryStack: stack,
+      });
+      this.goToPage(prev, false);
+    } else {
+      const history = appState.get('pageJumpHistory');
+      if (history) {
+        this.goToPage(history, false);
+      }
     }
   },
 

@@ -106,7 +106,15 @@ export const PdfService = {
     }
 
     const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
-    const renderScale = Math.min(Math.max(dpr, 1), 2.5);
+    let renderScale = Math.min(Math.max(dpr, 1), 2.0);
+
+    // Limite de segurança de memória para o canvas (evita tela branca/crash em iOS/Safari e alto zoom)
+    const MAX_CANVAS_PIXELS = 16 * 1024 * 1024;
+    const estimatedPixels = viewport.width * renderScale * viewport.height * renderScale;
+    if (estimatedPixels > MAX_CANVAS_PIXELS) {
+      const downscaleFactor = Math.sqrt(MAX_CANVAS_PIXELS / estimatedPixels);
+      renderScale = Math.max(1.0, renderScale * downscaleFactor);
+    }
 
     canvas.width = Math.floor(viewport.width * renderScale);
     canvas.height = Math.floor(viewport.height * renderScale);
@@ -152,14 +160,13 @@ export const PdfService = {
   },
 
   /**
-   * Constrói o wrapper DOM completo para uma página PDF (Canvas + Highlights + TextLayer)
+   * Constrói placeholder com dimensões exatas da página para layout rápido e scroll virtualizado
    * @param {number} pageNum
    * @param {boolean} forceSingle
    * @param {HTMLElement} container
-   * @param {Function} [onDrawHighlights]
-   * @returns {Promise<HTMLElement>}
+   * @returns {Promise<{ wrapper: HTMLElement, page: any, viewport: any }>}
    */
-  async buildPageWrapper(pageNum, forceSingle, container, onDrawHighlights) {
+  async buildPageWrapperPlaceholder(pageNum, forceSingle, container) {
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc) throw new Error('Nenhum documento PDF aberto.');
 
@@ -169,10 +176,26 @@ export const PdfService = {
     const viewport = page.getViewport({ scale });
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'page-wrapper';
+    wrapper.className = 'page-wrapper page-placeholder';
     wrapper.style.width = `${viewport.width}px`;
     wrapper.style.height = `${viewport.height}px`;
     wrapper.dataset.page = String(pageNum);
+
+    return { wrapper, page, viewport };
+  },
+
+  /**
+   * Preenche o wrapper DOM com Canvas, TextLayer e Grifos
+   * @param {HTMLElement} wrapper
+   * @param {any} page
+   * @param {any} viewport
+   * @param {number} pageNum
+   * @param {Function} [onDrawHighlights]
+   */
+  async populatePageWrapper(wrapper, page, viewport, pageNum, onDrawHighlights) {
+    if (wrapper.dataset.rendered === 'true') return;
+    wrapper.dataset.rendered = 'true';
+    wrapper.classList.remove('page-placeholder');
 
     // 1. Camada Canvas (Visual do PDF em Alta Resolução / Subpixel Sharpness)
     const canvas = document.createElement('canvas');
@@ -193,7 +216,7 @@ export const PdfService = {
     // Renderiza o Canvas de forma segura e cancelável
     await this.renderCanvas(page, viewport, canvas, pageNum);
 
-    // 3. Renderiza Text Content no TextLayer (com renderTextLayer oficial ou fallback calibrado)
+    // Renderiza Text Content no TextLayer
     const textContent = await page.getTextContent();
     if (window.pdfjsLib && typeof window.pdfjsLib.renderTextLayer === 'function') {
       try {
@@ -210,11 +233,23 @@ export const PdfService = {
       this.renderManualTextLayer(textContent, textLayer, viewport);
     }
 
-    // 4. Desenha Grifos na camada de grifos
+    // Desenha Grifos na camada de grifos
     if (typeof onDrawHighlights === 'function') {
       onDrawHighlights(pageNum, highlightLayer);
     }
+  },
 
+  /**
+   * Constrói o wrapper DOM completo para uma página PDF (Canvas + Highlights + TextLayer)
+   * @param {number} pageNum
+   * @param {boolean} forceSingle
+   * @param {HTMLElement} container
+   * @param {Function} [onDrawHighlights]
+   * @returns {Promise<HTMLElement>}
+   */
+  async buildPageWrapper(pageNum, forceSingle, container, onDrawHighlights) {
+    const { wrapper, page, viewport } = await this.buildPageWrapperPlaceholder(pageNum, forceSingle, container);
+    await this.populatePageWrapper(wrapper, page, viewport, pageNum, onDrawHighlights);
     return wrapper;
   },
 

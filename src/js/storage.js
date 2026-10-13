@@ -548,4 +548,33 @@ export const Storage = {
       fileKeys: fileKeysList,
     };
   },
+
+  /**
+   * Salva preferências específicas do documento (modo de leitura, zoom)
+   * @param {string} fileKey
+   * @param {Object} prefs
+   */
+  saveDocPreferences(fileKey, prefs) {
+    if (!fileKey || !prefs) return;
+    try {
+      localStorage.setItem(`${fileKey}_prefs`, JSON.stringify(prefs));
+    } catch (e) {
+      console.warn('Erro ao salvar preferências do documento:', e);
+    }
+  },
+
+  /**
+   * Carrega preferências específicas do documento
+   * @param {string} fileKey
+   * @returns {Object|null}
+   */
+  loadDocPreferences(fileKey) {
+    if (!fileKey) return null;
+    try {
+      const raw = localStorage.getItem(`${fileKey}_prefs`);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
 };

@@ -210,4 +210,12 @@ describe('Storage Module', () => {
     expect(Storage.loadPage(resolvedKey)).toBe(42);
     expect(Storage.loadManualNotes(resolvedKey)[42]).toBe('Anotação antiga');
   });
+
+  it('deve salvar e carregar preferências do documento (zoom, modo de leitura)', () => {
+    const prefs = { zoomLevel: 1.25, zoomMode: 'fit-page', readingMode: 'continuous' };
+    Storage.saveDocPreferences(sampleFileKey, prefs);
+
+    const loaded = Storage.loadDocPreferences(sampleFileKey);
+    expect(loaded).toEqual(prefs);
+  });
 });
