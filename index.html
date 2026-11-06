@@ -1,442 +1,503 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <meta name="description" content="DiveReader Pro - O Leitor Definitivo para Estudos e Fichamentos Acadêmicos em PDF" />
-    <title>DiveReader Pro | O Leitor Definitivo para Estudos</title>
 
-    <!-- Favicon Temático -->
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>"
-    />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="description"
+    content="DiveReader Pro - O Leitor Definitivo para Estudos e Fichamentos Acadêmicos em PDF" />
+  <title>DiveReader Pro | O Leitor Definitivo para Estudos</title>
 
-    <!-- Motor Exclusivo: PDF.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- Favicon Temático -->
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>" />
 
-    <!-- Biblioteca de Ícones (Lucide) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Motor Exclusivo: PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
-    <!-- Folhas de Estilo Modulares -->
-    <link rel="stylesheet" href="./src/css/main.css" />
-  </head>
+  <!-- Biblioteca de Ícones (Lucide) -->
+  <!-- Versão fixada: "@latest" pode quebrar ícones renomeados sem aviso -->
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
-  <body class="theme-light">
-    <div class="app-container">
-      <!-- WIDGET POMODORO -->
-      <div id="pomodoro-container">
-        <!-- Relógio Circular (Cápsula) -->
-        <div
-          id="pomodoro-widget"
-          title="Clique para Iniciar/Pausar o ciclo Pomodoro"
-          role="button"
-          tabindex="0"
-        >
-          <div class="clock-face" id="clock-face">
-            <div class="clock-hand" id="clock-hand"></div>
-            <div class="clock-center"></div>
-          </div>
-          <span id="pomodoro-text">20:00</span>
+  <!-- Folhas de Estilo Modulares -->
+  <link rel="stylesheet" href="./src/css/main.css" />
+</head>
+
+<body class="theme-light">
+  <div class="app-container">
+    <!-- WIDGET POMODORO -->
+    <div id="pomodoro-container">
+      <!-- Relógio Circular (Cápsula) -->
+      <div id="pomodoro-widget" title="Clique para Iniciar/Pausar o ciclo Pomodoro" role="button" tabindex="0">
+        <div class="clock-face" id="clock-face">
+          <div class="clock-hand" id="clock-hand"></div>
+          <div class="clock-center"></div>
         </div>
-
-        <!-- Mini Controles Pomodoro -->
-        <div id="pomodoro-controls">
-          <button id="btn-pomodoro-sub5" title="Remover 5 minutos">-5</button>
-          <button id="btn-pomodoro-reset" title="Zerar Pomodoro">
-            <i data-lucide="rotate-ccw" style="width: 12px; height: 12px"></i>
-          </button>
-          <button id="btn-pomodoro-add5" title="Adicionar 5 minutos">+5</button>
-        </div>
+        <span id="pomodoro-text">20:00</span>
       </div>
 
-      <!-- MODAL DE ALERTA POMODORO -->
-      <div id="pomodoro-alert" class="hidden" role="alertdialog" aria-modal="true">
-        <div class="alert-content">
-          <i
-            data-lucide="brain-circuit"
-            style="width: 42px; height: 42px; color: var(--primary); margin-bottom: 12px"
-          ></i>
-          <h3 style="margin: 0 0 8px 0; color: var(--text-color)">Fim do Ciclo!</h3>
-          <p style="margin: 0 0 20px 0; font-size: 13.5px; color: var(--text-muted)">
-            Excelente foco! Hora de descansar a mente, alongar o corpo e beber água.
-          </p>
-          <div class="alert-buttons">
-            <button id="btn-alert-break" class="btn-primary">
-              <i data-lucide="coffee" style="width: 14px; height: 14px"></i> Pausa (5m)
-            </button>
-            <button id="btn-alert-snooze">
-              <i data-lucide="alarm-clock-plus" style="width: 14px; height: 14px"></i> Soneca (+5m)
-            </button>
-            <button
-              id="btn-alert-reset"
-              style="background: transparent; border: none; font-size: 12px; color: var(--text-muted)"
-            >
-              Zerar
-            </button>
-          </div>
-        </div>
+      <!-- Mini Controles Pomodoro -->
+      <div id="pomodoro-controls">
+        <button id="btn-pomodoro-sub5" title="Remover 5 minutos">-5</button>
+        <button id="btn-pomodoro-reset" title="Zerar Pomodoro">
+          <i data-lucide="rotate-ccw" style="width: 12px; height: 12px"></i>
+        </button>
+        <button id="btn-pomodoro-add5" title="Adicionar 5 minutos">+5</button>
       </div>
-
-      <!-- TOOLTIP FLUTUANTE DE GRIFO RÁPIDO COM PALETA DE CORES -->
-      <div id="quick-highlight-tooltip">
-        <div class="color-swatches">
-          <button class="color-swatch-btn color-yellow" data-color="yellow" title="Conceito / Ideia Principal (Amarelo)"></button>
-          <button class="color-swatch-btn color-green" data-color="green" title="Fato / Exemplo (Verde)"></button>
-          <button class="color-swatch-btn color-pink" data-color="pink" title="Dúvida / Refutação (Rosa)"></button>
-          <button class="color-swatch-btn color-blue" data-color="blue" title="Citação / Fonte (Azul)"></button>
-          <button class="color-swatch-btn color-purple" data-color="purple" title="Metodologia / Tese (Roxo)"></button>
-        </div>
-      </div>
-
-      <!-- OVERLAYS, INDICADORES & TOASTS -->
-      <div id="drag-overlay">
-        <i data-lucide="file-up" style="width: 44px; height: 44px"></i>
-        <span>Solte o documento PDF para abrir</span>
-      </div>
-
-      <div id="toast-container"></div>
-
-      <div id="loading-msg">
-        <i data-lucide="loader-2" class="lucide-spin" style="width: 18px; height: 18px"></i>
-        <span>Processando documento...</span>
-      </div>
-
-      <div id="discreet-indicator" role="button" tabindex="0" title="Toque para navegar pelas páginas">Pág. - / -</div>
-
-      <!-- ESTADO VAZIO (EMPTY STATE) -->
-      <div id="empty-state">
-        <div class="icon-wrapper">
-          <i data-lucide="book-open-check" stroke-width="1.75" style="width: 38px; height: 38px"></i>
-        </div>
-        <h2>DiveReader Pro 2.0</h2>
-        <p>
-          Ambiente de leitura profunda e fichamento acadêmico em PDF. Abra ou arraste seu documento para começar seus estudos.
-        </p>
-        <label class="file-upload-label" style="margin-top: 8px">
-          <i data-lucide="folder-open" style="width: 18px; height: 18px"></i>
-          <span>Escolher Arquivo PDF</span>
-          <input type="file" id="empty-file-input" accept=".pdf" onchange="document.getElementById('file-input').files = this.files; document.getElementById('file-input').dispatchEvent(new Event('change'))" />
-        </label>
-      </div>
-
-      <!-- BARRA DE FOCO FLUTUANTE -->
-      <div id="floating-focus-bar">
-        <button onclick="document.getElementById('btn-toggle-sidebar').click()" title="Meu Caderno">
-          <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
-        </button>
-        <div class="divider-v"></div>
-        <button onclick="document.getElementById('btn-highlight').click()" title="Grifar Seleção">
-          <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
-        </button>
-        <div class="divider-v"></div>
-        <button onclick="document.getElementById('btn-toggle-focus').click()" title="Sair do Modo Foco">
-          <i data-lucide="maximize" style="width: 16px; height: 16px"></i>
-        </button>
-      </div>
-
-      <!-- MENU SUPERIOR (TOP BAR) -->
-      <header class="controls" id="top-menu">
-        <div class="controls-group">
-          <label class="file-upload-label" title="Abrir arquivo PDF">
-            <i data-lucide="folder-open" style="width: 16px; height: 16px"></i>
-            <span class="btn-text">Abrir PDF</span>
-            <input type="file" id="file-input" accept=".pdf" />
-          </label>
-          <span id="file-title">Nenhum arquivo</span>
-
-          <div class="divider-v"></div>
-
-          <button id="btn-export-backup" title="Exportar Backup dos Estudos (.json)" class="btn-ghost btn-icon">
-            <i data-lucide="download-cloud" style="width: 16px; height: 16px"></i>
-          </button>
-
-          <label class="file-upload-label btn-ghost btn-icon" style="padding: 0; min-height: 34px; width: 34px; justify-content: center; border: 1px solid transparent;" title="Importar Backup (.json)">
-            <i data-lucide="upload-cloud" style="width: 16px; height: 16px"></i>
-            <input type="file" id="import-backup-input" accept=".json" style="display: none" />
-          </label>
-        </div>
-
-        <div class="controls-group">
-          <button id="btn-highlight" title="Grifar texto selecionado" disabled>
-            <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
-            <span class="btn-text">Grifar</span>
-          </button>
-
-          <select id="theme-selector" title="Tema de Visualização" disabled>
-            <option value="theme-light">☀️ Claro</option>
-            <option value="theme-sepia">📖 Sépia</option>
-            <option value="theme-dark">🌙 Noturno</option>
-          </select>
-
-          <div style="display: flex; gap: 4px; align-items: center;">
-            <button id="btn-zoom-out" class="btn-icon" title="Afastar (Zoom Out)" disabled>
-              <i data-lucide="zoom-out" style="width: 16px; height: 16px"></i>
-            </button>
-            <button id="btn-zoom-preset" class="btn-ghost" title="Alternar Ajustar à Largura / Ajustar à Página" disabled style="padding: 2px 6px; font-size: 11px; font-weight: 600; min-height: 28px;">
-              <span id="zoom-preset-label">100%</span>
-            </button>
-            <button id="btn-zoom-in" class="btn-icon" title="Aproximar (Zoom In)" disabled>
-              <i data-lucide="zoom-in" style="width: 16px; height: 16px"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="controls-group">
-          <div class="page-navigation">
-            <button id="btn-prev" class="btn-icon" title="Página Anterior (Seta Esquerda)" disabled>
-              <i data-lucide="chevron-left" style="width: 16px; height: 16px"></i>
-            </button>
-            <span>
-              <input type="number" id="page-input" value="1" min="1" disabled />
-              / <span id="total-pages">-</span>
-            </span>
-            <button id="btn-next" class="btn-icon" title="Próxima Página (Seta Direita)" disabled>
-              <i data-lucide="chevron-right" style="width: 16px; height: 16px"></i>
-            </button>
-          </div>
-
-          <button id="btn-toggle-sidebar" class="btn-primary" title="Meu Caderno de Estudos (C)" disabled>
-            <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
-            <span class="btn-text">Caderno</span>
-          </button>
-
-          <button id="btn-toggle-focus" class="btn-ghost btn-icon" title="Modo Foco (F)" disabled>
-            <i data-lucide="minimize" style="width: 16px; height: 16px"></i>
-          </button>
-        </div>
-      </header>
-
-      <!-- ESPAÇO DE LEITURA & SIDEBAR -->
-      <main class="main-workspace">
-        <div id="reading-progress-bar-container">
-          <div id="reading-progress-bar" style="width: 0%;"></div>
-        </div>
-        <div id="book-container" style="display: none">
-          <div id="pdf-viewer">
-            <!-- Páginas PDF renderizadas dinamicamente -->
-          </div>
-        </div>
-
-        <!-- SIDEBAR: MEU CADERNO DE ESTUDOS -->
-        <aside id="sidebar" class="hidden" style="display: none" aria-label="Caderno de Estudos">
-          <div class="sidebar-header">
-            <div class="header-title">
-              <i data-lucide="book-marked" style="width: 18px; height: 18px; color: var(--primary)"></i>
-              <span>Meu Caderno de Estudos</span>
-            </div>
-            <button id="btn-close-sidebar" class="btn-ghost btn-icon" title="Fechar Caderno">
-              <i data-lucide="x" style="width: 18px; height: 18px"></i>
-            </button>
-          </div>
-
-          <!-- Barra de Busca e Filtro Semântico por Cores -->
-          <div class="sidebar-search-bar">
-            <div class="search-input-wrapper">
-              <i data-lucide="search" style="width: 14px; height: 14px; opacity: 0.6;"></i>
-              <input type="text" id="notebook-search-input" placeholder="Buscar nos grifos e anotações..." autocomplete="off" />
-              <button id="btn-clear-search" class="btn-clear-search hidden" title="Limpar busca">
-                <i data-lucide="x" style="width: 12px; height: 12px;"></i>
-              </button>
-            </div>
-            <div class="color-filter-chips" id="color-filter-chips">
-              <button class="color-chip active" data-color="all" title="Todas as cores">Todos</button>
-              <button class="color-chip color-yellow" data-color="yellow" title="🟡 Conceito"></button>
-              <button class="color-chip color-green" data-color="green" title="🟢 Exemplo"></button>
-              <button class="color-chip color-pink" data-color="pink" title="🔴 Dúvida"></button>
-              <button class="color-chip color-blue" data-color="blue" title="🔵 Citação"></button>
-              <button class="color-chip color-purple" data-color="purple" title="🟣 Tese"></button>
-            </div>
-          </div>
-
-          <div class="sidebar-tabs" role="tablist">
-            <button id="tab-btn-page" class="active" role="tab" aria-selected="true">
-              Nesta Página
-            </button>
-            <button id="tab-btn-global" role="tab" aria-selected="false">
-              Fichamento
-            </button>
-            <button id="tab-btn-toc" role="tab" aria-selected="false">
-              Sumário
-            </button>
-          </div>
-
-          <!-- Aba 1: Nesta Página (Grifos estruturados + Síntese) -->
-          <div id="tab-page" class="tab-content active" role="tabpanel">
-            <div class="notebook-page-content">
-              <!-- Seção de Grifos / Citações -->
-              <div class="notebook-section">
-                <div class="section-header">
-                  <span>📌 Grifos & Citações</span>
-                  <span class="badge" id="page-highlights-count">0</span>
-                </div>
-                <div class="highlights-list" id="page-highlights-list">
-                  <!-- Cards de grifos inseridos via JS -->
-                </div>
-              </div>
-
-              <!-- Seção de Síntese Manual -->
-              <div class="notebook-section" style="flex-grow: 1;">
-                <div class="section-header">
-                  <span>✍️ Síntese / Anotações da Página</span>
-                </div>
-                <div class="synthesis-editor-container">
-                  <textarea
-                    id="notepad"
-                    placeholder="Escreva suas sínteses, reflexões e anotações sobre esta página..."
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Aba 2: Fichamento Completo (Exportação & Download) -->
-          <div id="tab-global" class="tab-content" role="tabpanel">
-            <div id="global-view">Nenhuma anotação ou grifo feito ainda.</div>
-            <div class="action-buttons">
-              <button id="btn-copy-global" class="btn-ghost" title="Copiar Fichamento">
-                <i data-lucide="copy" style="width: 16px; height: 16px"></i>
-              </button>
-              <button id="btn-download-notes" class="btn-primary" title="Baixar Fichamento (.md)">
-                <i data-lucide="download" style="width: 16px; height: 16px"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Aba 3: Sumário Estruturado do Livro (TOC) -->
-          <div id="tab-toc" class="tab-content" role="tabpanel">
-            <div class="toc-container" id="toc-list">
-              <div class="toc-empty">
-                <i data-lucide="bookmark" style="width: 28px; height: 28px; opacity: 0.5;"></i>
-                <span>Nenhum sumário encontrado neste documento.</span>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </main>
-
-      <!-- HUD FLUTUANTE DE ZOOM (DESKTOP & MOBILE) -->
-      <div id="zoom-hud" class="zoom-hud" aria-label="Controle de Zoom">
-        <button id="hud-btn-zoom-out" class="hud-btn" title="Afastar (−)">
-          <i data-lucide="minus"></i>
-        </button>
-        <button id="hud-btn-preset" class="hud-btn hud-preset-btn" title="Alternar Modo de Zoom (Largura / Página)">
-          <span id="hud-zoom-text">100%</span>
-        </button>
-        <button id="hud-btn-zoom-in" class="hud-btn" title="Aproximar (+)">
-          <i data-lucide="plus"></i>
-        </button>
-        <button id="hud-btn-fit" class="hud-btn" title="Alternar Ajustar à Largura / Ajustar à Página Inteira">
-          <i data-lucide="maximize-2"></i>
-        </button>
-      </div>
-
-      <!-- BARRA DE NAVEGAÇÃO INFERIOR PARA MOBILE -->
-      <nav id="mobile-nav-bar" aria-label="Navegação Mobile">
-        <button id="mobile-btn-prev" title="Página Anterior" disabled>
-          <i data-lucide="chevron-left"></i>
-          <span>Anterior</span>
-        </button>
-        <button id="mobile-btn-page" class="mobile-nav-page-btn" title="Ir para Página / Navegar" disabled>
-          <i data-lucide="compass"></i>
-          <span id="mobile-page-text">Pág. -/-</span>
-        </button>
-        <button id="mobile-btn-highlight" title="Grifar Seleção" disabled>
-          <i data-lucide="highlighter"></i>
-          <span>Grifar</span>
-        </button>
-        <button id="mobile-btn-sidebar" title="Abrir Caderno" disabled>
-          <i data-lucide="pen-line"></i>
-          <span>Caderno</span>
-        </button>
-        <button id="mobile-btn-focus" title="Modo Foco (Tela Cheia)" disabled>
-          <i data-lucide="maximize-2"></i>
-          <span>Foco</span>
-        </button>
-        <button id="mobile-btn-next" title="Próxima Página" disabled>
-          <i data-lucide="chevron-right"></i>
-          <span>Próxima</span>
-        </button>
-      </nav>
-
-      <!-- GAVETA / DIÁLOGO DE NAVEGAÇÃO DIRETA DE PÁGINAS (ESTILO KINDLE) -->
-      <dialog id="page-jump-dialog" class="page-jump-dialog" closedby="any" aria-modal="true">
-        <div class="page-jump-content">
-          <div class="page-jump-header">
-            <div class="pj-title-group">
-              <i data-lucide="compass" style="width: 18px; height: 18px; color: var(--primary)"></i>
-              <span>Navegação do Documento</span>
-            </div>
-            <button id="btn-close-page-jump" class="btn-ghost btn-icon" title="Fechar">
-              <i data-lucide="x" style="width: 18px; height: 18px"></i>
-            </button>
-          </div>
-
-          <div class="page-jump-body">
-            <!-- Indicador Grande de Página & Progresso -->
-            <div class="pj-progress-display">
-              <div class="pj-page-badge">
-                Página <b id="pj-current-num">1</b> de <span id="pj-total-num">1</span>
-              </div>
-              <span class="pj-percent-badge" id="pj-percent">1%</span>
-            </div>
-
-            <!-- Scrubber Slider tipo Kindle -->
-            <div class="pj-slider-container">
-              <input type="range" id="pj-slider" min="1" max="1" value="1" step="1" aria-label="Deslizar para mudar de página" />
-            </div>
-
-            <!-- Campo Numérico Direto -->
-            <form id="pj-form" class="pj-input-row" onsubmit="event.preventDefault()">
-              <label for="pj-number-input">Ir diretamente para:</label>
-              <div class="pj-input-group">
-                <input
-                  type="number"
-                  id="pj-number-input"
-                  min="1"
-                  max="1"
-                  placeholder="Nº da página"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                />
-                <button type="submit" id="btn-pj-go" class="btn-primary">
-                  <i data-lucide="arrow-right" style="width: 14px; height: 14px"></i>
-                  <span>Ir</span>
-                </button>
-              </div>
-            </form>
-
-            <!-- Atalhos Rápidos & Histórico de Retorno -->
-            <div class="pj-shortcuts">
-              <button type="button" id="btn-pj-first" class="pj-chip" title="Ir para a primeira página">
-                <i data-lucide="chevrons-left" style="width: 14px; height: 14px"></i>
-                <span>Início (1)</span>
-              </button>
-              <button type="button" id="btn-pj-return" class="pj-chip pj-chip-return hidden" title="Retornar à página anterior ao salto">
-                <i data-lucide="undo-2" style="width: 14px; height: 14px"></i>
-                <span id="pj-return-text">Voltar pág. -</span>
-              </button>
-              <button type="button" id="btn-pj-last" class="pj-chip" title="Ir para a última página">
-                <i data-lucide="chevrons-right" style="width: 14px; height: 14px"></i>
-                <span id="pj-last-text">Fim</span>
-              </button>
-              <button type="button" id="btn-pj-toc" class="pj-chip" title="Abrir Sumário do Documento">
-                <i data-lucide="list" style="width: 14px; height: 14px"></i>
-                <span>Sumário</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </dialog>
-
-      <!-- DIÁLOGO DE CONFIRMAÇÃO MODAL -->
-      <dialog id="confirm-dialog" closedby="any" aria-modal="true"></dialog>
     </div>
 
-    <!-- Ponto de Entrada da Aplicação (Módulos ES) -->
-    <script type="module" src="./src/js/app.js"></script>
-  </body>
+    <!-- MODAL DE ALERTA POMODORO -->
+    <div id="pomodoro-alert" class="hidden" role="alertdialog" aria-modal="true">
+      <div class="alert-content">
+        <i data-lucide="brain-circuit"
+          style="width: 42px; height: 42px; color: var(--primary); margin-bottom: 12px"></i>
+        <h3 style="margin: 0 0 8px 0; color: var(--text-color)">Fim do Ciclo!</h3>
+        <p style="margin: 0 0 20px 0; font-size: 13.5px; color: var(--text-muted)">
+          Excelente foco! Hora de descansar a mente, alongar o corpo e beber água.
+        </p>
+        <div class="alert-buttons">
+          <button id="btn-alert-break" class="btn-primary">
+            <i data-lucide="coffee" style="width: 14px; height: 14px"></i> Pausa (5m)
+          </button>
+          <button id="btn-alert-snooze">
+            <i data-lucide="alarm-clock-plus" style="width: 14px; height: 14px"></i> Soneca (+5m)
+          </button>
+          <button id="btn-alert-reset"
+            style="background: transparent; border: none; font-size: 12px; color: var(--text-muted)">
+            Zerar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLTIP FLUTUANTE DE GRIFO RÁPIDO COM PALETA DE CORES -->
+    <div id="quick-highlight-tooltip">
+      <div class="color-swatches">
+        <button class="color-swatch-btn color-yellow" data-color="yellow"
+          title="Conceito / Ideia Principal (Amarelo)"></button>
+        <button class="color-swatch-btn color-green" data-color="green" title="Fato / Exemplo (Verde)"></button>
+        <button class="color-swatch-btn color-pink" data-color="pink" title="Dúvida / Refutação (Rosa)"></button>
+        <button class="color-swatch-btn color-blue" data-color="blue" title="Citação / Fonte (Azul)"></button>
+        <button class="color-swatch-btn color-purple" data-color="purple" title="Metodologia / Tese (Roxo)"></button>
+      </div>
+    </div>
+
+    <!-- OVERLAYS, INDICADORES & TOASTS -->
+    <div id="drag-overlay">
+      <i data-lucide="file-up" style="width: 44px; height: 44px"></i>
+      <span>Solte o documento PDF para abrir</span>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="loading-msg">
+      <i data-lucide="loader-2" class="lucide-spin" style="width: 18px; height: 18px"></i>
+      <span id="loading-text">Processando documento...</span>
+    </div>
+
+    <div id="discreet-indicator" role="button" tabindex="0" title="Ir para página (G)" aria-live="polite">Pág. - / -</div>
+
+    <!-- ESTADO VAZIO (EMPTY STATE) -->
+    <div id="empty-state">
+      <div class="icon-wrapper">
+        <i data-lucide="book-open-check" stroke-width="1.75" style="width: 38px; height: 38px"></i>
+      </div>
+      <h2>DiveReader Pro 2.0</h2>
+      <p>
+        Ambiente de leitura profunda e fichamento acadêmico em PDF. Abra ou arraste seu documento para começar seus
+        estudos.
+      </p>
+      <button type="button" id="btn-empty-open" class="btn-primary empty-cta">
+        <i data-lucide="folder-open" style="width: 18px; height: 18px"></i>
+        <span>Escolher Arquivo PDF</span>
+      </button>
+      <span class="empty-drop-hint">ou arraste um PDF para qualquer lugar da janela</span>
+
+      <ul class="empty-features" aria-label="Recursos">
+        <li><i data-lucide="highlighter"></i><span>Grifos coloridos por categoria</span></li>
+        <li><i data-lucide="notebook-pen"></i><span>Síntese por página e fichamento</span></li>
+        <li><i data-lucide="file-down"></i><span>Exportação em Markdown e backup</span></li>
+      </ul>
+
+      <button type="button" id="btn-empty-shortcuts" class="btn-ghost empty-shortcuts-link">
+        <i data-lucide="keyboard" style="width: 14px; height: 14px"></i>
+        <span>Ver atalhos de teclado <kbd>?</kbd></span>
+      </button>
+    </div>
+
+    <!-- BARRA DE FOCO FLUTUANTE -->
+    <div id="floating-focus-bar">
+      <button id="btn-focus-sidebar" title="Meu Caderno">
+        <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
+      </button>
+      <div class="divider-v"></div>
+      <button id="btn-focus-highlight" title="Grifar Seleção">
+        <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
+      </button>
+      <div class="divider-v"></div>
+      <button id="btn-focus-toggle" title="Sair do Modo Foco">
+        <i data-lucide="maximize" style="width: 16px; height: 16px"></i>
+      </button>
+    </div>
+
+    <!-- MENU SUPERIOR (TOP BAR) -->
+    <header class="controls" id="top-menu">
+      <div class="controls-group">
+        <button type="button" id="btn-open-file" class="file-upload-label" title="Abrir arquivo PDF">
+          <i data-lucide="folder-open" style="width: 16px; height: 16px"></i>
+          <span class="btn-text">Abrir PDF</span>
+        </button>
+        <input type="file" id="file-input" accept=".pdf,application/pdf" hidden />
+        <span id="file-title">Nenhum arquivo</span>
+
+        <div class="divider-v"></div>
+
+        <button id="btn-export-backup" title="Exportar Backup dos Estudos (.json)" class="btn-ghost btn-icon">
+          <i data-lucide="download-cloud" style="width: 16px; height: 16px"></i>
+        </button>
+
+        <button type="button" id="btn-import-backup" class="btn-ghost btn-icon" title="Importar Backup (.json)">
+          <i data-lucide="upload-cloud" style="width: 16px; height: 16px"></i>
+        </button>
+        <input type="file" id="import-backup-input" accept=".json,application/json" hidden />
+      </div>
+
+      <div class="controls-group">
+        <button id="btn-highlight" title="Grifar texto selecionado" disabled>
+          <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
+          <span class="btn-text">Grifar</span>
+        </button>
+
+        <button id="btn-theme-cycle" class="btn-ghost btn-icon show-on-mobile" title="Alternar tema (Claro / Sépia / Noturno)"
+          aria-label="Alternar tema">
+          <i data-lucide="sun-moon" style="width: 16px; height: 16px"></i>
+        </button>
+
+        <select id="theme-selector" title="Tema de Visualização" aria-label="Tema de Visualização">
+          <option value="theme-light">☀️ Claro</option>
+          <option value="theme-sepia">📖 Sépia</option>
+          <option value="theme-dark">🌙 Noturno</option>
+        </select>
+
+        <button id="btn-reading-mode" class="btn-ghost" title="Alternar Modo de Leitura (Páginas / Rolagem Contínua)" disabled
+          style="padding: 2px 8px; font-size: 11px; font-weight: 600; min-height: 28px; display: inline-flex; align-items: center; gap: 4px;">
+          <i data-lucide="book-open" style="width: 14px; height: 14px"></i>
+          <span id="reading-mode-label">Páginas</span>
+        </button>
+
+        <div style="display: flex; gap: 4px; align-items: center;">
+          <button id="btn-zoom-out" class="btn-icon" title="Afastar (Zoom Out)" disabled>
+            <i data-lucide="zoom-out" style="width: 16px; height: 16px"></i>
+          </button>
+          <button id="btn-zoom-preset" class="btn-ghost" title="Alternar Ajustar à Largura / Ajustar à Página" disabled
+            style="padding: 2px 6px; font-size: 11px; font-weight: 600; min-height: 28px;">
+            <span id="zoom-preset-label">100%</span>
+          </button>
+          <button id="btn-zoom-in" class="btn-icon" title="Aproximar (Zoom In)" disabled>
+            <i data-lucide="zoom-in" style="width: 16px; height: 16px"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="controls-group">
+        <div class="page-navigation">
+          <button id="btn-prev" class="btn-icon" title="Página Anterior (Seta Esquerda)" disabled>
+            <i data-lucide="chevron-left" style="width: 16px; height: 16px"></i>
+          </button>
+          <span>
+            <input type="number" id="page-input" value="1" min="1" disabled aria-label="Página atual" />
+            / <span id="total-pages">-</span>
+          </span>
+          <button id="btn-next" class="btn-icon" title="Próxima Página (Seta Direita)" disabled>
+            <i data-lucide="chevron-right" style="width: 16px; height: 16px"></i>
+          </button>
+        </div>
+
+        <button id="btn-toggle-sidebar" class="btn-primary" title="Meu Caderno de Estudos (C)" aria-controls="sidebar"
+          aria-expanded="false" disabled>
+          <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
+          <span class="btn-text">Caderno</span>
+        </button>
+
+        <button id="btn-toggle-focus" class="btn-ghost btn-icon" title="Modo Foco (F)" aria-pressed="false" disabled>
+          <i data-lucide="minimize" style="width: 16px; height: 16px"></i>
+        </button>
+
+        <button id="btn-shortcuts" class="btn-ghost btn-icon hide-on-mobile" title="Atalhos de Teclado (?)">
+          <i data-lucide="keyboard" style="width: 16px; height: 16px"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ESPAÇO DE LEITURA & SIDEBAR -->
+    <main class="main-workspace">
+      <div id="reading-progress-bar-container">
+        <div id="reading-progress-bar" style="width: 0%;"></div>
+      </div>
+      <div id="book-container" tabindex="-1" style="display: none">
+        <div id="pdf-viewer">
+          <!-- Páginas PDF renderizadas dinamicamente -->
+        </div>
+      </div>
+
+      <!-- SIDEBAR: MEU CADERNO DE ESTUDOS -->
+      <aside id="sidebar" class="hidden" style="display: none" aria-label="Caderno de Estudos">
+        <div class="sidebar-header">
+          <div class="header-title">
+            <i data-lucide="book-marked" style="width: 18px; height: 18px; color: var(--primary)"></i>
+            <span>Meu Caderno de Estudos</span>
+          </div>
+          <button id="btn-close-sidebar" class="btn-ghost btn-icon" title="Fechar Caderno">
+            <i data-lucide="x" style="width: 18px; height: 18px"></i>
+          </button>
+        </div>
+
+        <!-- Barra de Busca e Filtro Semântico por Cores -->
+        <div class="sidebar-search-bar">
+          <div class="search-input-wrapper">
+            <i data-lucide="search" style="width: 14px; height: 14px; opacity: 0.6;"></i>
+            <input type="search" id="notebook-search-input" placeholder="Buscar nos grifos e anotações..."
+              autocomplete="off" aria-label="Buscar nos grifos e anotações" />
+            <button id="btn-clear-search" class="btn-clear-search hidden" title="Limpar busca">
+              <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+            </button>
+          </div>
+          <div class="color-filter-chips" id="color-filter-chips">
+            <button class="color-chip active" data-color="all" title="Todas as cores">Todos</button>
+            <button class="color-chip color-yellow" data-color="yellow" title="🟡 Conceito"></button>
+            <button class="color-chip color-green" data-color="green" title="🟢 Exemplo"></button>
+            <button class="color-chip color-pink" data-color="pink" title="🔴 Dúvida"></button>
+            <button class="color-chip color-blue" data-color="blue" title="🔵 Citação"></button>
+            <button class="color-chip color-purple" data-color="purple" title="🟣 Tese"></button>
+          </div>
+        </div>
+
+        <div class="sidebar-tabs" role="tablist">
+          <button id="tab-btn-page" class="active" role="tab" aria-selected="true" aria-controls="tab-page">
+            Nesta Página
+          </button>
+          <button id="tab-btn-global" role="tab" aria-selected="false" aria-controls="tab-global">
+            Fichamento
+          </button>
+          <button id="tab-btn-toc" role="tab" aria-selected="false" aria-controls="tab-toc">
+            Sumário
+          </button>
+        </div>
+
+        <!-- Aba 1: Nesta Página (Grifos estruturados + Síntese) -->
+        <div id="tab-page" class="tab-content active" role="tabpanel">
+          <div class="notebook-page-content">
+            <!-- Seção de Grifos / Citações -->
+            <div class="notebook-section">
+              <div class="section-header">
+                <span>📌 Grifos & Citações</span>
+                <span class="badge" id="page-highlights-count">0</span>
+              </div>
+              <div class="highlights-list" id="page-highlights-list">
+                <!-- Cards de grifos inseridos via JS -->
+              </div>
+            </div>
+
+            <!-- Seção de Síntese Manual -->
+            <div class="notebook-section" style="flex-grow: 1;">
+              <div class="section-header">
+                <span>✍️ Síntese / Anotações da Página</span>
+              </div>
+              <div class="synthesis-editor-container">
+                <textarea id="notepad"
+                  placeholder="Escreva suas sínteses, reflexões e anotações sobre esta página..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba 2: Fichamento Completo (Exportação & Download) -->
+        <div id="tab-global" class="tab-content" role="tabpanel">
+          <div id="global-view">Nenhuma anotação ou grifo feito ainda.</div>
+          <div class="action-buttons">
+            <button id="btn-copy-global" class="btn-ghost" title="Copiar Fichamento">
+              <i data-lucide="copy" style="width: 16px; height: 16px"></i>
+            </button>
+            <button id="btn-download-notes" class="btn-primary" title="Baixar Fichamento (.md)">
+              <i data-lucide="download" style="width: 16px; height: 16px"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Aba 3: Sumário Estruturado do Livro (TOC) -->
+        <div id="tab-toc" class="tab-content" role="tabpanel">
+          <div class="toc-container" id="toc-list">
+            <div class="toc-empty">
+              <i data-lucide="bookmark" style="width: 28px; height: 28px; opacity: 0.5;"></i>
+              <span>Nenhum sumário encontrado neste documento.</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- HUD FLUTUANTE DE ZOOM (DESKTOP & MOBILE) -->
+    <div id="zoom-hud" class="zoom-hud hidden" aria-label="Controle de Zoom">
+      <button id="hud-btn-zoom-out" class="hud-btn" title="Afastar (−)">
+        <i data-lucide="minus"></i>
+      </button>
+      <button id="hud-btn-preset" class="hud-btn hud-preset-btn" title="Alternar Modo de Zoom (Largura / Página)">
+        <span id="hud-zoom-text">100%</span>
+      </button>
+      <button id="hud-btn-zoom-in" class="hud-btn" title="Aproximar (+)">
+        <i data-lucide="plus"></i>
+      </button>
+      <button id="hud-btn-fit" class="hud-btn" title="Alternar Modo Foco / Tela Cheia (F)">
+        <i data-lucide="maximize-2"></i>
+      </button>
+    </div>
+
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR PARA MOBILE -->
+    <nav id="mobile-nav-bar" aria-label="Navegação Mobile">
+      <button id="mobile-btn-prev" title="Página Anterior" disabled>
+        <i data-lucide="chevron-left"></i>
+        <span>Anterior</span>
+      </button>
+      <button id="mobile-btn-page" class="mobile-nav-page-btn" title="Ir para Página / Navegar" disabled>
+        <i data-lucide="compass"></i>
+        <span id="mobile-page-text">Pág. -/-</span>
+      </button>
+      <button id="mobile-btn-highlight" title="Grifar Seleção" disabled>
+        <i data-lucide="highlighter"></i>
+        <span>Grifar</span>
+      </button>
+      <button id="mobile-btn-sidebar" title="Abrir Caderno" disabled>
+        <i data-lucide="pen-line"></i>
+        <span>Caderno</span>
+      </button>
+      <button id="mobile-btn-focus" title="Modo Foco (Tela Cheia)" disabled>
+        <i data-lucide="maximize-2"></i>
+        <span>Foco</span>
+      </button>
+      <button id="mobile-btn-next" title="Próxima Página" disabled>
+        <i data-lucide="chevron-right"></i>
+        <span>Próxima</span>
+      </button>
+    </nav>
+
+    <!-- GAVETA / DIÁLOGO DE NAVEGAÇÃO DIRETA DE PÁGINAS (ESTILO KINDLE) -->
+    <dialog id="page-jump-dialog" class="page-jump-dialog" closedby="any" aria-modal="true">
+      <div class="page-jump-content">
+        <div class="page-jump-header">
+          <div class="pj-title-group">
+            <i data-lucide="compass" style="width: 18px; height: 18px; color: var(--primary)"></i>
+            <span>Navegação do Documento</span>
+          </div>
+          <button id="btn-close-page-jump" class="btn-ghost btn-icon" title="Fechar">
+            <i data-lucide="x" style="width: 18px; height: 18px"></i>
+          </button>
+        </div>
+
+        <div class="page-jump-body">
+          <!-- Indicador Grande de Página & Progresso -->
+          <div class="pj-progress-display">
+            <div class="pj-page-badge">
+              Página <b id="pj-current-num">1</b> de <span id="pj-total-num">1</span>
+            </div>
+            <span class="pj-percent-badge" id="pj-percent">1%</span>
+          </div>
+
+          <!-- Scrubber Slider tipo Kindle -->
+          <div class="pj-slider-container">
+            <input type="range" id="pj-slider" min="1" max="1" value="1" step="1"
+              aria-label="Deslizar para mudar de página" />
+          </div>
+
+          <!-- Campo Numérico Direto -->
+          <form id="pj-form" class="pj-input-row" onsubmit="event.preventDefault()">
+            <label for="pj-number-input">Ir diretamente para:</label>
+            <div class="pj-input-group">
+              <input type="number" id="pj-number-input" min="1" max="1" placeholder="Nº da página" inputmode="numeric"
+                pattern="[0-9]*" />
+              <button type="submit" id="btn-pj-go" class="btn-primary">
+                <i data-lucide="arrow-right" style="width: 14px; height: 14px"></i>
+                <span>Ir</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- Atalhos Rápidos & Histórico de Retorno -->
+          <div class="pj-shortcuts">
+            <button type="button" id="btn-pj-first" class="pj-chip" title="Ir para a primeira página">
+              <i data-lucide="chevrons-left" style="width: 14px; height: 14px"></i>
+              <span>Início (1)</span>
+            </button>
+            <button type="button" id="btn-pj-return" class="pj-chip pj-chip-return hidden"
+              title="Retornar à página anterior ao salto">
+              <i data-lucide="undo-2" style="width: 14px; height: 14px"></i>
+              <span id="pj-return-text">Voltar pág. -</span>
+            </button>
+            <button type="button" id="btn-pj-last" class="pj-chip" title="Ir para a última página">
+              <i data-lucide="chevrons-right" style="width: 14px; height: 14px"></i>
+              <span id="pj-last-text">Fim</span>
+            </button>
+            <button type="button" id="btn-pj-toc" class="pj-chip" title="Abrir Sumário do Documento">
+              <i data-lucide="list" style="width: 14px; height: 14px"></i>
+              <span>Sumário</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- PAINEL DE ATALHOS DE TECLADO -->
+    <dialog id="shortcuts-dialog" class="shortcuts-dialog" closedby="any" aria-labelledby="shortcuts-title">
+      <div class="modal-dialog-content">
+        <div class="modal-header">
+          <div class="icon-badge primary">
+            <i data-lucide="keyboard" style="width: 20px; height: 20px"></i>
+          </div>
+          <h3 id="shortcuts-title">Atalhos de Teclado</h3>
+          <button id="btn-close-shortcuts" class="btn-ghost btn-icon modal-close" title="Fechar (Esc)">
+            <i data-lucide="x" style="width: 18px; height: 18px"></i>
+          </button>
+        </div>
+        <div class="shortcuts-grid">
+          <div class="shortcuts-group">
+            <h4>Navegação</h4>
+            <dl>
+              <div><dt><kbd>→</kbd> <kbd>J</kbd> <kbd>PgDn</kbd></dt><dd>Próxima página</dd></div>
+              <div><dt><kbd>←</kbd> <kbd>K</kbd> <kbd>PgUp</kbd></dt><dd>Página anterior</dd></div>
+              <div><dt><kbd>Home</kbd> / <kbd>End</kbd></dt><dd>Primeira / última página</dd></div>
+              <div><dt><kbd>G</kbd></dt><dd>Ir para página…</dd></div>
+            </dl>
+          </div>
+          <div class="shortcuts-group">
+            <h4>Visualização</h4>
+            <dl>
+              <div><dt><kbd>Ctrl</kbd> <kbd>+</kbd> / <kbd>−</kbd></dt><dd>Aproximar / afastar</dd></div>
+              <div><dt><kbd>Ctrl</kbd> <kbd>0</kbd></dt><dd>Restaurar zoom</dd></div>
+              <div><dt><kbd>Ctrl</kbd> + roda</dt><dd>Zoom no ponto do cursor</dd></div>
+              <div><dt><kbd>Espaço</kbd></dt><dd>Alternar seleção / mãozinha</dd></div>
+              <div><dt><kbd>Alt</kbd> + arrastar</dt><dd>Mover a página</dd></div>
+            </dl>
+          </div>
+          <div class="shortcuts-group">
+            <h4>Estudo</h4>
+            <dl>
+              <div><dt><kbd>C</kbd></dt><dd>Abrir / fechar Caderno</dd></div>
+              <div><dt><kbd>F</kbd></dt><dd>Modo Foco</dd></div>
+              <div><dt><kbd>Esc</kbd></dt><dd>Fechar Caderno / sair do Foco</dd></div>
+              <div><dt>Duplo clique no grifo</dt><dd>Excluir grifo</dd></div>
+              <div><dt><kbd>?</kbd></dt><dd>Mostrar este painel</dd></div>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- DIÁLOGO DE CONFIRMAÇÃO MODAL -->
+    <dialog id="confirm-dialog" closedby="any" aria-modal="true"></dialog>
+  </div>
+
+  <!-- Ponto de Entrada da Aplicação (Módulos ES) -->
+  <script type="module" src="./src/js/app.js"></script>
+</body>
+
 </html>

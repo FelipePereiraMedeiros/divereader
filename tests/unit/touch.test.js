@@ -15,10 +15,6 @@ describe('Touch Events and Gestures', () => {
       <div id="book-container">
         <div id="pdf-viewer"></div>
       </div>
-      <div id="zoom-hud" class="hidden">
-        <span id="hud-zoom-text">100%</span>
-      </div>
-      <span id="zoom-preset-label">100%</span>
       <div id="sidebar" class="hidden"></div>
       <div id="quick-highlight-tooltip" style="display: none"></div>
     `;
@@ -41,35 +37,51 @@ describe('Touch Events and Gestures', () => {
     });
   });
 
-  it('1 dedo só deve mover a página para posicionar o texto e NÃO deve trocar de página ao arrastar horizontalmente', () => {
+  it('deve disparar onNextPage ao fazer swipe horizontal para a esquerda', () => {
     // Touchstart na posição x=200, y=100
     const touchStart = new Event('touchstart');
     touchStart.touches = [{ clientX: 200, clientY: 100 }];
     container.dispatchEvent(touchStart);
 
-    // Touchend na posição x=100, y=100 (arraste de 100px para a esquerda)
+    // Touchend na posição x=100, y=100 (deslocamento de 100px para a esquerda)
     const touchEnd = new Event('touchend');
     touchEnd.touches = [];
     touchEnd.changedTouches = [{ clientX: 100, clientY: 100 }];
     container.dispatchEvent(touchEnd);
 
-    // Não deve navegar de página: 1 dedo é exclusivo para mover/posicionar o texto
-    expect(onNextPage).not.toHaveBeenCalled();
+    expect(onNextPage).toHaveBeenCalledTimes(1);
     expect(onPrevPage).not.toHaveBeenCalled();
   });
 
-  it('1 dedo arrastando para a direita também não deve voltar página', () => {
+  it('deve disparar onPrevPage ao fazer swipe horizontal para a direita', () => {
+    // Touchstart na posição x=100, y=100
     const touchStart = new Event('touchstart');
     touchStart.touches = [{ clientX: 100, clientY: 100 }];
     container.dispatchEvent(touchStart);
 
+    // Touchend na posição x=200, y=100 (deslocamento de 100px para a direita)
     const touchEnd = new Event('touchend');
     touchEnd.touches = [];
-    touchEnd.changedTouches = [{ clientX: 250, clientY: 100 }];
+    touchEnd.changedTouches = [{ clientX: 200, clientY: 100 }];
     container.dispatchEvent(touchEnd);
 
-    expect(onPrevPage).not.toHaveBeenCalled();
+    expect(onPrevPage).toHaveBeenCalledTimes(1);
     expect(onNextPage).not.toHaveBeenCalled();
+  });
+
+  it('não deve mudar de página se o swipe for vertical predominante', () => {
+    const touchStart = new Event('touchstart');
+    touchStart.touches = [{ clientX: 100, clientY: 100 }];
+    container.dispatchEvent(touchStart);
+
+    // Deslocamento vertical de 150px e horizontal pequeno de 30px
+    const touchEnd = new Event('touchend');
+    touchEnd.touches = [];
+    touchEnd.changedTouches = [{ clientX: 70, clientY: 250 }];
+    container.dispatchEvent(touchEnd);
+
+    expect(onNextPage).not.toHaveBeenCalled();
+    expect(onPrevPage).not.toHaveBeenCalled();
   });
 
   it('deve detectar gesto de pinça (pinch) e acionar onSetZoom no touchend', () => {
@@ -106,49 +118,6 @@ describe('Touch Events and Gestures', () => {
     expect(onPrevPage).not.toHaveBeenCalled();
   });
 
-  it('deve incrementar o zoom de 1 em 1% durante a pinça e travar ao soltar os dedos', () => {
-    // Início da pinça: distância de 100px (dedos em x=100 e x=200)
-    const touchStart = new Event('touchstart');
-    touchStart.touches = [
-      { clientX: 100, clientY: 100 },
-      { clientX: 200, clientY: 100 },
-    ];
-    container.dispatchEvent(touchStart);
-
-    // Pequeno movimento de abertura de 1% (distância vai para 101px: x=99.5 e x=200.5)
-    const touchMove1 = new Event('touchmove');
-    touchMove1.touches = [
-      { clientX: 99.5, clientY: 100 },
-      { clientX: 200.5, clientY: 100 },
-    ];
-    container.dispatchEvent(touchMove1);
-
-    const hudText = document.getElementById('hud-zoom-text');
-    expect(hudText.textContent).toBe('101%');
-
-    // Mais um pequeno movimento para 103px (3% de zoom: 103%)
-    const touchMove2 = new Event('touchmove');
-    touchMove2.touches = [
-      { clientX: 98.5, clientY: 100 },
-      { clientX: 201.5, clientY: 100 },
-    ];
-    container.dispatchEvent(touchMove2);
-    expect(hudText.textContent).toBe('103%');
-
-    // Usuário solta os dedos da tela (touchend)
-    const touchEnd = new Event('touchend');
-    touchEnd.touches = [];
-    touchEnd.changedTouches = [
-      { clientX: 98.5, clientY: 100 },
-      { clientX: 201.5, clientY: 100 },
-    ];
-    container.dispatchEvent(touchEnd);
-
-    // O zoom final alcançado (1.03) é fixado e aplicado
-    expect(onSetZoom).toHaveBeenCalledTimes(1);
-    expect(onSetZoom).toHaveBeenCalledWith(1.03, { clientX: 150, clientY: 100 });
-  });
-
   it('deve alternar zoom inteligente (smart double-tap) ao dar dois toques rápidos', () => {
     // Primeiro toque
     const t1 = new Event('touchend');
@@ -180,5 +149,86 @@ describe('Touch Events and Gestures', () => {
 
     expect(onSetZoom).toHaveBeenCalledTimes(2);
     expect(onSetZoom).toHaveBeenLastCalledWith(1.0);
+  });
+
+  it('não deve acionar smart zoom no duplo toque se o toque ocorrer sobre a camada de texto', () => {
+    const textLayer = document.createElement('div');
+    textLayer.className = 'textLayer';
+    const span = document.createElement('span');
+    span.textContent = 'Palavra selecionável';
+    textLayer.appendChild(span);
+    container.appendChild(textLayer);
+
+    // Primeiro toque sobre o span da textLayer
+    const t1 = new Event('touchend');
+    t1.touches = [];
+    t1.changedTouches = [{ clientX: 180, clientY: 220 }];
+    span.dispatchEvent(t1);
+
+    // Segundo toque rápido sobre o mesmo span
+    const t2 = new Event('touchend');
+    t2.touches = [];
+    t2.changedTouches = [{ clientX: 181, clientY: 220 }];
+    span.dispatchEvent(t2);
+
+    // Não deve acionar onSetZoom pois o usuário está realizando seleção de palavra
+    expect(onSetZoom).not.toHaveBeenCalled();
+  });
+
+  it('deve permitir mover a visão da página (pan com 1 dedo) quando o zoom for maior que 1.01', () => {
+    appState.set({ zoomLevel: 1.5 });
+    container.scrollLeft = 50;
+    container.scrollTop = 50;
+
+    // Toque com 1 dedo
+    const touchStart = new Event('touchstart');
+    touchStart.touches = [{ clientX: 100, clientY: 100 }];
+    container.dispatchEvent(touchStart);
+
+    // Arrasto com 1 dedo: moveu 30px para a esquerda (dx = -30) e 20px para cima (dy = -20)
+    const touchMove = new Event('touchmove');
+    touchMove.touches = [{ clientX: 70, clientY: 80 }];
+    container.dispatchEvent(touchMove);
+
+    expect(container.scrollLeft).toBe(80); // 50 - (-30) = 80
+    expect(container.scrollTop).toBe(70);  // 50 - (-20) = 70
+
+    const touchEnd = new Event('touchend');
+    touchEnd.touches = [];
+    touchEnd.changedTouches = [{ clientX: 70, clientY: 80 }];
+    container.dispatchEvent(touchEnd);
+
+    // Não deve acionar navegação de página quando o zoom estiver ativo
+    expect(onNextPage).not.toHaveBeenCalled();
+    expect(onPrevPage).not.toHaveBeenCalled();
+  });
+
+  it('deve ajustar zoom em incrementos de 1% e fixar no valor final ao terminar a pinça', () => {
+    // Distância inicial: 100px (100 a 200)
+    const touchStart = new Event('touchstart');
+    touchStart.touches = [
+      { clientX: 100, clientY: 100 },
+      { clientX: 200, clientY: 100 },
+    ];
+    container.dispatchEvent(touchStart);
+
+    // Distância final: 115px (1.15x = aumento exato de 15%, 1% em 1%)
+    const touchMove = new Event('touchmove');
+    touchMove.touches = [
+      { clientX: 92.5, clientY: 100 },
+      { clientX: 207.5, clientY: 100 },
+    ];
+    container.dispatchEvent(touchMove);
+
+    const touchEnd = new Event('touchend');
+    touchEnd.touches = [];
+    touchEnd.changedTouches = [
+      { clientX: 92.5, clientY: 100 },
+      { clientX: 207.5, clientY: 100 },
+    ];
+    container.dispatchEvent(touchEnd);
+
+    expect(onSetZoom).toHaveBeenCalledTimes(1);
+    expect(onSetZoom).toHaveBeenCalledWith(1.15, { clientX: 150, clientY: 100 });
   });
 });

@@ -2,7 +2,7 @@
  * Estado Reativo Centralizado da Aplicação
  */
 
-import { EVENTS, THEMES, ZOOM_MODES } from './constants.js';
+import { EVENTS, THEMES, ZOOM_MODES, READING_MODES } from './constants.js';
 
 class StateManager {
   constructor() {
@@ -18,7 +18,9 @@ class StateManager {
       outline: [], // Array<{ title: string, pageNum: number|null, items: Array }>
       zoomLevel: 1.0,
       zoomMode: ZOOM_MODES.FIT_WIDTH,
+      readingMode: READING_MODES.PAGED, // 'paged' | 'continuous'
       pageJumpHistory: null,
+      pageJumpHistoryStack: [],
       activeHighlightColor: 'yellow',
       theme: THEMES.LIGHT,
       isSidebarOpen: false,
@@ -97,8 +99,10 @@ class StateManager {
    */
   isSinglePageMode() {
     if (typeof window === 'undefined') return true;
-    return window.innerWidth <= 900 || this.state.zoomLevel > 1.0;
+    if (this.state.readingMode === READING_MODES.CONTINUOUS) return true;
+    return window.innerWidth <= 900;
   }
 }
 
 export const appState = new StateManager();
+

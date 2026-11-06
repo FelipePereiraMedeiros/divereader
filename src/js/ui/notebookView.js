@@ -11,9 +11,39 @@ import { showToast } from './toast.js';
 import { DOM, refreshIcons } from './dom.js';
 import { EVENTS } from '../constants.js';
 
+// Templates SVG pré-compilados para eliminar Layout Thrashing na renderização de listas longas de grifos
+const SVG_ICONS = {
+  QUOTE: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path></svg>`,
+  EYE: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+  TRASH: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
+  BOOK: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`,
+  EXTERNAL_LINK: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>`,
+  HIGHLIGHTER: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="m9 11-6 6v3h3l6-6"></path><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"></path></svg>`,
+  MESSAGE: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; color: var(--primary); flex-shrink: 0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`,
+  PEN: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg>`,
+  SEARCH_X: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 4px; display: inline-block;"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="8" x2="14" y1="8" y2="14"></line><line x1="14" x2="8" y1="8" y2="14"></line></svg>`,
+};
+
 export const NotebookView = {
   /** Callback opcional de navegação externa */
   onNavigatePage: null,
+  notepadSaveTimeout: null,
+  lastNotepadPage: null,
+
+  /**
+   * Salva imediatamente qualquer síntese pendente no notepad antes de mudar de página
+   */
+  flushPendingSynthesis() {
+    if (this.notepadSaveTimeout) {
+      clearTimeout(this.notepadSaveTimeout);
+      this.notepadSaveTimeout = null;
+      const page = this.lastNotepadPage || appState.get('pageNum') || 1;
+      const notepad = DOM.notepad || document.getElementById('notepad');
+      if (notepad) {
+        NoteService.savePageSynthesis(page, notepad.value);
+      }
+    }
+  },
 
   COLOR_LABELS: {
     yellow: '🟡 Conceito',
@@ -33,7 +63,8 @@ export const NotebookView = {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   },
 
   /**
@@ -65,18 +96,22 @@ export const NotebookView = {
       this.render();
     });
 
-    // Campo de Busca em Tempo Real
+    // Campo de Busca em Tempo Real com Debounce
     const searchInput = DOM.notebookSearchInput || document.getElementById('notebook-search-input');
     const clearBtn = DOM.btnClearSearch || document.getElementById('btn-clear-search');
 
     if (searchInput) {
+      let searchTimeout = null;
       searchInput.addEventListener('input', (e) => {
         const query = e.target.value;
-        appState.set({ searchQuery: query });
         if (clearBtn) {
           clearBtn.classList.toggle('hidden', !query);
         }
-        this.render();
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          appState.set({ searchQuery: query });
+          this.render();
+        }, 150);
       });
     }
 
@@ -116,14 +151,15 @@ export const NotebookView = {
       DOM.tabBtnToc.onclick = () => this.switchTab('toc');
     }
 
-    // Auto-save da Síntese Manual
+    // Auto-save da Síntese Manual com Registro de Página Ativa
     if (DOM.notepad) {
-      let saveTimeout;
       DOM.notepad.addEventListener('input', () => {
-        clearTimeout(saveTimeout);
-        const currentPage = appState.get('pageNum') || 1;
-        saveTimeout = setTimeout(() => {
-          NoteService.savePageSynthesis(currentPage, DOM.notepad.value);
+        clearTimeout(this.notepadSaveTimeout);
+        this.lastNotepadPage = appState.get('pageNum') || 1;
+        const page = this.lastNotepadPage;
+        this.notepadSaveTimeout = setTimeout(() => {
+          this.notepadSaveTimeout = null;
+          NoteService.savePageSynthesis(page, DOM.notepad.value);
         }, 250);
       });
     }
@@ -193,9 +229,15 @@ export const NotebookView = {
       appState.set({ isSidebarOpen: true });
       this.render();
     } else {
+      this.flushPendingSynthesis();
+      if (DOM.sidebar.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
       DOM.sidebar.classList.add('hidden');
       appState.set({ isSidebarOpen: false });
     }
+    document.body.classList.toggle('sidebar-open', shouldBeOpen);
+    if (DOM.btnToggleSidebar) DOM.btnToggleSidebar.setAttribute('aria-expanded', String(shouldBeOpen));
   },
 
   /**
@@ -208,6 +250,11 @@ export const NotebookView = {
     if (DOM.tabBtnPage) DOM.tabBtnPage.classList.toggle('active', tab === 'page');
     if (DOM.tabBtnGlobal) DOM.tabBtnGlobal.classList.toggle('active', tab === 'global');
     if (DOM.tabBtnToc) DOM.tabBtnToc.classList.toggle('active', tab === 'toc');
+    [
+      [DOM.tabBtnPage, 'page'],
+      [DOM.tabBtnGlobal, 'global'],
+      [DOM.tabBtnToc, 'toc'],
+    ].forEach(([btn, key]) => btn?.setAttribute('aria-selected', String(tab === key)));
 
     if (DOM.tabPage) DOM.tabPage.classList.toggle('active', tab === 'page');
     if (DOM.tabGlobal) DOM.tabGlobal.classList.toggle('active', tab === 'global');
@@ -261,7 +308,7 @@ export const NotebookView = {
         const isFiltering = !!searchQuery || activeColorFilter !== 'all';
         container.innerHTML = `
           <div class="empty-highlights-hint">
-            <i data-lucide="${isFiltering ? 'search-x' : 'highlighter'}" style="width: 20px; height: 20px; margin-bottom: 4px; display: inline-block;"></i>
+            ${isFiltering ? SVG_ICONS.SEARCH_X : SVG_ICONS.HIGHLIGHTER}
             <p style="margin: 0;">${isFiltering ? 'Nenhum grifo corresponde ao filtro atual.' : 'Nenhum grifo nesta página.'}</p>
             <p style="margin: 4px 0 0 0; font-size: 11px; opacity: 0.8;">${isFiltering ? 'Tente limpar a busca ou selecionar outra cor.' : 'Selecione qualquer trecho de texto no PDF para grifar!'}</p>
           </div>
@@ -299,13 +346,13 @@ export const NotebookView = {
             </div>
             <div class="highlight-actions">
               <button class="btn-abnt" title="Copiar citação formatada ABNT">
-                <i data-lucide="quote" style="width: 12px; height: 12px;"></i> Copiar ABNT
+                ${SVG_ICONS.QUOTE} Copiar ABNT
               </button>
               <button class="btn-locate" title="Localizar no documento">
-                <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver no PDF
+                ${SVG_ICONS.EYE} Ver no PDF
               </button>
               <button class="btn-del" title="Excluir este grifo">
-                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Excluir
+                ${SVG_ICONS.TRASH} Excluir
               </button>
             </div>
           `;
@@ -335,11 +382,17 @@ export const NotebookView = {
             };
           }
 
-          // Evento: Ver no PDF (pisca o grifo)
+          // Evento: Ver no PDF (pisca o grifo e fecha a sidebar no mobile para exibição)
           const btnLocate = card.querySelector('.btn-locate');
           if (btnLocate) {
             btnLocate.onclick = () => {
-              HighlightService.flashHighlight(hPageNum, h.id);
+              if (typeof window !== 'undefined' && window.innerWidth <= 820) {
+                this.toggleSidebar(false);
+              }
+              const found = HighlightService.flashHighlight(hPageNum, h.id);
+              if (!found) {
+                showToast('Esta citação não possui marcação visível no PDF.', 'info');
+              }
             };
           }
 
@@ -348,15 +401,15 @@ export const NotebookView = {
           if (btnDel) {
             btnDel.onclick = async () => {
               const choice = await DialogService.confirmHighlightDeletion({
-                title: 'Excluir Grifo do Caderno',
-                message: 'Você deseja excluir este grifo também da página do PDF?',
+                title: 'Excluir Grifo',
+                message: 'O grifo será removido do PDF e do Caderno, junto com a nota associada.',
                 quoteText: h.text,
                 hasNote: !!(h.note && h.note.trim()),
-                primaryActionText: 'Sim, excluir do Caderno e do PDF',
-                secondaryActionText: 'Remover apenas do Caderno',
+                primaryActionText: 'Excluir grifo',
+                secondaryActionText: null,
               });
 
-              if (choice === 'delete-all' || choice === 'delete-one') {
+              if (choice === 'delete-all') {
                 HighlightService.deleteHighlight(hPageNum, h.id);
                 this.render();
                 showToast('Grifo excluído com sucesso.', 'eraser');
@@ -364,14 +417,14 @@ export const NotebookView = {
             };
           }
 
-          // Evento: Input da nota vinculada ao grifo
-          const noteInput = card.querySelector('input');
+          // Evento: Editar Nota do Grifo em Tempo Real (Silencioso para não destruir foco)
+          const noteInput = card.querySelector('.highlight-card-note input');
           if (noteInput) {
             let inputTimeout;
             noteInput.oninput = () => {
               clearTimeout(inputTimeout);
               inputTimeout = setTimeout(() => {
-                HighlightService.updateHighlightNote(hPageNum, h.id, noteInput.value);
+                HighlightService.updateHighlightNote(hPageNum, h.id, noteInput.value, { silent: true });
               }, 400);
             };
           }
@@ -379,13 +432,20 @@ export const NotebookView = {
           container.appendChild(card);
         });
       }
-
-      refreshIcons(container);
     }
 
     // Atualiza a síntese manual da página
     if (DOM.notepad) {
-      DOM.notepad.value = NoteService.getPageSynthesis(pageNum);
+      const isEditingSamePage =
+        document.activeElement === DOM.notepad &&
+        this.notepadSaveTimeout &&
+        this.lastNotepadPage === pageNum;
+      if (!isEditingSamePage) {
+        DOM.notepad.value = NoteService.getPageSynthesis(pageNum);
+      }
+      DOM.notepad.placeholder = isSingle
+        ? `Escreva suas sínteses e reflexões sobre a página ${pageNum}...`
+        : `Escreva suas sínteses e reflexões sobre as páginas ${pageNum}–${pageNum + 1}...`;
     }
 
     // Atualiza aba global ou sumário se estiver ativa
@@ -426,13 +486,21 @@ export const NotebookView = {
         itemEl.className = `toc-item ${isActive ? 'active' : ''}`;
 
         itemEl.innerHTML = `
-          <span class="toc-title" title="${item.title}">${item.title}</span>
+          <span class="toc-title" title="${this.escapeHtml(item.title)}">${this.escapeHtml(item.title)}</span>
           ${item.pageNum ? `<span class="toc-page">p. ${item.pageNum}</span>` : ''}
         `;
 
         if (item.pageNum) {
+          itemEl.setAttribute('role', 'button');
+          itemEl.tabIndex = 0;
           itemEl.onclick = () => {
             this.navigateTo(item.pageNum);
+          };
+          itemEl.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              this.navigateTo(item.pageNum);
+            }
           };
         }
 
@@ -449,6 +517,12 @@ export const NotebookView = {
 
     renderTree(outline, tocListEl);
     refreshIcons(tocListEl);
+
+    // Mantém o capítulo atual visível em sumários longos
+    const activeItem = tocListEl.querySelector('.toc-item.active');
+    if (activeItem && typeof activeItem.scrollIntoView === 'function') {
+      activeItem.scrollIntoView({ block: 'nearest' });
+    }
   },
 
   /**
@@ -472,7 +546,7 @@ export const NotebookView = {
 
     const validPages = pages.filter((pageNum) => {
       const pageHighlights = highlights[pageNum] || [];
-      const pageSynthesis = (manualNotes[pageNum] || '').trim();
+      const pageSynthesis = NoteService.getPageSynthesis(pageNum).trim();
 
       const matchingHighlights = pageHighlights.filter((h) => {
         const matchColor = activeColorFilter === 'all' || (h.color || 'yellow') === activeColorFilter;
@@ -504,7 +578,7 @@ export const NotebookView = {
 
     validPages.forEach((pageNum) => {
       const pageHighlights = highlights[pageNum] || [];
-      const pageSynthesis = (manualNotes[pageNum] || '').trim();
+      const pageSynthesis = NoteService.getPageSynthesis(pageNum).trim();
 
       // Filtra os grifos da página
       const matchingHighlights = pageHighlights.filter((h) => {
@@ -525,10 +599,10 @@ export const NotebookView = {
       header.className = 'global-page-header';
       header.innerHTML = `
         <span class="page-tag">
-          <i data-lucide="book-open" style="width: 14px; height: 14px;"></i> Página ${pageNum}
+          ${SVG_ICONS.BOOK} Página ${pageNum}
         </span>
         <button class="btn-jump-page" title="Ir para a página ${pageNum}">
-          <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Ir para página
+          ${SVG_ICONS.EXTERNAL_LINK} Ir para página
         </button>
       `;
 
@@ -546,7 +620,7 @@ export const NotebookView = {
         const quotesSection = document.createElement('div');
         quotesSection.innerHTML = `
           <div class="global-section-title">
-            <i data-lucide="highlighter" style="width: 12px; height: 12px;"></i> Citações Grifadas (${matchingHighlights.length})
+            ${SVG_ICONS.HIGHLIGHTER} Citações Grifadas (${matchingHighlights.length})
           </div>
         `;
 
@@ -566,7 +640,7 @@ export const NotebookView = {
             </div>
             <div class="global-quote-text">"${highlightedQuote}"</div>
             <div class="global-quote-note-edit">
-              <i data-lucide="message-square" style="width: 13px; height: 13px; color: var(--primary); flex-shrink: 0;"></i>
+              ${SVG_ICONS.MESSAGE}
               <input 
                 type="text" 
                 class="global-quote-note-input" 
@@ -578,13 +652,13 @@ export const NotebookView = {
             </div>
             <div class="global-quote-actions">
               <button class="btn-abnt" title="Copiar citação ABNT">
-                <i data-lucide="quote" style="width: 11px; height: 11px;"></i> Copiar ABNT
+                ${SVG_ICONS.QUOTE} Copiar ABNT
               </button>
               <button class="btn-locate" title="Ver grifo no PDF">
-                <i data-lucide="eye" style="width: 11px; height: 11px;"></i> Ver no PDF
+                ${SVG_ICONS.EYE} Ver no PDF
               </button>
               <button class="btn-del" title="Excluir este grifo">
-                <i data-lucide="trash-2" style="width: 11px; height: 11px;"></i> Excluir
+                ${SVG_ICONS.TRASH} Excluir
               </button>
             </div>
           `;
@@ -603,14 +677,14 @@ export const NotebookView = {
             };
           }
 
-          // Ação: Editar Nota da Citação em Tempo Real
+          // Ação: Editar Nota da Citação em Tempo Real (Silenciosa para preservar foco)
           const noteInput = item.querySelector('.global-quote-note-input');
           if (noteInput) {
             let noteTimer;
             noteInput.oninput = () => {
               clearTimeout(noteTimer);
               noteTimer = setTimeout(() => {
-                HighlightService.updateHighlightNote(pageNum, h.id, noteInput.value);
+                HighlightService.updateHighlightNote(pageNum, h.id, noteInput.value, { silent: true });
                 if (appState.get('pageNum') === pageNum) {
                   const cardInput = (DOM.highlightsContainer || document).querySelector(
                     `input[data-highlight-id="${h.id}"]`,
@@ -623,11 +697,14 @@ export const NotebookView = {
             };
           }
 
-          // Ação: Localizar e piscar no PDF
+          // Ação: Localizar e piscar no PDF (com auto-fechamento no mobile)
           const btnLocate = item.querySelector('.btn-locate');
           if (btnLocate) {
             btnLocate.onclick = () => {
               this.navigateTo(pageNum);
+              if (typeof window !== 'undefined' && window.innerWidth <= 820) {
+                this.toggleSidebar(false);
+              }
               setTimeout(() => HighlightService.flashHighlight(pageNum, h.id), 350);
             };
           }
@@ -638,14 +715,14 @@ export const NotebookView = {
             btnDel.onclick = async () => {
               const choice = await DialogService.confirmHighlightDeletion({
                 title: 'Excluir Grifo do Fichamento',
-                message: 'Você deseja excluir este grifo também da página do PDF?',
+                message: 'O grifo será removido do PDF e do Caderno, junto com a nota associada.',
                 quoteText: h.text,
                 hasNote: !!(h.note && h.note.trim()),
-                primaryActionText: 'Sim, excluir do Fichamento e do PDF',
-                secondaryActionText: 'Remover apenas do Fichamento',
+                primaryActionText: 'Excluir grifo',
+                secondaryActionText: null,
               });
 
-              if (choice === 'delete-all' || choice === 'delete-one') {
+              if (choice === 'delete-all') {
                 HighlightService.deleteHighlight(pageNum, h.id);
                 this.render();
                 showToast('Grifo excluído com sucesso.', 'eraser');
@@ -665,13 +742,13 @@ export const NotebookView = {
         const synthesisSection = document.createElement('div');
         synthesisSection.innerHTML = `
           <div class="global-section-title">
-            <i data-lucide="pen-tool" style="width: 12px; height: 12px;"></i> Síntese da Página
+            ${SVG_ICONS.PEN} Síntese da Página
           </div>
           <textarea 
             class="global-synthesis-textarea" 
             placeholder="Escreva a síntese ou reflexões desta página..."
             data-page-num="${pageNum}"
-          >${pageSynthesis}</textarea>
+          >${this.escapeHtml(pageSynthesis)}</textarea>
         `;
 
         const synthTextarea = synthesisSection.querySelector('.global-synthesis-textarea');
@@ -693,7 +770,5 @@ export const NotebookView = {
 
       globalViewEl.appendChild(pageCard);
     });
-
-    refreshIcons(globalViewEl);
   },
 };

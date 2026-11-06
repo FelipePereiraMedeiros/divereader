@@ -29,6 +29,7 @@ export const BackupService = {
     document.body.appendChild(link);
     link.click();
     link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 
     return {
       success: true,

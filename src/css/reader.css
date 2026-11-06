@@ -9,8 +9,18 @@
   z-index: 60;
   pointer-events: auto;
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
   transition: height var(--transition-fast), background-color var(--transition-fast);
+}
+
+/* Área de toque expandida para dispositivos touch (WCAG 2.5.5) */
+#reading-progress-bar-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
 }
 
 #reading-progress-bar-container:hover {
@@ -24,26 +34,73 @@
   background: linear-gradient(90deg, var(--primary) 0%, #38bdf8 50%, var(--highlight-border) 100%);
   box-shadow: 0 0 8px var(--primary-light);
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 #pdf-viewer {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: safe center;
+  align-items: flex-start;
   gap: 16px;
-  margin: auto;
+  margin: 0 auto;
   transition: transform var(--transition-normal);
-  perspective: 2000px;
+  perspective: none;
   min-height: 100%;
   width: max-content;
   min-width: 100%;
-  touch-action: pan-x pan-y;
+}
+
+#pdf-viewer.flipping,
+#pdf-viewer:has(.flip-next),
+#pdf-viewer:has(.flip-prev) {
+  perspective: 2000px;
 }
 
 body.zoomed-mode #pdf-viewer {
   margin: 0 auto;
-  padding: 24px;
+  margin-top: 0;
+  padding: 0;
+  align-items: flex-start;
   perspective: none;
+}
+
+/* Modo de Rolagem Contínua Vertical (Scroll Suave) */
+#pdf-viewer.mode-continuous {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 24px;
+  width: max-content;
+  min-width: 100%;
+  min-height: auto;
+  margin: 0 auto;
+  padding: 16px 0 80px 0;
+}
+
+#pdf-viewer.mode-continuous .page-wrapper {
+  margin: 0 auto;
+}
+
+body.zoomed-mode #pdf-viewer.mode-continuous {
+  align-items: center;
+  margin: 0;
+  margin-inline: max(0px, auto);
+}
+
+.page-wrapper.page-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--page-bg);
+}
+
+.page-wrapper.page-placeholder::after {
+  content: 'Carregando pág. ' attr(data-page) '...';
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.6;
 }
 
 /* Page Wrapper */
@@ -56,19 +113,21 @@ body.zoomed-mode #pdf-viewer {
   backface-visibility: hidden;
   transform-style: preserve-3d;
   transition: box-shadow var(--transition-normal);
+  /* Cria um novo contexto de empilhamento e isola o mix-blend-mode dentro da página */
+  isolation: isolate;
+  contain: layout style;
   flex-shrink: 0;
   flex-grow: 0;
-  box-sizing: content-box;
 }
 
 .page-wrapper canvas {
   display: block;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  max-height: none !important;
+  width: 100%;
+  height: 100%;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  transform: translateZ(0); /* Força camada própria no compositor gráfico */
+  backface-visibility: hidden;
   text-rendering: optimizeLegibility;
   transition: filter var(--transition-normal), opacity var(--transition-normal);
   filter: contrast(102%) brightness(99%);
@@ -108,6 +167,7 @@ body.zoomed-mode #pdf-viewer {
   z-index: 3;
   user-select: text;
   -webkit-user-select: text;
+  cursor: text;
   touch-action: pan-x pan-y;
 }
 
@@ -153,6 +213,8 @@ body.zoomed-mode #pdf-viewer {
   cursor: pointer;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  /* Elimina o cálculo repetido de reflow ao passar o cursor */
+  will-change: background-color, box-shadow;
   transition:
     background-color var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -258,3 +320,10 @@ body.zoomed-mode #pdf-viewer {
     opacity: 0.15;
   }
 }
+
+/* Pulso de localização na cor do próprio grifo */
+.highlight-rect.highlight-yellow { --highlight-pulse: var(--hl-yellow-pulse); }
+.highlight-rect.highlight-green { --highlight-pulse: var(--hl-green-pulse); }
+.highlight-rect.highlight-pink { --highlight-pulse: var(--hl-pink-pulse); }
+.highlight-rect.highlight-blue { --highlight-pulse: var(--hl-blue-pulse); }
+.highlight-rect.highlight-purple { --highlight-pulse: var(--hl-purple-pulse); }

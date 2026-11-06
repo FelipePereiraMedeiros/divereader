@@ -122,4 +122,23 @@ describe('Page Jump Feature (Mobile & Desktop)', () => {
     expect(DOM.pjCurrentNum.textContent).toBe('8');
     expect(DOM.pjPercent.textContent).toBe('40%');
   });
+
+  it('deve suportar múltiplos saltos de página e desempilhar o histórico corretamente', () => {
+    const renderSpy = vi.spyOn(App, 'renderPages').mockResolvedValue(undefined);
+
+    App.goToPage(10, true);
+    expect(appState.get('pageJumpHistory')).toBe(3);
+
+    appState.set({ pageNum: 10 });
+    App.goToPage(18, true);
+    expect(appState.get('pageJumpHistory')).toBe(10);
+
+    appState.set({ pageNum: 18 });
+    App.returnToPreviousPage();
+    expect(renderSpy).toHaveBeenLastCalledWith(10);
+
+    appState.set({ pageNum: 10 });
+    App.returnToPreviousPage();
+    expect(renderSpy).toHaveBeenLastCalledWith(3);
+  });
 });

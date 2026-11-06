@@ -23,7 +23,11 @@ export const HighlightService = {
     let range;
     let textExtracted = '';
 
-    if (typeof Range !== 'undefined' && selectionOrRange instanceof Range) {
+    const isRangeLike =
+      (typeof Range !== 'undefined' && selectionOrRange instanceof Range) ||
+      (typeof selectionOrRange.getClientRects === 'function' && 'commonAncestorContainer' in selectionOrRange);
+
+    if (isRangeLike) {
       range = selectionOrRange;
       textExtracted = customText || range.toString();
     } else if (selectionOrRange.getRangeAt && selectionOrRange.rangeCount > 0) {
@@ -36,7 +40,11 @@ export const HighlightService = {
       return { success: false, message: 'Selecione um texto antes de grifar.' };
     }
 
-    textExtracted = textExtracted.replace(/[\r\n]+/g, ' ').trim();
+    // Reconstitui palavras quebradas por hífen no final de linha e normaliza espaços
+    textExtracted = textExtracted
+      .replace(/([\p{L}\p{N}]+)-\s*[\r\n]+\s*([\p{L}\p{N}]+)/gu, '$1$2')
+      .replace(/[\r\n]+/g, ' ')
+      .trim();
     if (textExtracted.length < 2) {
       return { success: false, message: 'Selecione um texto válido para grifar.' };
     }
@@ -57,21 +65,26 @@ export const HighlightService = {
     const pageHighlights = allHighlights[pageNum] || [];
 
     // Checagem de Colisão / Duplo Grifo
+    let collidingCount = 0;
     for (let i = 0; i < rects.length; i++) {
       const r = rects[i];
       const centerX = (r.left - wrapperRect.left + r.width / 2) / wrapperRect.width;
       const centerY = (r.top - wrapperRect.top + r.height / 2) / wrapperRect.height;
 
-      const isCollision = pageHighlights.some((h) => h.containsPoint(centerX, centerY));
-      if (isCollision) {
-        try {
-          const winSel = window.getSelection();
-          if (winSel && typeof winSel.removeAllRanges === 'function') {
-            winSel.removeAllRanges();
-          }
-        } catch (err) {}
-        return { success: false, message: 'Este trecho já foi grifado.' };
+      if (pageHighlights.some((h) => h.containsPoint(centerX, centerY))) {
+        collidingCount++;
       }
+    }
+
+    const exactMatch = pageHighlights.some((h) => h.text.trim() === textExtracted.trim());
+    if (exactMatch || (rects.length > 0 && collidingCount === rects.length)) {
+      try {
+        const winSel = window.getSelection();
+        if (winSel && typeof winSel.removeAllRanges === 'function') {
+          winSel.removeAllRanges();
+        }
+      } catch (err) {}
+      return { success: false, message: 'Este trecho já foi grifado.' };
     }
 
     const highlightId = `hl_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -282,8 +295,9 @@ export const HighlightService = {
    * @param {number} pageNum
    * @param {string} highlightId
    * @param {string} note
+   * @param {{ silent?: boolean }} [options]
    */
-  updateHighlightNote(pageNum, highlightId, note) {
+  updateHighlightNote(pageNum, highlightId, note, options = {}) {
     const allHighlights = appState.get('highlights') || {};
     const pageList = allHighlights[pageNum] || [];
 
@@ -299,8 +313,28 @@ export const HighlightService = {
       [pageNum]: updatedList,
     };
 
-    appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
+    if (options.silent) {
+      appState.set({ highlights: updatedHighlights });
+    } else {
+      appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
+    }
     Storage.saveHighlights(appState.get('fileKey'), updatedHighlights);
+  },
+
+  /**
+   * Alias de compatibilidade para createFromSelection com suporte a ordem flexível de parâmetros
+   */
+  addHighlight(selectionOrRange, customTextOrColor = null, maybeColor = 'yellow') {
+    let color = 'yellow';
+    let customText = null;
+    if (typeof customTextOrColor === 'string' && ['yellow', 'green', 'pink', 'blue', 'purple'].includes(customTextOrColor)) {
+      color = customTextOrColor;
+      customText = typeof maybeColor === 'string' && !['yellow', 'green', 'pink', 'blue', 'purple'].includes(maybeColor) ? maybeColor : null;
+    } else {
+      customText = customTextOrColor;
+      if (typeof maybeColor === 'string') color = maybeColor;
+    }
+    return this.createFromSelection(selectionOrRange, color, customText);
   },
 
   /**
@@ -330,18 +364,56 @@ export const HighlightService = {
   },
 
   /**
+   * Remove apenas a marcação visual do grifo no PDF, preservando a citação e a nota no Caderno
+   * @param {number} pageNum
+   * @param {string} highlightId
+   */
+  removeHighlightMarks(pageNum, highlightId) {
+    const allHighlights = appState.get('highlights') || {};
+    const pageList = allHighlights[pageNum] || [];
+
+    const updatedList = pageList.map((h) =>
+      h.id === highlightId
+        ? new Highlight({
+            id: h.id,
+            pageNum: h.pageNum,
+            text: h.text,
+            rects: [],
+            color: h.color,
+            note: h.note,
+            createdAt: h.createdAt,
+          })
+        : h,
+    );
+
+    const updatedHighlights = { ...allHighlights, [pageNum]: updatedList };
+    appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
+    Storage.saveHighlights(appState.get('fileKey'), updatedHighlights);
+
+    const pageWrapper = document.querySelector(`.page-wrapper[data-page="${pageNum}"]`);
+    const layer = pageWrapper?.querySelector('.highlight-layer');
+    if (layer) this.drawPageHighlights(pageNum, layer);
+  },
+
+  /**
    * Pisca visualmente os retângulos do grifo selecionado no leitor
    * @param {number} pageNum
    * @param {string} highlightId
+   * @returns {number} Quantidade de marcações encontradas no documento renderizado
    */
   flashHighlight(pageNum, highlightId) {
     const marks = document.querySelectorAll(
       `.highlight-rect[data-highlight-id="${highlightId}"]`,
     );
+    // Garante que o grifo esteja visível (útil em zoom alto ou rolagem contínua)
+    if (marks.length > 0 && typeof marks[0].scrollIntoView === 'function') {
+      marks[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
     marks.forEach((m) => {
       m.classList.add('highlight-pulse');
       setTimeout(() => m.classList.remove('highlight-pulse'), 2400);
     });
+    return marks.length;
   },
 
   /**

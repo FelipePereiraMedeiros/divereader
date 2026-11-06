@@ -17,6 +17,99 @@ export const Storage = {
   },
 
   /**
+   * Gera uma chave segura baseada no hash SHA-256 dos primeiros 64KB do arquivo,
+   * permitindo ao leitor renomear o arquivo no disco sem perder anotações e histórico.
+   * Suporta migração automática da chave legada (baseada em nome e tamanho).
+   * @param {string} fileName
+   * @param {number} fileSize
+   * @param {ArrayBuffer} [arrayBuffer]
+   * @returns {Promise<string>}
+   */
+  async resolveFileKey(fileName, fileSize, arrayBuffer) {
+    const legacyKey = this.generateFileKey(fileName, fileSize);
+
+    if (!arrayBuffer || typeof crypto === 'undefined' || !crypto.subtle) {
+      return legacyKey;
+    }
+
+    try {
+      // 1. Calcula hash legado (64KB puros) para checar se já há dados salvos nessa versão
+      const slice64 = arrayBuffer.slice(0, 64 * 1024);
+      const oldHashBuffer = await crypto.subtle.digest('SHA-256', slice64);
+      const oldHashHex = Array.from(new Uint8Array(oldHashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+        .slice(0, 16);
+      const oldHashKey = `${STORAGE_PREFIX}sha_${oldHashHex}`;
+
+      // Se já existem dados sob o oldHashKey, mantém compatibilidade total
+      if (
+        localStorage.getItem(`${oldHashKey}_highlights_v2`) ||
+        localStorage.getItem(`${oldHashKey}_notes_v2`) ||
+        localStorage.getItem(`${oldHashKey}_page`)
+      ) {
+        return oldHashKey;
+      }
+
+      // 2. Cria hash composto blindado contra colisão (64KB iniciais + fileSize + fileName + 16KB finais)
+      const meta = new TextEncoder().encode(`__size:${fileSize}__name:${fileName}__tail:`);
+      const tailSlice = arrayBuffer.byteLength > 64 * 1024
+        ? new Uint8Array(arrayBuffer.slice(Math.max(0, arrayBuffer.byteLength - 16 * 1024)))
+        : new Uint8Array(0);
+      const headSlice = new Uint8Array(slice64);
+
+      const combined = new Uint8Array(headSlice.length + meta.length + tailSlice.length);
+      combined.set(headSlice, 0);
+      combined.set(meta, headSlice.length);
+      combined.set(tailSlice, headSlice.length + meta.length);
+
+      const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+      const hashHex = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+        .slice(0, 16);
+      const hashKey = `${STORAGE_PREFIX}sha_${hashHex}`;
+
+      // Migra dados caso a chave legada (ou oldHashKey) exista e a hashKey ainda não possua dados
+      this.migrateLegacyKeyToHashKey(legacyKey, hashKey);
+      this.migrateLegacyKeyToHashKey(oldHashKey, hashKey);
+
+      return hashKey;
+    } catch (e) {
+      console.warn('Falha ao calcular hash SHA-256, utilizando chave padrão:', e);
+      return legacyKey;
+    }
+  },
+
+  /**
+   * Migra os dados da chave legada para a chave persistente por hash
+   * @param {string} legacyKey
+   * @param {string} hashKey
+   */
+  migrateLegacyKeyToHashKey(legacyKey, hashKey) {
+    if (!legacyKey || !hashKey || legacyKey === hashKey) return;
+
+    try {
+      const hashHighlights = localStorage.getItem(`${hashKey}_highlights_v2`);
+      const hashNotes = localStorage.getItem(`${hashKey}_notes_v2`);
+      const hashPage = localStorage.getItem(`${hashKey}_page`);
+
+      // Se já existem dados associados à hashKey, não sobrescreve
+      if (hashHighlights || hashNotes || hashPage) return;
+
+      const suffixes = ['_page', '_highlights_v2', '_notes_v2', '_highlights', '_anotacoes'];
+      for (const suffix of suffixes) {
+        const val = localStorage.getItem(`${legacyKey}${suffix}`);
+        if (val !== null) {
+          localStorage.setItem(`${hashKey}${suffix}`, val);
+        }
+      }
+    } catch (e) {
+      console.warn('Erro na migração para hashKey:', e);
+    }
+  },
+
+  /**
    * Salva a última página lida
    * @param {string} fileKey
    * @param {number} pageNum
@@ -367,7 +460,8 @@ export const Storage = {
           .replace(/_notes_v2$/, '')
           .replace(/_highlights$/, '')
           .replace(/_anotacoes$/, '')
-          .replace(/_page$/, '');
+          .replace(/_page$/, '')
+          .replace(/_prefs$/, '');
         if (baseKey.startsWith(STORAGE_PREFIX)) {
           discoveredFileKeys.add(baseKey);
         }
@@ -435,7 +529,8 @@ export const Storage = {
             .replace(/_notes_v2$/, '')
             .replace(/_highlights$/, '')
             .replace(/_anotacoes$/, '')
-            .replace(/_page$/, '');
+            .replace(/_page$/, '')
+          .replace(/_prefs$/, '');
           if (baseKey.startsWith(STORAGE_PREFIX)) {
             discoveredFileKeys.add(baseKey);
           }
@@ -454,5 +549,34 @@ export const Storage = {
       documentsCount: fileKeysList.length,
       fileKeys: fileKeysList,
     };
+  },
+
+  /**
+   * Salva preferências específicas do documento (modo de leitura, zoom)
+   * @param {string} fileKey
+   * @param {Object} prefs
+   */
+  saveDocPreferences(fileKey, prefs) {
+    if (!fileKey || !prefs) return;
+    try {
+      localStorage.setItem(`${fileKey}_prefs`, JSON.stringify(prefs));
+    } catch (e) {
+      console.warn('Erro ao salvar preferências do documento:', e);
+    }
+  },
+
+  /**
+   * Carrega preferências específicas do documento
+   * @param {string} fileKey
+   * @returns {Object|null}
+   */
+  loadDocPreferences(fileKey) {
+    if (!fileKey) return null;
+    try {
+      const raw = localStorage.getItem(`${fileKey}_prefs`);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
   },
 };

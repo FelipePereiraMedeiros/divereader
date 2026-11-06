@@ -4,7 +4,7 @@
 
 /* Selection Quick Highlight Tooltip */
 #quick-highlight-tooltip {
-  position: absolute;
+  position: fixed;
   z-index: 600;
   display: none;
   background: var(--ui-bg);
@@ -15,22 +15,23 @@
   pointer-events: auto;
   align-items: center;
   gap: 6px;
-  transition: transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), top 0.16s ease, left 0.16s ease;
+  /* Retira-se a transição de left/top para evitar atraso visual e deslizamento relativo ao texto */
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
-/* Posição Padrão (Acima da seleção) */
-#quick-highlight-tooltip,
+/* Posição Acima da seleção */
 #quick-highlight-tooltip.placement-top {
   transform: translate(-50%, -100%);
-  margin-top: -10px;
-  animation: tooltipPop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  margin-top: 0;
+  animation: tooltipPop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Posição Invertida (Abaixo da seleção quando houver conflito de extensão/borda) */
+/* Posição Padrão / Abaixo da seleção (evita conflito com menus nativos de browser) */
+#quick-highlight-tooltip,
 #quick-highlight-tooltip.placement-bottom {
   transform: translate(-50%, 0);
-  margin-top: 10px;
-  animation: tooltipPopBottom 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  margin-top: 0;
+  animation: tooltipPopBottom 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes tooltipPop {
@@ -353,7 +354,8 @@
   #theme-selector,
   .controls-group .page-navigation,
   #btn-toggle-sidebar,
-  #btn-toggle-focus {
+  #btn-toggle-focus,
+  #btn-shortcuts {
     display: none !important;
   }
 
@@ -405,19 +407,11 @@
   }
 
   .page-wrapper {
+    flex-shrink: 0;
+    flex-grow: 0;
     margin: 0 auto;
     border-radius: 2px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    flex-shrink: 0 !important;
-    flex-grow: 0 !important;
-    max-width: none !important;
-  }
-
-  .page-wrapper canvas {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
   }
 
   body.focus-mode .page-wrapper {
@@ -427,16 +421,17 @@
 
   #pdf-viewer {
     gap: 0;
-    margin: auto;
+    margin: 0 auto;
     width: max-content;
     min-width: 100%;
-    min-height: 100%;
-    touch-action: pan-x pan-y;
+    align-items: flex-start;
+    justify-content: safe center;
   }
 
   body.zoomed-mode #pdf-viewer {
-    padding: 8px 4px;
-    margin: auto;
+    margin: 0 auto;
+    margin-top: 0;
+    align-items: flex-start;
   }
 
   /* Mobile Sidebar as full height drawer / slide-over */
@@ -547,5 +542,48 @@
 
   body.focus-mode #book-container {
     padding: 2px 0 4px 0;
+  }
+}
+
+@media (max-width: 820px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .controls .show-on-mobile {
+    display: inline-flex !important;
+  }
+
+  /* Toasts centralizados acima da barra inferior, sem cobrir a navegação */
+  #toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+    align-items: center;
+  }
+
+  body.focus-mode #toast-container {
+    bottom: 72px;
+  }
+
+  .toast {
+    max-width: 100%;
+  }
+
+  #empty-state .empty-features {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #empty-state .empty-shortcuts-link,
+  #empty-state .empty-drop-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Sem espaço útil para o nome do arquivo: ele continua visível no título da aba */
+  #file-title {
+    display: none !important;
   }
 }

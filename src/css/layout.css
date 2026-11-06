@@ -5,9 +5,8 @@
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
   position: relative;
 }
@@ -153,6 +152,8 @@ input[type="file"] {
 #book-container {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
   flex-grow: 1;
   height: 100%;
   padding: 16px;
@@ -163,8 +164,14 @@ input[type="file"] {
   box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.04);
   position: relative;
   scroll-behavior: smooth;
+  outline: none;
   touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+#book-container:focus,
+#book-container:focus-visible {
+  outline: none;
 }
 
 /* Empty State */
@@ -267,8 +274,8 @@ input[type="file"] {
   font-size: 12px;
   font-weight: 600;
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--transition-normal), transform var(--transition-fast), background-color var(--transition-fast);
-  pointer-events: auto;
   cursor: pointer;
   user-select: none;
   z-index: 150;
@@ -280,8 +287,10 @@ input[type="file"] {
   gap: 6px;
 }
 
+#discreet-indicator.visible,
 #discreet-indicator:hover {
   opacity: 1 !important;
+  pointer-events: auto;
   transform: scale(1.05);
   background-color: var(--primary);
   color: #ffffff;
@@ -291,14 +300,27 @@ input[type="file"] {
   transform: scale(0.95);
 }
 
-/* Grab & Pan no modo Zoom */
+/* Intenção de interação: texto = marcar; fundo = arrastar; Espaço = mãozinha */
 body.zoomed-mode #book-container {
-  cursor: grab;
+  scroll-behavior: auto !important;
 }
 
-body.zoomed-mode.is-panning #book-container,
-body.zoomed-mode #book-container:active {
-  cursor: grabbing;
+body.is-selecting #book-container {
+  scroll-behavior: auto !important;
+}
+
+body.space-hand-tool #book-container,
+body.space-hand-tool #book-container *,
+body.hand-tool-active #book-container,
+body.hand-tool-active #book-container * {
+  cursor: grab !important;
+}
+
+body.is-panning,
+body.is-panning * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
 /* Drag Overlay & Loading */
@@ -381,4 +403,75 @@ body.zoomed-mode #book-container:active {
 .toast.show {
   transform: translateY(0) scale(1);
   opacity: 1;
+}
+
+/* Evita que o surgimento da barra de rolagem desloque/reajuste as páginas */
+#book-container {
+  scrollbar-gutter: stable;
+}
+
+/* Empty State: chamada principal e dicas */
+#empty-state .empty-cta {
+  margin-top: 8px;
+  padding: 10px 20px;
+  min-height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+#empty-state .empty-drop-hint {
+  font-size: 12px;
+  color: var(--text-subtle);
+  margin-top: -6px;
+}
+
+#empty-state .empty-features {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+#empty-state .empty-features li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#empty-state .empty-features svg {
+  width: 15px;
+  height: 15px;
+  color: var(--primary);
+}
+
+#empty-state .empty-shortcuts-link {
+  font-size: 12px;
+  min-height: 30px;
+}
+
+/* Desktop: elementos flutuantes acompanham a abertura do Caderno em vez de cobri-lo */
+@media (min-width: 821px) {
+  body.sidebar-open #pomodoro-container,
+  body.sidebar-open .zoom-hud,
+  body.sidebar-open #toast-container {
+    right: calc(360px + 20px);
+  }
+
+  #pomodoro-container,
+  .zoom-hud,
+  #toast-container {
+    transition-property: opacity, transform, right;
+  }
+
+  /* Toasts acima do HUD de zoom para não se sobreporem */
+  #toast-container {
+    bottom: 80px;
+  }
 }

@@ -14,12 +14,24 @@ import { QuickHighlightTooltip } from './ui/quickHighlight.js';
 import { showToast } from './ui/toast.js';
 import { DOM, refreshIcons } from './ui/dom.js';
 import { setupKeyboardShortcuts } from './events/keyboard.js';
-import { setupMouseEvents } from './events/mouse.js';
+import { setupMouseEvents, applyFocalZoom } from './events/mouse.js';
 import { setupTouchAndGestures } from './events/touch.js';
-import { EVENTS, ZOOM_LIMITS, ZOOM_MODES } from './constants.js';
+import { cachePdfDocument, getLastCachedPdf } from './storage/indexedDB.js';
+import { EVENTS, ZOOM_LIMITS, ZOOM_MODES, READING_MODES, THEMES } from './constants.js';
 
 export const App = {
   focusTimer: null,
+  renderToken: 0,
+  indicatorTimer: null,
+  continuousObserver: null,
+  continuousUnloadObserver: null,
+  continuousZoomLevel: null,
+  continuousZoomMode: null,
+  continuousContainerWidth: 0,
+  resizeTimer: null,
+  zoomDebounceTimer: null,
+  prefetchTimer: null,
+  layoutSize: { width: 0, height: 0 },
 
   /**
    * Inicialização da aplicação
@@ -29,32 +41,74 @@ export const App = {
     PdfService.initWorker();
 
     // Carrega e aplica o tema salvo
-    const savedTheme = Storage.loadTheme();
-    document.body.className = savedTheme;
-    if (DOM.themeSelector) DOM.themeSelector.value = savedTheme;
+    this.applyTheme(Storage.loadTheme(), false);
 
     // Inicializa componentes de UI
     NotebookView.init({
-      onNavigatePage: (pageNum) => this.renderPages(pageNum),
+      onNavigatePage: (pageNum) => this.goToPage(pageNum, true),
     });
     QuickHighlightTooltip.init();
-    this.initEventListeners();
-    this.initPomodoro();
-    window.app = this;
 
-    // Redimensionamento de tela
-    window.addEventListener('resize', () => {
-      if (appState.get('pdfDoc') && !appState.get('isRendering')) {
-        this.updateBodyMode();
-        let pageNum = appState.get('pageNum');
-        if (!appState.isSinglePageMode() && pageNum % 2 === 0) {
-          pageNum -= 1;
-        }
-        this.renderPages(pageNum);
+    // Listener global para navegação direta de página via eventos
+    appState.on('NAVIGATE_PAGE', (pageNum) => {
+      if (typeof pageNum === 'number' && !isNaN(pageNum)) {
+        this.goToPage(pageNum, true);
       }
     });
 
+    this.initEventListeners();
+    this.initPomodoro();
+    this.updateReadingModeUI();
+    window.app = this;
+
+    this.setupResizeHandling();
+
     console.log('DiveReader Pro 2.0 inicializado com sucesso.');
+
+    // Restauração de sessão persistente via cache IndexedDB
+    try {
+      const cached = await getLastCachedPdf();
+      if (cached && cached.arrayBuffer && !appState.get('pdfDoc')) {
+        await this.loadPdfBuffer(cached.arrayBuffer, cached.fileName, cached.fileSize, true);
+      }
+    } catch (err) {
+      console.warn('Não foi possível restaurar sessão anterior do IndexedDB:', err);
+    }
+  },
+
+  /**
+   * Reajusta as páginas quando a área de leitura muda de tamanho
+   * (janela redimensionada, Caderno aberto/fechado, rotação do dispositivo).
+   */
+  setupResizeHandling() {
+    const scheduleRefit = () => {
+      clearTimeout(this.resizeTimer);
+      this.resizeTimer = setTimeout(() => {
+        const container = DOM.bookContainer;
+        if (!container || !appState.get('pdfDoc')) return;
+        if (appState.get('isRendering')) {
+          scheduleRefit();
+          return;
+        }
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        // Limiar acima da largura de uma barra de rolagem para não entrar em ciclo de re-render
+        const widthChanged = Math.abs(width - this.layoutSize.width) > 24;
+        // A altura só importa no modo "Ajustar à Página" (evita re-render quando a barra do navegador mobile oculta)
+        const heightMatters = appState.get('zoomMode') === ZOOM_MODES.FIT_PAGE;
+        const heightChanged = heightMatters && Math.abs(height - this.layoutSize.height) > 40;
+        const modeChanged = document.body.classList.contains('single-page-mode') !== appState.isSinglePageMode();
+        if (!widthChanged && !heightChanged && !modeChanged) return;
+
+        this.updateBodyMode();
+        this.renderPages(appState.get('pageNum'));
+      }, 180);
+    };
+
+    if (typeof ResizeObserver !== 'undefined' && DOM.bookContainer) {
+      new ResizeObserver(scheduleRefit).observe(DOM.bookContainer);
+    }
+    window.addEventListener('resize', scheduleRefit);
   },
 
   /**
@@ -67,16 +121,50 @@ export const App = {
         if (e.target.files?.length > 0) {
           this.handleFile(e.target.files[0]);
         }
+        // Permite reabrir o mesmo arquivo logo em seguida
+        e.target.value = '';
       });
     }
 
-    // 2. Seletor de Tema
+    if (DOM.btnEmptyOpen) {
+      DOM.btnEmptyOpen.onclick = () => DOM.fileInput?.click();
+    }
+    if (DOM.btnOpenFile) {
+      DOM.btnOpenFile.onclick = () => DOM.fileInput?.click();
+    }
+    if (DOM.btnImportBackup) {
+      DOM.btnImportBackup.onclick = () => DOM.importBackupInput?.click();
+    }
+    if (DOM.btnShortcuts) {
+      DOM.btnShortcuts.onclick = () => this.openShortcutsDialog();
+    }
+    if (DOM.btnEmptyShortcuts) {
+      DOM.btnEmptyShortcuts.onclick = () => this.openShortcutsDialog();
+    }
+    if (DOM.btnCloseShortcuts) {
+      DOM.btnCloseShortcuts.onclick = () => DOM.shortcutsDialog?.close();
+    }
+
+    // 2. Seletor de Tema & Modo de Leitura
     if (DOM.themeSelector) {
       DOM.themeSelector.addEventListener('change', (e) => {
-        const theme = e.target.value;
-        document.body.className = theme;
-        Storage.saveTheme(theme);
+        this.applyTheme(e.target.value);
       });
+    }
+
+    if (DOM.btnThemeCycle) {
+      DOM.btnThemeCycle.onclick = () => {
+        const order = [THEMES.LIGHT, THEMES.SEPIA, THEMES.DARK];
+        const labels = { [THEMES.LIGHT]: 'Tema Claro', [THEMES.SEPIA]: 'Tema Sépia', [THEMES.DARK]: 'Tema Noturno' };
+        const current = order.find((t) => document.body.classList.contains(t)) || THEMES.LIGHT;
+        const next = order[(order.indexOf(current) + 1) % order.length];
+        this.applyTheme(next);
+        showToast(labels[next], 'sun-moon');
+      };
+    }
+
+    if (DOM.btnReadingMode) {
+      DOM.btnReadingMode.onclick = () => this.toggleReadingMode();
     }
 
     // 3. Zoom (Top Bar & Floating HUD)
@@ -87,7 +175,7 @@ export const App = {
     if (DOM.hudBtnZoomOut) DOM.hudBtnZoomOut.onclick = () => this.changeZoom(-ZOOM_LIMITS.STEP);
     if (DOM.hudBtnZoomIn) DOM.hudBtnZoomIn.onclick = () => this.changeZoom(ZOOM_LIMITS.STEP);
     if (DOM.hudBtnPreset) DOM.hudBtnPreset.onclick = () => this.toggleZoomMode();
-    if (DOM.hudBtnFit) DOM.hudBtnFit.onclick = () => this.toggleZoomMode();
+    if (DOM.hudBtnFit) DOM.hudBtnFit.onclick = () => this.toggleFocusMode();
 
     // 4. Navegação de Páginas (Top Bar, Mobile & Indicador Discreto)
     if (DOM.btnPrev) DOM.btnPrev.onclick = () => this.onPrevPage();
@@ -107,6 +195,12 @@ export const App = {
 
     if (DOM.indicator) {
       DOM.indicator.onclick = () => this.openPageJumpDialog();
+      DOM.indicator.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.openPageJumpDialog();
+        }
+      });
     }
 
     if (DOM.readingProgressBarContainer) {
@@ -222,13 +316,28 @@ export const App = {
       DOM.floatingBar.addEventListener('mouseleave', () => this.wakeFocusBar());
     }
 
+    if (DOM.btnFocusSidebar) {
+      DOM.btnFocusSidebar.onclick = () => NotebookView.toggleSidebar();
+    }
+    if (DOM.btnFocusHighlight) {
+      DOM.btnFocusHighlight.onclick = () => DOM.btnHighlight?.click();
+    }
+    if (DOM.btnFocusToggle) {
+      DOM.btnFocusToggle.onclick = () => this.toggleFocusMode();
+    }
+
     // 10. Configuração de Eventos de Entrada
     setupKeyboardShortcuts({
       onNextPage: () => this.onNextPage(),
       onPrevPage: () => this.onPrevPage(),
-      onChangeZoom: (delta) => this.changeZoom(delta),
+      onGoToPage: (p) => this.goToPage(p, true),
+      onChangeZoom: (delta, opts) => this.changeZoom(delta, opts),
+      onResetZoom: () => this.setZoom(1.0),
       onToggleMenu: () => this.toggleFocusMode(),
       onToggleSidebar: () => NotebookView.toggleSidebar(),
+      onOpenPageJump: () => this.openPageJumpDialog(),
+      onShowShortcuts: () => this.openShortcutsDialog(),
+      onEscape: () => this.handleEscape(),
     });
 
     setupMouseEvents({
@@ -247,29 +356,64 @@ export const App = {
       onSetZoom: (zoom, focalPoint) => this.setZoom(zoom, focalPoint),
       onChangeZoom: (delta) => this.changeZoom(delta),
     });
+
+    // 11. Desfoca botões de interface e overlay após o clique para que o leitor permaneça ativo para navegação
+    document.addEventListener('pointerup', (e) => {
+      const btn = e.target.closest('button, .file-upload-label');
+      if (btn && !btn.closest('dialog')) {
+        setTimeout(() => {
+          btn.blur();
+          DOM.bookContainer?.focus({ preventScroll: true });
+        }, 40);
+      }
+    });
   },
 
   /**
-   * Processa o carregamento de um arquivo PDF
+   * Processa o carregamento de um arquivo PDF a partir de um File do sistema
    * @param {File} file
    */
   async handleFile(file) {
-    if (!file || file.type !== 'application/pdf') {
+    const isPdf = file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+    if (!isPdf) {
       return showToast('Por favor, selecione um arquivo PDF válido.', 'file-warning');
     }
 
-    const fileKey = Storage.generateFileKey(file.name, file.size);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      await this.loadPdfBuffer(arrayBuffer, file.name, file.size, false);
+    } catch (err) {
+      console.error('Erro ao ler arquivo PDF:', err);
+      showToast('Falha ao ler o arquivo do disco.', 'alert-circle');
+    }
+  },
 
+  /**
+   * Carrega um ArrayBuffer de PDF no leitor e sincroniza com o cache IndexedDB
+   * @param {ArrayBuffer} arrayBuffer
+   * @param {string} fileName
+   * @param {number} fileSize
+   * @param {boolean} isFromCache
+   */
+  async loadPdfBuffer(arrayBuffer, fileName, fileSize, isFromCache = false) {
+    const fileKey = Storage.generateFileKey(fileName, fileSize);
+
+    NotebookView.flushPendingSynthesis();
     appState.set({
-      fileName: file.name,
+      fileName,
       fileKey,
       zoomLevel: 1.0,
+      pageJumpHistory: null,
+      pageJumpHistoryStack: [],
     });
 
     if (DOM.fileTitle) {
-      DOM.fileTitle.textContent = file.name;
+      DOM.fileTitle.textContent = fileName;
+      DOM.fileTitle.title = fileName;
       DOM.fileTitle.style.display = 'block';
     }
+    document.title = `${fileName.replace(/\.pdf$/i, '')} · DiveReader`;
+    if (DOM.loadingText) DOM.loadingText.textContent = `Abrindo "${fileName}"...`;
 
     if (DOM.emptyState) DOM.emptyState.style.display = 'none';
     if (DOM.bookContainer) DOM.bookContainer.style.display = 'flex';
@@ -280,6 +424,7 @@ export const App = {
       DOM.btnZoomOut,
       DOM.btnZoomIn,
       DOM.btnZoomPreset,
+      DOM.btnReadingMode,
       DOM.btnToggleSidebar,
       DOM.btnToggleFocus,
       DOM.themeSelector,
@@ -303,13 +448,30 @@ export const App = {
     if (DOM.loading) DOM.loading.style.display = 'flex';
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
+      const resolvedKey = await Storage.resolveFileKey(fileName, fileSize, arrayBuffer);
+      appState.set({ fileKey: resolvedKey });
+
+      // Persiste no cache IndexedDB com buffer clonado para evitar erro de buffer detached caso o worker o transfira
+      if (!isFromCache) {
+        const bufferClone = arrayBuffer.slice(0);
+        cachePdfDocument(resolvedKey, fileName, fileSize, bufferClone).catch((err) => {
+          console.warn('Falha ao salvar no cache IndexedDB:', err);
+        });
+      }
+
       const pdfDoc = await PdfService.loadDocument(arrayBuffer);
       const outline = await PdfService.getOutline(pdfDoc);
 
-      const savedPage = Storage.loadPage(fileKey);
-      const savedHighlights = Storage.loadHighlights(fileKey);
-      const savedNotes = Storage.loadManualNotes(fileKey);
+      const savedPage = Storage.loadPage(resolvedKey);
+      const savedHighlights = Storage.loadHighlights(resolvedKey);
+      const savedNotes = Storage.loadManualNotes(resolvedKey);
+      const savedPrefs = Storage.loadDocPreferences(resolvedKey);
+
+      if (savedPrefs) {
+        if (typeof savedPrefs.zoomLevel === 'number') appState.set({ zoomLevel: savedPrefs.zoomLevel });
+        if (savedPrefs.zoomMode) appState.set({ zoomMode: savedPrefs.zoomMode });
+        if (savedPrefs.readingMode) appState.set({ readingMode: savedPrefs.readingMode });
+      }
 
       let pageNum = savedPage || 1;
       if (!appState.isSinglePageMode() && pageNum % 2 === 0) {
@@ -330,30 +492,52 @@ export const App = {
       if (DOM.mobilePageText) DOM.mobilePageText.textContent = `Pág. ${pageNum}/${pdfDoc.numPages}`;
       if (DOM.mobileBtnPage) DOM.mobileBtnPage.disabled = false;
 
+      this.updateReadingModeUI();
       this.updateBodyMode();
       this.updateZoomUI();
       await this.renderPages(pageNum);
 
-      showToast('Documento carregado e pronto para estudo!', 'check-circle-2');
+      showToast(
+        isFromCache
+          ? 'Sessão anterior restaurada com sucesso!'
+          : 'Documento carregado e pronto para estudo!',
+        'check-circle-2'
+      );
     } catch (error) {
       console.error('Erro ao carregar PDF:', error);
-      showToast('Erro ao processar o arquivo PDF.', 'alert-circle');
-      if (DOM.emptyState) DOM.emptyState.style.display = 'flex';
-      if (DOM.bookContainer) DOM.bookContainer.style.display = 'none';
+      const isPassword = error?.name === 'PasswordException';
+      showToast(
+        isPassword
+          ? 'Este PDF é protegido por senha e não pode ser aberto.'
+          : 'Não foi possível abrir este PDF. O arquivo pode estar corrompido.',
+        'alert-circle',
+        4500,
+      );
+      if (!appState.get('pdfDoc')) {
+        if (DOM.emptyState) DOM.emptyState.style.display = 'flex';
+        if (DOM.bookContainer) DOM.bookContainer.style.display = 'none';
+        if (DOM.zoomHud) DOM.zoomHud.classList.add('hidden');
+        document.title = 'DiveReader Pro | O Leitor Definitivo para Estudos';
+      }
     } finally {
       if (DOM.loading) DOM.loading.style.display = 'none';
     }
   },
 
   /**
-   * Renderiza as páginas ativas no leitor (Normalizando Páginas Esquerda/Direita)
+   * Renderiza as páginas ativas no leitor (Normalizando Páginas Esquerda/Direita ou Modo Contínuo)
    * @param {number} num
    */
   async renderPages(num) {
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc) return;
 
+    const currentToken = ++this.renderToken;
+    if (DOM.bookContainer) {
+      this.layoutSize = { width: DOM.bookContainer.clientWidth, height: DOM.bookContainer.clientHeight };
+    }
     const totalPages = appState.get('totalPages') || pdfDoc.numPages;
+    const isContinuous = appState.get('readingMode') === READING_MODES.CONTINUOUS;
     const singlePage = appState.isSinglePageMode();
 
     let targetPage = parseInt(num, 10);
@@ -367,27 +551,61 @@ export const App = {
 
     appState.set({ isRendering: true, pageNum: leftPageNum });
     Storage.savePage(appState.get('fileKey'), leftPageNum);
+    this.saveCurrentPreferences();
 
     if (DOM.pageInput) DOM.pageInput.value = String(targetPage);
     if (DOM.btnPrev) DOM.btnPrev.disabled = leftPageNum <= 1;
     if (DOM.mobileBtnPrev) DOM.mobileBtnPrev.disabled = leftPageNum <= 1;
     if (DOM.mobileBtnPage) DOM.mobileBtnPage.disabled = false;
 
-    if (DOM.pdfViewer) DOM.pdfViewer.innerHTML = '';
+    try {
+      PdfService.cancelAllPendingRenders();
+
+      if (isContinuous) {
+        await this.renderContinuousMode(targetPage, currentToken);
+      } else {
+        await this.renderPagedMode(leftPageNum, targetPage, totalPages, singlePage, currentToken);
+      }
+    } catch (err) {
+      console.error('Erro na renderização das páginas:', err);
+    } finally {
+      if (this.renderToken === currentToken) {
+        appState.set({ isRendering: false });
+      }
+    }
+  },
+
+  /**
+   * Renderização em modo paginado (Página única ou Livro aberto de duas páginas)
+   */
+  async renderPagedMode(leftPageNum, targetPage, totalPages, singlePage, currentToken) {
+    this.continuousZoomLevel = null;
+    this.continuousZoomMode = null;
+    this.continuousContainerWidth = 0;
+    if (this.continuousObserver) {
+      this.continuousObserver.disconnect();
+      this.continuousObserver = null;
+    }
+    if (this.continuousUnloadObserver) {
+      this.continuousUnloadObserver.disconnect();
+      this.continuousUnloadObserver = null;
+    }
 
     let indicatorText = `${leftPageNum}`;
+    const buildPromises = [];
 
     if (singlePage) {
       if (DOM.btnNext) DOM.btnNext.disabled = leftPageNum >= totalPages;
       if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = leftPageNum >= totalPages;
 
-      const wrapper = await PdfService.buildPageWrapper(
-        leftPageNum,
-        true,
-        DOM.bookContainer,
-        (p, layer) => HighlightService.drawPageHighlights(p, layer),
+      buildPromises.push(
+        PdfService.buildPageWrapper(
+          leftPageNum,
+          true,
+          DOM.bookContainer,
+          (p, layer) => HighlightService.drawPageHighlights(p, layer),
+        ),
       );
-      if (DOM.pdfViewer) DOM.pdfViewer.appendChild(wrapper);
     } else {
       const rightPageNum = leftPageNum + 1;
       const hasRightPage = rightPageNum <= totalPages;
@@ -396,68 +614,383 @@ export const App = {
       if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = leftPageNum >= totalPages - 1;
 
       // Página da Esquerda (Sempre ímpar: 1, 3, 5, 7...)
-      const wrapperLeft = await PdfService.buildPageWrapper(
-        leftPageNum,
-        false,
-        DOM.bookContainer,
-        (p, layer) => HighlightService.drawPageHighlights(p, layer),
-      );
-      if (DOM.pdfViewer) DOM.pdfViewer.appendChild(wrapperLeft);
-
-      // Página da Direita (Sempre par: 2, 4, 6, 8...)
-      if (hasRightPage) {
-        const wrapperRight = await PdfService.buildPageWrapper(
-          rightPageNum,
+      buildPromises.push(
+        PdfService.buildPageWrapper(
+          leftPageNum,
           false,
           DOM.bookContainer,
           (p, layer) => HighlightService.drawPageHighlights(p, layer),
+        ),
+      );
+
+      // Página da Direita (Sempre par: 2, 4, 6, 8...)
+      if (hasRightPage) {
+        buildPromises.push(
+          PdfService.buildPageWrapper(
+            rightPageNum,
+            false,
+            DOM.bookContainer,
+            (p, layer) => HighlightService.drawPageHighlights(p, layer),
+          ),
         );
-        if (DOM.pdfViewer) DOM.pdfViewer.appendChild(wrapperRight);
         indicatorText += ` & ${rightPageNum}`;
       }
     }
 
-    // Atualiza o texto do botão mobile
+    const wrappers = await Promise.all(buildPromises);
+
+    // Descarta se uma renderização mais recente foi solicitada durante os awaits
+    if (this.renderToken !== currentToken) return;
+
+    // Troca atômica de conteúdo sem flash/piscada de tela branca
+    if (DOM.pdfViewer) {
+      DOM.pdfViewer.classList.remove('mode-continuous');
+      DOM.pdfViewer.replaceChildren(...wrappers);
+    }
+
+    this.updatePageProgressUI(indicatorText, singlePage ? targetPage : Math.min(totalPages, leftPageNum + 1), totalPages);
+    NotebookView.render();
+    this.updateZoomUI();
+
+    // Pré-carregamento em background da próxima página para transição imediata
+    this.schedulePrefetch(leftPageNum + (singlePage ? 1 : 2), totalPages);
+  },
+
+  /**
+   * Renderização em modo de rolagem contínua vertical com placeholders virtuais
+   */
+  async renderContinuousMode(targetPage, currentToken) {
+    const pdfDoc = appState.get('pdfDoc');
+    if (!pdfDoc) return;
+    const totalPages = appState.get('totalPages') || pdfDoc.numPages;
+
+    if (DOM.btnNext) DOM.btnNext.disabled = targetPage >= totalPages;
+    if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = targetPage >= totalPages;
+
+    const hadModeClass = DOM.pdfViewer?.classList.contains('mode-continuous');
+    if (DOM.pdfViewer && !hadModeClass) {
+      DOM.pdfViewer.classList.add('mode-continuous');
+    }
+
+    const currentZoom = appState.get('zoomLevel') || 1.0;
+    const currentMode = appState.get('zoomMode') || ZOOM_MODES.FIT_WIDTH;
+    const container = DOM.bookContainer;
+    const containerWidth = container?.clientWidth || 800;
+
+    const existingWrappers = DOM.pdfViewer?.querySelectorAll('.page-wrapper') || [];
+    const isContinuousMounted = hadModeClass && existingWrappers.length === totalPages;
+
+    const layoutNeedsUpdate =
+      this.continuousZoomLevel !== currentZoom ||
+      this.continuousZoomMode !== currentMode ||
+      Math.abs(this.continuousContainerWidth - containerWidth) > 8;
+
+    // Se todos os wrappers já estão montados e a escala/tamanho não mudou, apenas rola (navegação pura)
+    if (isContinuousMounted && !layoutNeedsUpdate) {
+      const targetWrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${targetPage}"]`);
+      if (targetWrapper) {
+        targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
+      NotebookView.render();
+      this.updateZoomUI();
+      return;
+    }
+
+    this.continuousZoomLevel = currentZoom;
+    this.continuousZoomMode = currentMode;
+    this.continuousContainerWidth = containerWidth;
+
+    // Se os wrappers já estão montados e a escala/tamanho mudou, atualiza dimensões e re-renderiza visíveis
+    if (isContinuousMounted) {
+      const containerRect = container ? container.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+      const visiblePages = new Set();
+
+      existingWrappers.forEach((wrapper) => {
+        const rect = wrapper.getBoundingClientRect();
+        if (rect.bottom >= containerRect.top - 200 && rect.top <= containerRect.bottom + 200) {
+          visiblePages.add(parseInt(wrapper.dataset.page, 10));
+        }
+      });
+
+      if (visiblePages.size === 0) {
+        visiblePages.add(targetPage);
+      }
+
+      const updatePromises = [];
+      for (let i = 0; i < existingWrappers.length; i++) {
+        const wrapper = existingWrappers[i];
+        const pageNum = parseInt(wrapper.dataset.page, 10);
+        updatePromises.push(
+          (async () => {
+            try {
+              const page = await pdfDoc.getPage(pageNum);
+              const scale = PdfService.getScale(page.getViewport({ scale: 1 }), true, container, currentZoom, currentMode);
+              const viewport = page.getViewport({ scale });
+              wrapper.style.width = `${viewport.width}px`;
+              wrapper.style.height = `${viewport.height}px`;
+
+              if (visiblePages.has(pageNum)) {
+                wrapper.replaceChildren();
+                wrapper.dataset.rendered = 'false';
+                wrapper.classList.remove('page-placeholder');
+                await PdfService.populatePageWrapper(
+                  wrapper,
+                  page,
+                  viewport,
+                  pageNum,
+                  (p, layer) => HighlightService.drawPageHighlights(p, layer),
+                );
+              } else if (wrapper.dataset.rendered === 'true') {
+                wrapper.replaceChildren();
+                wrapper.dataset.rendered = 'false';
+                wrapper.classList.add('page-placeholder');
+              }
+            } catch (err) {
+              console.warn('Erro ao atualizar página no zoom contínuo:', pageNum, err);
+            }
+          })()
+        );
+      }
+
+      await Promise.all(updatePromises);
+      if (this.renderToken !== currentToken) return;
+
+      this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
+      NotebookView.render();
+      this.updateZoomUI();
+      return;
+    }
+
+    // Primeira montagem do modo contínuo: cria placeholders dimensionados para todas as páginas
+    const placeholderPromises = [];
+    for (let p = 1; p <= totalPages; p++) {
+      placeholderPromises.push(PdfService.buildPageWrapperPlaceholder(p, true, DOM.bookContainer));
+    }
+
+    const placeholders = await Promise.all(placeholderPromises);
+    if (this.renderToken !== currentToken) return;
+
+    const wrappers = placeholders.map((item) => item.wrapper);
+    if (DOM.pdfViewer) {
+      DOM.pdfViewer.replaceChildren(...wrappers);
+    }
+
+    this.setupContinuousObserver();
+
+    // Rola até a página solicitada na primeira montagem
+    const targetWrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${targetPage}"]`);
+    if (targetWrapper) {
+      targetWrapper.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+
+    this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
+    NotebookView.render();
+    this.updateZoomUI();
+  },
+
+  /**
+   * Observador de interseção para carregamento sob demanda de páginas em modo contínuo
+   */
+  setupContinuousObserver() {
+    if (this.continuousObserver) {
+      this.continuousObserver.disconnect();
+    }
+    const container = DOM.bookContainer;
+    this.continuousObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(async (entry) => {
+          const wrapper = entry.target;
+          const pageNum = parseInt(wrapper.dataset.page, 10);
+
+          if (entry.isIntersecting) {
+            if (wrapper.dataset.rendered !== 'true') {
+              const pdfDoc = appState.get('pdfDoc');
+              if (pdfDoc) {
+                try {
+                  const page = await pdfDoc.getPage(pageNum);
+                  const zoomLevel = appState.get('zoomLevel');
+                  const scale = PdfService.getScale(
+                    page.getViewport({ scale: 1 }),
+                    true,
+                    container,
+                    zoomLevel,
+                    appState.get('zoomMode'),
+                  );
+                  const viewport = page.getViewport({ scale });
+                  await PdfService.populatePageWrapper(
+                    wrapper,
+                    page,
+                    viewport,
+                    pageNum,
+                    (p, layer) => HighlightService.drawPageHighlights(p, layer),
+                  );
+                } catch (e) {
+                  console.warn('Erro ao carregar página contínua:', pageNum, e);
+                }
+              }
+            }
+
+            if (entry.intersectionRatio >= 0.4 || (entry.boundingClientRect.top >= 0 && entry.boundingClientRect.top < window.innerHeight * 0.5)) {
+              this.onContinuousPageVisible(pageNum);
+            }
+          }
+        });
+      },
+      {
+        root: container,
+        rootMargin: '250px 0px 250px 0px',
+        threshold: [0, 0.25, 0.5, 0.75],
+      },
+    );
+
+    const wrappers = DOM.pdfViewer?.querySelectorAll('.page-wrapper') || [];
+    wrappers.forEach((w) => this.continuousObserver.observe(w));
+
+    // Descarrega páginas muito distantes da área visível para limitar o uso de memória em PDFs longos
+    if (this.continuousUnloadObserver) this.continuousUnloadObserver.disconnect();
+    this.continuousUnloadObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const wrapper = entry.target;
+          if (!entry.isIntersecting && wrapper.dataset.rendered === 'true') {
+            wrapper.replaceChildren();
+            wrapper.dataset.rendered = 'false';
+            wrapper.classList.add('page-placeholder');
+          }
+        });
+      },
+      { root: container, rootMargin: '2500px 0px 2500px 0px', threshold: 0 },
+    );
+    wrappers.forEach((w) => this.continuousUnloadObserver.observe(w));
+  },
+
+  onContinuousPageVisible(pageNum) {
+    const current = appState.get('pageNum');
+    if (current === pageNum) return;
+
+    NotebookView.flushPendingSynthesis();
+    appState.set({ pageNum });
+    Storage.savePage(appState.get('fileKey'), pageNum);
+    if (DOM.pageInput) DOM.pageInput.value = String(pageNum);
+
+    const totalPages = appState.get('totalPages') || 1;
+    if (DOM.btnPrev) DOM.btnPrev.disabled = pageNum <= 1;
+    if (DOM.mobileBtnPrev) DOM.mobileBtnPrev.disabled = pageNum <= 1;
+    if (DOM.btnNext) DOM.btnNext.disabled = pageNum >= totalPages;
+    if (DOM.mobileBtnNext) DOM.mobileBtnNext.disabled = pageNum >= totalPages;
+    this.updatePageProgressUI(String(pageNum), pageNum, totalPages);
+    NotebookView.render();
+  },
+
+  /**
+   * Atualiza a barra linear de progresso e o indicador de leitura com timer seguro
+   */
+  updatePageProgressUI(indicatorText, currentEffectivePage, totalPages) {
     if (DOM.mobilePageText) {
       DOM.mobilePageText.textContent = `Pág. ${indicatorText}/${totalPages}`;
     }
 
-    // Atualiza a barra linear de progresso de leitura (%)
-    const currentEffectivePage = singlePage ? targetPage : Math.min(totalPages, leftPageNum + 1);
     const progressPercent = totalPages > 0 ? Math.min(100, Math.max(1, Math.round((currentEffectivePage / totalPages) * 100))) : 0;
     const progressBar = DOM.readingProgressBar || document.getElementById('reading-progress-bar');
     if (progressBar) {
       progressBar.style.width = `${progressPercent}%`;
     }
 
-    // Atualiza o indicador de página com porcentagem de leitura e seta indicadora
+    clearTimeout(this.indicatorTimer);
     if (DOM.indicator) {
       DOM.indicator.textContent = `Pág. ${indicatorText} / ${totalPages} (${progressPercent}%) ▾`;
-      DOM.indicator.style.opacity = '1';
-      setTimeout(() => {
+      DOM.indicator.classList.add('visible');
+      this.indicatorTimer = setTimeout(() => {
         if (appState.get('zoomLevel') <= 1.0 && DOM.indicator) {
-          DOM.indicator.style.opacity = '0';
+          DOM.indicator.classList.remove('visible');
         }
       }, 3000);
     }
+  },
 
-    // Atualiza o caderno de anotações e interface de zoom
-    NotebookView.render();
-    this.updateZoomUI();
-    appState.set({ isRendering: false });
+  /**
+   * Pré-carrega metadados e texto da próxima página no cache de forma ociosa
+   */
+  schedulePrefetch(nextPageNum, totalPages) {
+    clearTimeout(this.prefetchTimer);
+    if (nextPageNum > totalPages) return;
+    this.prefetchTimer = setTimeout(async () => {
+      const pdfDoc = appState.get('pdfDoc');
+      if (!pdfDoc) return;
+      try {
+        const page = await pdfDoc.getPage(nextPageNum);
+        await page.getTextContent();
+      } catch (e) {}
+    }, 350);
+  },
+
+  /**
+   * Alterna entre modo Paginado (Individual/Livro) e Rolagem Contínua Vertical
+   */
+  toggleReadingMode() {
+    const current = appState.get('readingMode') || READING_MODES.PAGED;
+    const next = current === READING_MODES.PAGED ? READING_MODES.CONTINUOUS : READING_MODES.PAGED;
+    appState.set({ readingMode: next });
+    this.updateReadingModeUI();
+    this.updateBodyMode();
+    const currentPage = appState.get('pageNum') || 1;
+    this.renderPages(currentPage);
+    showToast(
+      next === READING_MODES.CONTINUOUS
+        ? 'Modo: Rolagem Contínua'
+        : 'Modo: Páginas Lado a Lado / Individual',
+      next === READING_MODES.CONTINUOUS ? 'scroll' : 'book-open',
+    );
+  },
+
+  updateReadingModeUI() {
+    const mode = appState.get('readingMode') || READING_MODES.PAGED;
+    const isContinuous = mode === READING_MODES.CONTINUOUS;
+    if (DOM.readingModeLabel) {
+      DOM.readingModeLabel.textContent = isContinuous ? 'Contínuo' : 'Páginas';
+    }
+    if (DOM.btnReadingMode) {
+      DOM.btnReadingMode.title = isContinuous
+        ? 'Modo Atual: Rolagem Contínua (Clique para mudar para Páginas)'
+        : 'Modo Atual: Páginas (Clique para mudar para Rolagem Contínua)';
+      const icon = DOM.btnReadingMode.querySelector('i');
+      if (icon) {
+        icon.setAttribute('data-lucide', isContinuous ? 'scroll' : 'book-open');
+        refreshIcons(DOM.btnReadingMode);
+      }
+    }
+  },
+
+  saveCurrentPreferences() {
+    const fileKey = appState.get('fileKey');
+    if (!fileKey) return;
+    Storage.saveDocPreferences(fileKey, {
+      zoomLevel: appState.get('zoomLevel'),
+      zoomMode: appState.get('zoomMode'),
+      readingMode: appState.get('readingMode'),
+    });
   },
 
   /**
    * Avança para a próxima página com animação
    */
   onNextPage() {
+    NotebookView.flushPendingSynthesis();
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc || appState.get('isRendering')) return;
 
-    const single = appState.isSinglePageMode();
-    const currentPage = appState.get('pageNum');
     const total = appState.get('totalPages');
+    const currentPage = appState.get('pageNum');
 
+    if (appState.get('readingMode') === READING_MODES.CONTINUOUS) {
+      if (currentPage < total) {
+        this.goToPage(currentPage + 1, false);
+      }
+      return;
+    }
+
+    const single = appState.isSinglePageMode();
     if (currentPage >= total - (single ? 0 : 1)) return;
 
     appState.set({ isRendering: true });
@@ -465,8 +998,10 @@ export const App = {
     const target = single ? pages[0] : pages.length > 1 ? pages[1] : pages[0];
 
     if (target && appState.get('zoomLevel') <= 1.0) {
+      DOM.pdfViewer?.classList.add('flipping');
       target.classList.add('flip-next');
       setTimeout(() => {
+        DOM.pdfViewer?.classList.remove('flipping');
         appState.set({ isRendering: false });
         this.renderPages(currentPage + (single ? 1 : 2));
       }, 350);
@@ -479,20 +1014,28 @@ export const App = {
    * Volta para a página anterior com animação
    */
   onPrevPage() {
+    NotebookView.flushPendingSynthesis();
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc || appState.get('isRendering')) return;
 
-    const single = appState.isSinglePageMode();
     const currentPage = appState.get('pageNum');
     if (currentPage <= 1) return;
 
+    if (appState.get('readingMode') === READING_MODES.CONTINUOUS) {
+      this.goToPage(currentPage - 1, false);
+      return;
+    }
+
+    const single = appState.isSinglePageMode();
     appState.set({ isRendering: true });
     const pages = DOM.pdfViewer?.children || [];
     const target = pages[0];
 
     if (target && appState.get('zoomLevel') <= 1.0) {
+      DOM.pdfViewer?.classList.add('flipping');
       target.classList.add('flip-prev');
       setTimeout(() => {
+        DOM.pdfViewer?.classList.remove('flipping');
         appState.set({ isRendering: false });
         const nextPage = Math.max(1, currentPage - (single ? 1 : 2));
         this.renderPages(nextPage);
@@ -509,37 +1052,63 @@ export const App = {
    * @param {Object} [focalPoint] { clientX, clientY }
    */
   setZoom(targetZoom, focalPoint = null) {
-    const current = appState.get('zoomLevel');
+    const current = appState.get('zoomLevel') || 1.0;
     const clamped = Math.max(ZOOM_LIMITS.MIN, Math.min(ZOOM_LIMITS.MAX, targetZoom));
     const newZoom = Math.round(clamped * 100) / 100;
     if (Math.abs(newZoom - current) < 0.005) return;
 
-    // Calcula razão focal para ancorar a posição de leitura sem resetar para o topo
-    let ratioX = 0.5;
-    let ratioY = 0.5;
-    let focalOffsetX = null;
-    let focalOffsetY = null;
     const container = DOM.bookContainer;
+    const wasSingle = appState.isSinglePageMode();
 
-    if (container && container.scrollWidth > 0 && container.scrollHeight > 0) {
-      if (focalPoint && typeof focalPoint.clientX === 'number') {
-        const rect = container.getBoundingClientRect();
-        focalOffsetX = focalPoint.clientX - rect.left;
-        focalOffsetY = focalPoint.clientY - rect.top;
-        const focusX = focalOffsetX + container.scrollLeft;
-        const focusY = focalOffsetY + container.scrollTop;
-        ratioX = focusX / container.scrollWidth;
-        ratioY = focusY / container.scrollHeight;
+    // Captura o ponto focal antes de esvaziar o container para manter a visão estável
+    let targetScrollLeft = 0;
+    let targetScrollTop = 0;
+    let hasTargetScroll = false;
+
+    if (container && current > 0) {
+      const isContinuous = appState.get('readingMode') === READING_MODES.CONTINUOUS;
+      const isAtTop = container.scrollTop <= 6;
+      const isAtLeft = container.scrollLeft <= 6;
+      const hasExplicitFocal = Boolean(
+        focalPoint &&
+        typeof focalPoint.clientX === 'number' &&
+        typeof focalPoint.clientY === 'number'
+      );
+
+      if (!hasExplicitFocal && isAtTop) {
+        // Se o usuário está no topo do documento e aplica zoom via botão/tecla, mantém visão no topo absoluto
+        targetScrollTop = 0;
       } else {
-        const centerX = container.scrollLeft + container.clientWidth / 2;
-        const centerY = container.scrollTop + container.clientHeight / 2;
-        ratioX = centerX / container.scrollWidth;
-        ratioY = centerY / container.scrollHeight;
+        const rect = container.getBoundingClientRect();
+        const focalY = hasExplicitFocal
+          ? focalPoint.clientY - rect.top
+          : container.clientHeight / 2;
+        const scaleRatio = newZoom / current;
+        targetScrollTop = Math.max(0, (container.scrollTop + focalY) * scaleRatio - focalY);
       }
+
+      if (!hasExplicitFocal && isAtLeft) {
+        targetScrollLeft = 0;
+      } else {
+        const rect = container.getBoundingClientRect();
+        const focalX = hasExplicitFocal
+          ? focalPoint.clientX - rect.left
+          : container.clientWidth / 2;
+        const scaleRatio = newZoom / current;
+        targetScrollLeft = Math.max(0, (container.scrollLeft + focalX) * scaleRatio - focalX);
+      }
+
+      // No modo paginado (duas páginas ou página única), se o novo zoom for 1.0 ou menor, centraliza
+      if (!isContinuous && newZoom <= 1.0) {
+        targetScrollLeft = 0;
+        targetScrollTop = 0;
+      }
+
+      hasTargetScroll = true;
     }
 
-    const wasSingle = appState.isSinglePageMode();
     appState.set({ zoomLevel: newZoom });
+    this.saveCurrentPreferences();
     this.updateBodyMode();
     this.updateZoomUI();
 
@@ -549,13 +1118,14 @@ export const App = {
     }
 
     this.renderPages(pageNum).then(() => {
-      if (container && newZoom > 1.0) {
-        const offsetX = focalOffsetX !== null ? focalOffsetX : container.clientWidth / 2;
-        const offsetY = focalOffsetY !== null ? focalOffsetY : container.clientHeight / 2;
-        const newScrollLeft = ratioX * container.scrollWidth - offsetX;
-        const newScrollTop = ratioY * container.scrollHeight - offsetY;
-        container.scrollLeft = Math.max(0, newScrollLeft);
-        container.scrollTop = Math.max(0, newScrollTop);
+      if (container && hasTargetScroll) {
+        const prevBehavior = container.style.scrollBehavior;
+        container.style.scrollBehavior = 'auto';
+        container.scrollLeft = targetScrollLeft;
+        container.scrollTop = targetScrollTop;
+        requestAnimationFrame(() => {
+          container.style.scrollBehavior = prevBehavior;
+        });
       }
     });
   },
@@ -566,6 +1136,10 @@ export const App = {
    * @param {Object} [focalPoint]
    */
   changeZoom(delta, focalPoint = null) {
+    if (delta === null || (focalPoint && focalPoint.reset)) {
+      this.setZoom(1.0);
+      return;
+    }
     const current = appState.get('zoomLevel');
     this.setZoom(current + delta, focalPoint);
   },
@@ -667,6 +1241,29 @@ export const App = {
   },
 
   /**
+   * Abre o painel de atalhos de teclado
+   */
+  openShortcutsDialog() {
+    if (!DOM.shortcutsDialog || DOM.shortcutsDialog.open) return;
+    refreshIcons(DOM.shortcutsDialog);
+    DOM.shortcutsDialog.showModal();
+  },
+
+  /**
+   * Esc: fecha o Caderno ou sai do Modo Foco, nesta ordem
+   */
+  handleEscape() {
+    if (appState.get('isSidebarOpen')) {
+      NotebookView.toggleSidebar(false);
+      DOM.bookContainer?.focus({ preventScroll: true });
+      return;
+    }
+    if (appState.get('isFocusMode')) {
+      this.toggleFocusMode();
+    }
+  },
+
+  /**
    * Fecha a gaveta de salto de páginas
    */
   closePageJumpDialog() {
@@ -702,6 +1299,7 @@ export const App = {
    * @param {boolean} [trackHistory=true]
    */
   goToPage(targetPage, trackHistory = true) {
+    NotebookView.flushPendingSynthesis();
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc) return;
     const total = appState.get('totalPages') || pdfDoc.numPages || 1;
@@ -711,26 +1309,34 @@ export const App = {
 
     const currentPage = appState.get('pageNum') || 1;
     if (trackHistory && currentPage !== page) {
-      appState.set({ pageJumpHistory: currentPage });
+      const stack = [...(appState.get('pageJumpHistoryStack') || [])];
+      stack.push(currentPage);
+      appState.set({ pageJumpHistory: currentPage, pageJumpHistoryStack: stack });
     }
 
     this.closePageJumpDialog();
 
-    if (!appState.isSinglePageMode() && page % 2 === 0) {
-      page -= 1;
-    }
-
+    // renderPages normaliza a página esquerda no modo livro aberto (duas páginas)
     this.renderPages(page);
-    showToast(`Página ${page} de ${total}`, 'book-open');
   },
 
   /**
-   * Retorna à página em que o leitor estava antes do último salto
+   * Retorna à página em que o leitor estava antes do último salto (com suporte a histórico em pilha)
    */
   returnToPreviousPage() {
-    const history = appState.get('pageJumpHistory');
-    if (history) {
-      this.goToPage(history, false);
+    const stack = [...(appState.get('pageJumpHistoryStack') || [])];
+    if (stack.length > 0) {
+      const prev = stack.pop();
+      appState.set({
+        pageJumpHistory: stack.length > 0 ? stack[stack.length - 1] : null,
+        pageJumpHistoryStack: stack,
+      });
+      this.goToPage(prev, false);
+    } else {
+      const history = appState.get('pageJumpHistory');
+      if (history) {
+        this.goToPage(history, false);
+      }
     }
   },
 
@@ -749,6 +1355,25 @@ export const App = {
     this.goToPage(targetPage, true);
   },
 
+  /**
+   * Aplica o tema preservando as demais classes de estado do <body>
+   * @param {string} theme
+   * @param {boolean} [persist=true]
+   */
+  applyTheme(theme, persist = true) {
+    const valid = Object.values(THEMES);
+    const nextTheme = valid.includes(theme) ? theme : THEMES.LIGHT;
+    valid.forEach((t) => document.body.classList.remove(t));
+    document.body.classList.add(nextTheme);
+    if (DOM.themeSelector) DOM.themeSelector.value = nextTheme;
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) {
+      const colors = { [THEMES.LIGHT]: '#ffffff', [THEMES.SEPIA]: '#f5edd8', [THEMES.DARK]: '#1e1e24' };
+      themeMeta.setAttribute('content', colors[nextTheme]);
+    }
+    if (persist) Storage.saveTheme(nextTheme);
+  },
+
   updateBodyMode() {
     document.body.classList.toggle('single-page-mode', appState.isSinglePageMode());
     document.body.classList.toggle('zoomed-mode', appState.get('zoomLevel') > 1.0);
@@ -760,6 +1385,7 @@ export const App = {
     const isHidden = DOM.topMenu.classList.contains('hidden');
     appState.set({ isFocusMode: isHidden });
     document.body.classList.toggle('focus-mode', isHidden);
+    if (DOM.btnToggleFocus) DOM.btnToggleFocus.setAttribute('aria-pressed', String(isHidden));
 
     // No mobile, oculta também a barra inferior para liberar 100% da tela
     if (DOM.mobileNavBar) {
@@ -771,12 +1397,18 @@ export const App = {
         DOM.floatingBar.classList.add('visible');
         this.wakeFocusBar();
       }
-      showToast('Modo Foco (Tela Cheia)', 'maximize');
+      showToast('Modo Foco ativado — pressione F ou Esc para sair', 'maximize');
     } else if (DOM.floatingBar) {
       DOM.floatingBar.classList.remove('visible', 'faded');
       clearTimeout(this.focusTimer);
       showToast('Modo Foco desativado', 'minimize');
     }
+
+    // Libera o foco do botão de modo foco e foca imediatamente a área de leitura
+    if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+      document.activeElement.blur();
+    }
+    DOM.bookContainer?.focus({ preventScroll: true });
   },
 
   wakeFocusBar() {
@@ -817,9 +1449,11 @@ export const App = {
     });
 
     appState.on(EVENTS.POMODORO_FINISHED, () => {
+      PomodoroService.playChime();
       if (DOM.pomodoroAlert) {
         DOM.pomodoroAlert.classList.remove('hidden');
         refreshIcons(DOM.pomodoroAlert);
+        document.getElementById('btn-alert-break')?.focus();
       }
       showToast('Ciclo Pomodoro finalizado! Hora de descansar.', 'coffee');
     });
@@ -829,6 +1463,12 @@ export const App = {
         const running = PomodoroService.toggle();
         showToast(running ? 'Pomodoro iniciado!' : 'Pomodoro pausado', running ? 'play' : 'pause');
       };
+      DOM.pomodoroWidget.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          DOM.pomodoroWidget.click();
+        }
+      });
     }
 
     // Mini controles (-5, reset, +5)
@@ -868,6 +1508,13 @@ export const App = {
         PomodoroService.reset(20);
       };
     }
+
+    // Esc fecha o alerta do Pomodoro sem alterar o ciclo
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && DOM.pomodoroAlert && !DOM.pomodoroAlert.classList.contains('hidden')) {
+        DOM.pomodoroAlert.classList.add('hidden');
+      }
+    });
 
     // Inicializa a UI do Pomodoro
     updatePomodoroDOM(PomodoroService.getState());

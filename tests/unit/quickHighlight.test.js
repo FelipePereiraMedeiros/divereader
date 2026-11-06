@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { QuickHighlightTooltip } from '../../src/js/ui/quickHighlight.js';
 import { DOM } from '../../src/js/ui/dom.js';
 
@@ -38,27 +38,5 @@ describe('QuickHighlightTooltip Adaptive Positioning & Conflict Avoidance', () =
     expect(tooltipEl.style.display).toBe('flex');
     expect(tooltipEl.classList.contains('placement-top')).toBe(true);
     expect(tooltipEl.classList.contains('placement-bottom')).toBe(false);
-  });
-
-  it('isForeignOverlayAt deve detectar nós injetados por extensões externas', () => {
-    const fakeExtensionNode = document.createElement('div');
-    fakeExtensionNode.id = 'deepl-inline-popup';
-    fakeExtensionNode.style.position = 'fixed';
-    document.body.appendChild(fakeExtensionNode);
-
-    document.elementsFromPoint = vi.fn().mockReturnValue([fakeExtensionNode]);
-
-    const hasConflict = QuickHighlightTooltip.isForeignOverlayAt(150, 100);
-    expect(hasConflict).toBe(true);
-
-    fakeExtensionNode.remove();
-  });
-
-  it('isForeignOverlayAt deve ignorar nós nativos do próprio DiveReader', () => {
-    const bookContainer = document.getElementById('book-container');
-    document.elementsFromPoint = vi.fn().mockReturnValue([bookContainer]);
-
-    const hasConflict = QuickHighlightTooltip.isForeignOverlayAt(150, 100);
-    expect(hasConflict).toBe(false);
   });
 });

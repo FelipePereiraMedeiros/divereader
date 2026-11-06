@@ -4,6 +4,8 @@
 
 import { refreshIcons } from './dom.js';
 
+const MAX_TOASTS = 3;
+
 export function showToast(message, icon = 'info', duration = 3000) {
   let container = document.getElementById('toast-container');
   if (!container) {
@@ -17,10 +19,18 @@ export function showToast(message, icon = 'info', duration = 3000) {
   toast.setAttribute('role', 'status');
   toast.setAttribute('aria-live', 'polite');
 
-  toast.innerHTML = `
-    <i data-lucide="${icon}" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
-    <span>${message}</span>
-  `;
+  const iconEl = document.createElement('i');
+  iconEl.setAttribute('data-lucide', icon);
+  iconEl.style.cssText = 'width: 16px; height: 16px; flex-shrink: 0;';
+  const textEl = document.createElement('span');
+  textEl.textContent = message;
+  toast.append(iconEl, textEl);
+
+  // Evita empilhamento excessivo: mantém no máximo 3 toasts visíveis
+  const existing = container.querySelectorAll('.toast');
+  if (existing.length >= MAX_TOASTS) {
+    existing[0].remove();
+  }
 
   container.appendChild(toast);
   refreshIcons(toast);
