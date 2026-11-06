@@ -178,3 +178,12 @@ body.zoomed-mode #pomodoro-container:hover {
   justify-content: center;
   margin-top: 16px;
 }
+
+/* Em telas com mouse, os mini-controles só aparecem ao passar o cursor/focar (menos poluição sobre a página) */
+@media (hover: hover) {
+  #pomodoro-container:not(:hover):not(:focus-within) #pomodoro-controls {
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+  }
+}

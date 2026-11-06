@@ -63,7 +63,8 @@ export const NotebookView = {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   },
 
   /**
@@ -228,9 +229,15 @@ export const NotebookView = {
       appState.set({ isSidebarOpen: true });
       this.render();
     } else {
+      this.flushPendingSynthesis();
+      if (DOM.sidebar.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
       DOM.sidebar.classList.add('hidden');
       appState.set({ isSidebarOpen: false });
     }
+    document.body.classList.toggle('sidebar-open', shouldBeOpen);
+    if (DOM.btnToggleSidebar) DOM.btnToggleSidebar.setAttribute('aria-expanded', String(shouldBeOpen));
   },
 
   /**
@@ -243,6 +250,11 @@ export const NotebookView = {
     if (DOM.tabBtnPage) DOM.tabBtnPage.classList.toggle('active', tab === 'page');
     if (DOM.tabBtnGlobal) DOM.tabBtnGlobal.classList.toggle('active', tab === 'global');
     if (DOM.tabBtnToc) DOM.tabBtnToc.classList.toggle('active', tab === 'toc');
+    [
+      [DOM.tabBtnPage, 'page'],
+      [DOM.tabBtnGlobal, 'global'],
+      [DOM.tabBtnToc, 'toc'],
+    ].forEach(([btn, key]) => btn?.setAttribute('aria-selected', String(tab === key)));
 
     if (DOM.tabPage) DOM.tabPage.classList.toggle('active', tab === 'page');
     if (DOM.tabGlobal) DOM.tabGlobal.classList.toggle('active', tab === 'global');
@@ -377,7 +389,10 @@ export const NotebookView = {
               if (typeof window !== 'undefined' && window.innerWidth <= 820) {
                 this.toggleSidebar(false);
               }
-              HighlightService.flashHighlight(hPageNum, h.id);
+              const found = HighlightService.flashHighlight(hPageNum, h.id);
+              if (!found) {
+                showToast('Esta citação não possui marcação visível no PDF.', 'info');
+              }
             };
           }
 
@@ -387,14 +402,14 @@ export const NotebookView = {
             btnDel.onclick = async () => {
               const choice = await DialogService.confirmHighlightDeletion({
                 title: 'Excluir Grifo',
-                message: 'Você deseja excluir este grifo também da página do PDF?',
+                message: 'O grifo será removido do PDF e do Caderno, junto com a nota associada.',
                 quoteText: h.text,
                 hasNote: !!(h.note && h.note.trim()),
-                primaryActionText: 'Sim, excluir do Caderno e do PDF',
-                secondaryActionText: 'Remover apenas do Caderno',
+                primaryActionText: 'Excluir grifo',
+                secondaryActionText: null,
               });
 
-              if (choice === 'delete-all' || choice === 'delete-one') {
+              if (choice === 'delete-all') {
                 HighlightService.deleteHighlight(hPageNum, h.id);
                 this.render();
                 showToast('Grifo excluído com sucesso.', 'eraser');
@@ -421,7 +436,16 @@ export const NotebookView = {
 
     // Atualiza a síntese manual da página
     if (DOM.notepad) {
-      DOM.notepad.value = NoteService.getPageSynthesis(pageNum);
+      const isEditingSamePage =
+        document.activeElement === DOM.notepad &&
+        this.notepadSaveTimeout &&
+        this.lastNotepadPage === pageNum;
+      if (!isEditingSamePage) {
+        DOM.notepad.value = NoteService.getPageSynthesis(pageNum);
+      }
+      DOM.notepad.placeholder = isSingle
+        ? `Escreva suas sínteses e reflexões sobre a página ${pageNum}...`
+        : `Escreva suas sínteses e reflexões sobre as páginas ${pageNum}–${pageNum + 1}...`;
     }
 
     // Atualiza aba global ou sumário se estiver ativa
@@ -462,13 +486,21 @@ export const NotebookView = {
         itemEl.className = `toc-item ${isActive ? 'active' : ''}`;
 
         itemEl.innerHTML = `
-          <span class="toc-title" title="${item.title}">${item.title}</span>
+          <span class="toc-title" title="${this.escapeHtml(item.title)}">${this.escapeHtml(item.title)}</span>
           ${item.pageNum ? `<span class="toc-page">p. ${item.pageNum}</span>` : ''}
         `;
 
         if (item.pageNum) {
+          itemEl.setAttribute('role', 'button');
+          itemEl.tabIndex = 0;
           itemEl.onclick = () => {
             this.navigateTo(item.pageNum);
+          };
+          itemEl.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              this.navigateTo(item.pageNum);
+            }
           };
         }
 
@@ -485,6 +517,12 @@ export const NotebookView = {
 
     renderTree(outline, tocListEl);
     refreshIcons(tocListEl);
+
+    // Mantém o capítulo atual visível em sumários longos
+    const activeItem = tocListEl.querySelector('.toc-item.active');
+    if (activeItem && typeof activeItem.scrollIntoView === 'function') {
+      activeItem.scrollIntoView({ block: 'nearest' });
+    }
   },
 
   /**
@@ -508,7 +546,7 @@ export const NotebookView = {
 
     const validPages = pages.filter((pageNum) => {
       const pageHighlights = highlights[pageNum] || [];
-      const pageSynthesis = (manualNotes[pageNum] || '').trim();
+      const pageSynthesis = NoteService.getPageSynthesis(pageNum).trim();
 
       const matchingHighlights = pageHighlights.filter((h) => {
         const matchColor = activeColorFilter === 'all' || (h.color || 'yellow') === activeColorFilter;
@@ -540,7 +578,7 @@ export const NotebookView = {
 
     validPages.forEach((pageNum) => {
       const pageHighlights = highlights[pageNum] || [];
-      const pageSynthesis = (manualNotes[pageNum] || '').trim();
+      const pageSynthesis = NoteService.getPageSynthesis(pageNum).trim();
 
       // Filtra os grifos da página
       const matchingHighlights = pageHighlights.filter((h) => {
@@ -677,14 +715,14 @@ export const NotebookView = {
             btnDel.onclick = async () => {
               const choice = await DialogService.confirmHighlightDeletion({
                 title: 'Excluir Grifo do Fichamento',
-                message: 'Você deseja excluir este grifo também da página do PDF?',
+                message: 'O grifo será removido do PDF e do Caderno, junto com a nota associada.',
                 quoteText: h.text,
                 hasNote: !!(h.note && h.note.trim()),
-                primaryActionText: 'Sim, excluir do Fichamento e do PDF',
-                secondaryActionText: 'Remover apenas do Fichamento',
+                primaryActionText: 'Excluir grifo',
+                secondaryActionText: null,
               });
 
-              if (choice === 'delete-all' || choice === 'delete-one') {
+              if (choice === 'delete-all') {
                 HighlightService.deleteHighlight(pageNum, h.id);
                 this.render();
                 showToast('Grifo excluído com sucesso.', 'eraser');
@@ -710,7 +748,7 @@ export const NotebookView = {
             class="global-synthesis-textarea" 
             placeholder="Escreva a síntese ou reflexões desta página..."
             data-page-num="${pageNum}"
-          >${pageSynthesis}</textarea>
+          >${this.escapeHtml(pageSynthesis)}</textarea>
         `;
 
         const synthTextarea = synthesisSection.querySelector('.global-synthesis-textarea');

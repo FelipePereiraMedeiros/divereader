@@ -10,6 +10,8 @@ const SELECTOR_MAP = {
   pdfViewer: 'pdf-viewer',
   emptyState: 'empty-state',
   btnEmptyOpen: 'btn-empty-open',
+  btnEmptyShortcuts: 'btn-empty-shortcuts',
+  loadingText: 'loading-text',
   sidebar: 'sidebar',
   loading: 'loading-msg',
   dragOverlay: 'drag-overlay',
@@ -17,8 +19,14 @@ const SELECTOR_MAP = {
 
   // Elementos do Top Bar
   fileInput: 'file-input',
+  btnOpenFile: 'btn-open-file',
+  btnImportBackup: 'btn-import-backup',
+  btnShortcuts: 'btn-shortcuts',
+  shortcutsDialog: 'shortcuts-dialog',
+  btnCloseShortcuts: 'btn-close-shortcuts',
   fileTitle: 'file-title',
   themeSelector: 'theme-selector',
+  btnThemeCycle: 'btn-theme-cycle',
   btnReadingMode: 'btn-reading-mode',
   readingModeLabel: 'reading-mode-label',
   btnZoomOut: 'btn-zoom-out',

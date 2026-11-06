@@ -114,7 +114,7 @@ export const NoteService = {
 
     // Frontmatter padrão para interoperabilidade (Obsidian / Zettelkasten / PKM)
     let md = `---\n`;
-    md += `title: "${fileName}"\n`;
+    md += `title: "${fileName.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"\n`;
     md += `type: reading-notes\n`;
     md += `source: DiveReader\n`;
     md += `export_date: ${new Date().toISOString()}\n`;
@@ -162,7 +162,7 @@ export const NoteService = {
   downloadMarkdownDossier() {
     const md = this.generateMarkdown();
     const fileName = appState.get('fileName') || 'Anotacoes';
-    const cleanName = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const cleanName = fileName.replace(/\.[^/.]+$/, '').replace(/[^\p{L}\p{N}_-]+/gu, '_');
 
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
     const link = document.createElement('a');
@@ -172,6 +172,7 @@ export const NoteService = {
     document.body.appendChild(link);
     link.click();
     link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     return true;
   },
 

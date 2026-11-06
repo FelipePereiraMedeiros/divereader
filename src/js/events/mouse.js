@@ -37,13 +37,18 @@ export function setupMouseEvents({
   if (dragOverlay) {
     let dragCounter = 0;
 
+    // Só reage a arquivos externos: arrastar texto selecionado dentro do PDF não deve abrir o overlay
+    const isFileDrag = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
+
     document.addEventListener('dragenter', (e) => {
+      if (!isFileDrag(e)) return;
       e.preventDefault();
       dragCounter++;
       dragOverlay.classList.add('active');
     });
 
     document.addEventListener('dragover', (e) => {
+      if (!isFileDrag(e)) return;
       e.preventDefault();
       if (!dragOverlay.classList.contains('active')) {
         dragOverlay.classList.add('active');
@@ -51,6 +56,7 @@ export function setupMouseEvents({
     });
 
     document.addEventListener('dragleave', (e) => {
+      if (!isFileDrag(e)) return;
       e.preventDefault();
       dragCounter = Math.max(0, dragCounter - 1);
       if (dragCounter === 0) {
@@ -59,6 +65,7 @@ export function setupMouseEvents({
     });
 
     document.addEventListener('drop', (e) => {
+      if (!isFileDrag(e)) return;
       e.preventDefault();
       dragCounter = 0;
       dragOverlay.classList.remove('active');

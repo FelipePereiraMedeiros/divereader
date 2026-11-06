@@ -23,7 +23,11 @@ export const HighlightService = {
     let range;
     let textExtracted = '';
 
-    if (typeof Range !== 'undefined' && selectionOrRange instanceof Range) {
+    const isRangeLike =
+      (typeof Range !== 'undefined' && selectionOrRange instanceof Range) ||
+      (typeof selectionOrRange.getClientRects === 'function' && 'commonAncestorContainer' in selectionOrRange);
+
+    if (isRangeLike) {
       range = selectionOrRange;
       textExtracted = customText || range.toString();
     } else if (selectionOrRange.getRangeAt && selectionOrRange.rangeCount > 0) {
@@ -360,18 +364,56 @@ export const HighlightService = {
   },
 
   /**
+   * Remove apenas a marcação visual do grifo no PDF, preservando a citação e a nota no Caderno
+   * @param {number} pageNum
+   * @param {string} highlightId
+   */
+  removeHighlightMarks(pageNum, highlightId) {
+    const allHighlights = appState.get('highlights') || {};
+    const pageList = allHighlights[pageNum] || [];
+
+    const updatedList = pageList.map((h) =>
+      h.id === highlightId
+        ? new Highlight({
+            id: h.id,
+            pageNum: h.pageNum,
+            text: h.text,
+            rects: [],
+            color: h.color,
+            note: h.note,
+            createdAt: h.createdAt,
+          })
+        : h,
+    );
+
+    const updatedHighlights = { ...allHighlights, [pageNum]: updatedList };
+    appState.set({ highlights: updatedHighlights }, EVENTS.HIGHLIGHTS_UPDATED);
+    Storage.saveHighlights(appState.get('fileKey'), updatedHighlights);
+
+    const pageWrapper = document.querySelector(`.page-wrapper[data-page="${pageNum}"]`);
+    const layer = pageWrapper?.querySelector('.highlight-layer');
+    if (layer) this.drawPageHighlights(pageNum, layer);
+  },
+
+  /**
    * Pisca visualmente os retângulos do grifo selecionado no leitor
    * @param {number} pageNum
    * @param {string} highlightId
+   * @returns {number} Quantidade de marcações encontradas no documento renderizado
    */
   flashHighlight(pageNum, highlightId) {
     const marks = document.querySelectorAll(
       `.highlight-rect[data-highlight-id="${highlightId}"]`,
     );
+    // Garante que o grifo esteja visível (útil em zoom alto ou rolagem contínua)
+    if (marks.length > 0 && typeof marks[0].scrollIntoView === 'function') {
+      marks[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
     marks.forEach((m) => {
       m.classList.add('highlight-pulse');
       setTimeout(() => m.classList.remove('highlight-pulse'), 2400);
     });
+    return marks.length;
   },
 
   /**

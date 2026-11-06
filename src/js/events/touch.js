@@ -301,14 +301,18 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
             message: 'Deseja excluir este grifo?',
             quoteText: highlight.text,
             hasNote: !!(highlight.note && highlight.note.trim()),
-            primaryActionText: 'Excluir do PDF e Caderno',
-            secondaryActionText: 'Remover apenas do PDF',
+            primaryActionText: 'Excluir do PDF e do Caderno',
+            secondaryActionText: 'Remover do PDF, manter citação no Caderno',
           });
 
-          if (choice === 'delete-all' || choice === 'delete-one') {
+          if (choice === 'delete-all') {
             HighlightService.deleteHighlight(pageNum, highlightId);
             NotebookView.render();
-            showToast('Grifo removido.', 'eraser');
+            showToast('Grifo excluído do PDF e do Caderno.', 'eraser');
+          } else if (choice === 'delete-one') {
+            HighlightService.removeHighlightMarks(pageNum, highlightId);
+            NotebookView.render();
+            showToast('Marcação removida do PDF. A citação continua no Caderno.', 'bookmark-minus');
           }
         } else {
           // Apenas aplica zoom inteligente se o toque NÃO foi sobre nós de texto selecionáveis
@@ -373,10 +377,14 @@ export function setupTouchAndGestures({ container, onNextPage, onPrevPage, onSet
       secondaryActionText: 'Remover do PDF, mas manter citação no Caderno',
     });
 
-    if (choice === 'delete-all' || choice === 'delete-one') {
+    if (choice === 'delete-all') {
       HighlightService.deleteHighlight(pageNum, highlightId);
       NotebookView.render();
-      showToast('Grifo removido da página.', 'eraser');
+      showToast('Grifo excluído do PDF e do Caderno.', 'eraser');
+    } else if (choice === 'delete-one') {
+      HighlightService.removeHighlightMarks(pageNum, highlightId);
+      NotebookView.render();
+      showToast('Marcação removida do PDF. A citação continua no Caderno.', 'bookmark-minus');
     }
   });
 }

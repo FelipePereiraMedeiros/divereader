@@ -4,6 +4,14 @@
 
 import { refreshIcons } from './dom.js';
 
+const escapeHtml = (str) =>
+  String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 export const DialogService = {
   /**
    * Exibe um modal de confirmação para exclusão de grifo (PDF ou Caderno)
@@ -13,7 +21,7 @@ export const DialogService = {
    * @param {string} [params.quoteText='']
    * @param {boolean} [params.hasNote=false]
    * @param {string} [params.primaryActionText='Excluir do PDF e Caderno']
-   * @param {string} [params.secondaryActionText='Remover apenas visual']
+   * @param {string|null} [params.secondaryActionText] Passe null para um diálogo de ação única
    * @returns {Promise<'delete-all'|'delete-one'|'cancel'>}
    */
   confirmHighlightDeletion({
@@ -34,7 +42,7 @@ export const DialogService = {
       }
 
       const quoteSnippet = quoteText
-        ? `<div class="modal-quote-preview">"${quoteText.length > 180 ? quoteText.substring(0, 180) + '...' : quoteText}"</div>`
+        ? `<div class="modal-quote-preview">"${escapeHtml(quoteText.length > 180 ? quoteText.substring(0, 180) + '…' : quoteText)}"</div>`
         : '';
 
       dialog.innerHTML = `
@@ -43,20 +51,20 @@ export const DialogService = {
             <div class="icon-badge warning">
               <i data-lucide="help-circle" style="width: 22px; height: 22px;"></i>
             </div>
-            <h3>${title}</h3>
+            <h3>${escapeHtml(title)}</h3>
           </div>
           <div class="modal-body">
-            <p style="margin: 0 0 6px 0;">${message}</p>
+            <p style="margin: 0 0 6px 0;">${escapeHtml(message)}</p>
             ${quoteSnippet}
           </div>
           <div class="modal-actions">
             <button id="modal-btn-primary" class="btn-danger">
-              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> ${primaryActionText}
+              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> ${escapeHtml(primaryActionText)}
             </button>
             ${
               secondaryActionText
                 ? `<button id="modal-btn-secondary" class="btn-primary" style="background: transparent; color: var(--text-color); border: 1px solid var(--border-color);">
-                    <i data-lucide="bookmark-minus" style="width: 14px; height: 14px;"></i> ${secondaryActionText}
+                    <i data-lucide="bookmark-minus" style="width: 14px; height: 14px;"></i> ${escapeHtml(secondaryActionText)}
                   </button>`
                 : ''
             }
@@ -102,6 +110,8 @@ export const DialogService = {
       dialog.oncancel = () => cleanup('cancel');
 
       dialog.showModal();
+      // Foco inicial no botão seguro (Cancelar) para evitar exclusões acidentais via Enter
+      btnCancel?.focus();
     });
   },
 };

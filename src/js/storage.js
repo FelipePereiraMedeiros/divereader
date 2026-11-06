@@ -460,7 +460,8 @@ export const Storage = {
           .replace(/_notes_v2$/, '')
           .replace(/_highlights$/, '')
           .replace(/_anotacoes$/, '')
-          .replace(/_page$/, '');
+          .replace(/_page$/, '')
+          .replace(/_prefs$/, '');
         if (baseKey.startsWith(STORAGE_PREFIX)) {
           discoveredFileKeys.add(baseKey);
         }
@@ -528,7 +529,8 @@ export const Storage = {
             .replace(/_notes_v2$/, '')
             .replace(/_highlights$/, '')
             .replace(/_anotacoes$/, '')
-            .replace(/_page$/, '');
+            .replace(/_page$/, '')
+          .replace(/_prefs$/, '');
           if (baseKey.startsWith(STORAGE_PREFIX)) {
             discoveredFileKeys.add(baseKey);
           }

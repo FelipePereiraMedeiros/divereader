@@ -42,7 +42,9 @@ describe('Bidirectional Sync & Data Separation', () => {
     expect(loadedHighlights[3][0].text).toBe('Princípio da dignidade da pessoa humana');
     expect(loadedHighlights[3][0].note).toBe('Art. 1º, III da CF/88');
 
-    expect(loadedNotes[3]).toBe('Esta página trata dos fundamentos da República.');
+    // A síntese é persistida no modelo PageSynthesis ({ pageNum, content, updatedAt })
+    expect(loadedNotes[3].content).toBe('Esta página trata dos fundamentos da República.');
+    expect(NoteService.getPageSynthesis(3)).toBe('Esta página trata dos fundamentos da República.');
   });
 
   it('deve permitir atualizar anotação vinculada ao grifo sem afetar a síntese manual da página', () => {

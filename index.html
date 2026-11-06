@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
   <meta name="description"
     content="DiveReader Pro - O Leitor Definitivo para Estudos e Fichamentos Acadêmicos em PDF" />
   <title>DiveReader Pro | O Leitor Definitivo para Estudos</title>
@@ -16,7 +17,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
   <!-- Biblioteca de Ícones (Lucide) -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Versão fixada: "@latest" pode quebrar ícones renomeados sem aviso -->
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
   <!-- Folhas de Estilo Modulares -->
   <link rel="stylesheet" href="./src/css/main.css" />
@@ -91,10 +93,10 @@
 
     <div id="loading-msg">
       <i data-lucide="loader-2" class="lucide-spin" style="width: 18px; height: 18px"></i>
-      <span>Processando documento...</span>
+      <span id="loading-text">Processando documento...</span>
     </div>
 
-    <div id="discreet-indicator" role="button" tabindex="0" title="Toque para navegar pelas páginas">Pág. - / -</div>
+    <div id="discreet-indicator" role="button" tabindex="0" title="Ir para página (G)" aria-live="polite">Pág. - / -</div>
 
     <!-- ESTADO VAZIO (EMPTY STATE) -->
     <div id="empty-state">
@@ -106,9 +108,21 @@
         Ambiente de leitura profunda e fichamento acadêmico em PDF. Abra ou arraste seu documento para começar seus
         estudos.
       </p>
-      <button type="button" id="btn-empty-open" class="file-upload-label" style="margin-top: 8px">
+      <button type="button" id="btn-empty-open" class="btn-primary empty-cta">
         <i data-lucide="folder-open" style="width: 18px; height: 18px"></i>
         <span>Escolher Arquivo PDF</span>
+      </button>
+      <span class="empty-drop-hint">ou arraste um PDF para qualquer lugar da janela</span>
+
+      <ul class="empty-features" aria-label="Recursos">
+        <li><i data-lucide="highlighter"></i><span>Grifos coloridos por categoria</span></li>
+        <li><i data-lucide="notebook-pen"></i><span>Síntese por página e fichamento</span></li>
+        <li><i data-lucide="file-down"></i><span>Exportação em Markdown e backup</span></li>
+      </ul>
+
+      <button type="button" id="btn-empty-shortcuts" class="btn-ghost empty-shortcuts-link">
+        <i data-lucide="keyboard" style="width: 14px; height: 14px"></i>
+        <span>Ver atalhos de teclado <kbd>?</kbd></span>
       </button>
     </div>
 
@@ -130,11 +144,11 @@
     <!-- MENU SUPERIOR (TOP BAR) -->
     <header class="controls" id="top-menu">
       <div class="controls-group">
-        <label class="file-upload-label" title="Abrir arquivo PDF">
+        <button type="button" id="btn-open-file" class="file-upload-label" title="Abrir arquivo PDF">
           <i data-lucide="folder-open" style="width: 16px; height: 16px"></i>
           <span class="btn-text">Abrir PDF</span>
-          <input type="file" id="file-input" accept=".pdf" />
-        </label>
+        </button>
+        <input type="file" id="file-input" accept=".pdf,application/pdf" hidden />
         <span id="file-title">Nenhum arquivo</span>
 
         <div class="divider-v"></div>
@@ -143,12 +157,10 @@
           <i data-lucide="download-cloud" style="width: 16px; height: 16px"></i>
         </button>
 
-        <label class="file-upload-label btn-ghost btn-icon"
-          style="padding: 0; min-height: 34px; width: 34px; justify-content: center; border: 1px solid transparent;"
-          title="Importar Backup (.json)">
+        <button type="button" id="btn-import-backup" class="btn-ghost btn-icon" title="Importar Backup (.json)">
           <i data-lucide="upload-cloud" style="width: 16px; height: 16px"></i>
-          <input type="file" id="import-backup-input" accept=".json" style="display: none" />
-        </label>
+        </button>
+        <input type="file" id="import-backup-input" accept=".json,application/json" hidden />
       </div>
 
       <div class="controls-group">
@@ -157,7 +169,12 @@
           <span class="btn-text">Grifar</span>
         </button>
 
-        <select id="theme-selector" title="Tema de Visualização" disabled>
+        <button id="btn-theme-cycle" class="btn-ghost btn-icon show-on-mobile" title="Alternar tema (Claro / Sépia / Noturno)"
+          aria-label="Alternar tema">
+          <i data-lucide="sun-moon" style="width: 16px; height: 16px"></i>
+        </button>
+
+        <select id="theme-selector" title="Tema de Visualização" aria-label="Tema de Visualização">
           <option value="theme-light">☀️ Claro</option>
           <option value="theme-sepia">📖 Sépia</option>
           <option value="theme-dark">🌙 Noturno</option>
@@ -189,7 +206,7 @@
             <i data-lucide="chevron-left" style="width: 16px; height: 16px"></i>
           </button>
           <span>
-            <input type="number" id="page-input" value="1" min="1" disabled />
+            <input type="number" id="page-input" value="1" min="1" disabled aria-label="Página atual" />
             / <span id="total-pages">-</span>
           </span>
           <button id="btn-next" class="btn-icon" title="Próxima Página (Seta Direita)" disabled>
@@ -197,13 +214,18 @@
           </button>
         </div>
 
-        <button id="btn-toggle-sidebar" class="btn-primary" title="Meu Caderno de Estudos (C)" disabled>
+        <button id="btn-toggle-sidebar" class="btn-primary" title="Meu Caderno de Estudos (C)" aria-controls="sidebar"
+          aria-expanded="false" disabled>
           <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
           <span class="btn-text">Caderno</span>
         </button>
 
-        <button id="btn-toggle-focus" class="btn-ghost btn-icon" title="Modo Foco (F)" disabled>
+        <button id="btn-toggle-focus" class="btn-ghost btn-icon" title="Modo Foco (F)" aria-pressed="false" disabled>
           <i data-lucide="minimize" style="width: 16px; height: 16px"></i>
+        </button>
+
+        <button id="btn-shortcuts" class="btn-ghost btn-icon hide-on-mobile" title="Atalhos de Teclado (?)">
+          <i data-lucide="keyboard" style="width: 16px; height: 16px"></i>
         </button>
       </div>
     </header>
@@ -235,8 +257,8 @@
         <div class="sidebar-search-bar">
           <div class="search-input-wrapper">
             <i data-lucide="search" style="width: 14px; height: 14px; opacity: 0.6;"></i>
-            <input type="text" id="notebook-search-input" placeholder="Buscar nos grifos e anotações..."
-              autocomplete="off" />
+            <input type="search" id="notebook-search-input" placeholder="Buscar nos grifos e anotações..."
+              autocomplete="off" aria-label="Buscar nos grifos e anotações" />
             <button id="btn-clear-search" class="btn-clear-search hidden" title="Limpar busca">
               <i data-lucide="x" style="width: 12px; height: 12px;"></i>
             </button>
@@ -252,13 +274,13 @@
         </div>
 
         <div class="sidebar-tabs" role="tablist">
-          <button id="tab-btn-page" class="active" role="tab" aria-selected="true">
+          <button id="tab-btn-page" class="active" role="tab" aria-selected="true" aria-controls="tab-page">
             Nesta Página
           </button>
-          <button id="tab-btn-global" role="tab" aria-selected="false">
+          <button id="tab-btn-global" role="tab" aria-selected="false" aria-controls="tab-global">
             Fichamento
           </button>
-          <button id="tab-btn-toc" role="tab" aria-selected="false">
+          <button id="tab-btn-toc" role="tab" aria-selected="false" aria-controls="tab-toc">
             Sumário
           </button>
         </div>
@@ -316,7 +338,7 @@
     </main>
 
     <!-- HUD FLUTUANTE DE ZOOM (DESKTOP & MOBILE) -->
-    <div id="zoom-hud" class="zoom-hud" aria-label="Controle de Zoom">
+    <div id="zoom-hud" class="zoom-hud hidden" aria-label="Controle de Zoom">
       <button id="hud-btn-zoom-out" class="hud-btn" title="Afastar (−)">
         <i data-lucide="minus"></i>
       </button>
@@ -419,6 +441,52 @@
               <i data-lucide="list" style="width: 14px; height: 14px"></i>
               <span>Sumário</span>
             </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- PAINEL DE ATALHOS DE TECLADO -->
+    <dialog id="shortcuts-dialog" class="shortcuts-dialog" closedby="any" aria-labelledby="shortcuts-title">
+      <div class="modal-dialog-content">
+        <div class="modal-header">
+          <div class="icon-badge primary">
+            <i data-lucide="keyboard" style="width: 20px; height: 20px"></i>
+          </div>
+          <h3 id="shortcuts-title">Atalhos de Teclado</h3>
+          <button id="btn-close-shortcuts" class="btn-ghost btn-icon modal-close" title="Fechar (Esc)">
+            <i data-lucide="x" style="width: 18px; height: 18px"></i>
+          </button>
+        </div>
+        <div class="shortcuts-grid">
+          <div class="shortcuts-group">
+            <h4>Navegação</h4>
+            <dl>
+              <div><dt><kbd>→</kbd> <kbd>J</kbd> <kbd>PgDn</kbd></dt><dd>Próxima página</dd></div>
+              <div><dt><kbd>←</kbd> <kbd>K</kbd> <kbd>PgUp</kbd></dt><dd>Página anterior</dd></div>
+              <div><dt><kbd>Home</kbd> / <kbd>End</kbd></dt><dd>Primeira / última página</dd></div>
+              <div><dt><kbd>G</kbd></dt><dd>Ir para página…</dd></div>
+            </dl>
+          </div>
+          <div class="shortcuts-group">
+            <h4>Visualização</h4>
+            <dl>
+              <div><dt><kbd>Ctrl</kbd> <kbd>+</kbd> / <kbd>−</kbd></dt><dd>Aproximar / afastar</dd></div>
+              <div><dt><kbd>Ctrl</kbd> <kbd>0</kbd></dt><dd>Restaurar zoom</dd></div>
+              <div><dt><kbd>Ctrl</kbd> + roda</dt><dd>Zoom no ponto do cursor</dd></div>
+              <div><dt><kbd>Espaço</kbd></dt><dd>Alternar seleção / mãozinha</dd></div>
+              <div><dt><kbd>Alt</kbd> + arrastar</dt><dd>Mover a página</dd></div>
+            </dl>
+          </div>
+          <div class="shortcuts-group">
+            <h4>Estudo</h4>
+            <dl>
+              <div><dt><kbd>C</kbd></dt><dd>Abrir / fechar Caderno</dd></div>
+              <div><dt><kbd>F</kbd></dt><dd>Modo Foco</dd></div>
+              <div><dt><kbd>Esc</kbd></dt><dd>Fechar Caderno / sair do Foco</dd></div>
+              <div><dt>Duplo clique no grifo</dt><dd>Excluir grifo</dd></div>
+              <div><dt><kbd>?</kbd></dt><dd>Mostrar este painel</dd></div>
+            </dl>
           </div>
         </div>
       </div>

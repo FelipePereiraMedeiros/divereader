@@ -32,6 +32,9 @@ export function setupKeyboardShortcuts({
   onResetZoom,
   onToggleMenu,
   onToggleSidebar,
+  onOpenPageJump,
+  onShowShortcuts,
+  onEscape,
 }) {
   document.addEventListener('keydown', (e) => {
     // 1. Zoom via teclado (Ctrl/Cmd + [+] / [-] / [0])
@@ -67,27 +70,59 @@ export function setupKeyboardShortcuts({
       activeEl?.isContentEditable;
 
     if (isTextInput) {
+      if (e.key === 'Escape' && activeEl && typeof activeEl.blur === 'function' && !activeEl.closest('dialog')) {
+        activeEl.blur();
+      }
+      return;
+    }
+
+    // Diálogos modais tratam o próprio teclado (Esc, Tab, Enter)
+    if (document.querySelector('dialog[open]')) return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+    // Atalhos disponíveis mesmo sem documento aberto
+    if (e.key === '?' && typeof onShowShortcuts === 'function') {
+      e.preventDefault();
+      onShowShortcuts();
       return;
     }
 
     const pdfDoc = appState.get('pdfDoc');
     if (!pdfDoc) return;
 
+    // Espaço/Enter sobre um botão focado devem acionar o botão (acessibilidade via teclado)
+    const isActivatable = activeEl?.closest?.('button, [role="button"], [role="tab"], a, summary, label');
+    if ((e.key === ' ' || e.key === 'Enter') && isActivatable) return;
+
     switch (e.key) {
       case 'ArrowLeft':
       case 'PageUp':
-      case 'j':
-      case 'J':
+      case 'k':
+      case 'K':
         e.preventDefault();
         onPrevPage();
         break;
 
       case 'ArrowRight':
       case 'PageDown':
-      case 'k':
-      case 'K':
+      case 'j':
+      case 'J':
         e.preventDefault();
         onNextPage();
+        break;
+
+      case 'g':
+      case 'G':
+        if (typeof onOpenPageJump === 'function') {
+          e.preventDefault();
+          onOpenPageJump();
+        }
+        break;
+
+      case 'Escape':
+        if (typeof onEscape === 'function') {
+          onEscape();
+        }
         break;
 
       case ' ': // Barra de espaço: alterna o modo do cursor entre Seleção de Texto e Scroll (Mãozinha)

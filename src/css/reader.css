@@ -319,3 +319,10 @@ body.zoomed-mode #pdf-viewer.mode-continuous {
     opacity: 0.15;
   }
 }
+
+/* Pulso de localização na cor do próprio grifo */
+.highlight-rect.highlight-yellow { --highlight-pulse: var(--hl-yellow-pulse); }
+.highlight-rect.highlight-green { --highlight-pulse: var(--hl-green-pulse); }
+.highlight-rect.highlight-pink { --highlight-pulse: var(--hl-pink-pulse); }
+.highlight-rect.highlight-blue { --highlight-pulse: var(--hl-blue-pulse); }
+.highlight-rect.highlight-purple { --highlight-pulse: var(--hl-purple-pulse); }
