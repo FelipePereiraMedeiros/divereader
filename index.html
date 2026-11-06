@@ -26,154 +26,6 @@
 
 <body class="theme-light">
   <div class="app-container">
-    <!-- WIDGET POMODORO -->
-    <div id="pomodoro-container">
-      <!-- Relógio Circular (Cápsula) -->
-      <div id="pomodoro-widget" title="Clique para Iniciar/Pausar o ciclo Pomodoro" role="button" tabindex="0">
-        <div class="clock-face" id="clock-face">
-          <div class="clock-hand" id="clock-hand"></div>
-          <div class="clock-center"></div>
-        </div>
-        <span id="pomodoro-text">20:00</span>
-      </div>
-
-      <!-- Mini Controles Pomodoro -->
-      <div id="pomodoro-controls">
-        <button id="btn-pomodoro-sub5" title="Remover 5 minutos">-5</button>
-        <button id="btn-pomodoro-reset" title="Zerar Pomodoro">
-          <i data-lucide="rotate-ccw" style="width: 12px; height: 12px"></i>
-        </button>
-        <button id="btn-pomodoro-add5" title="Adicionar 5 minutos">+5</button>
-      </div>
-    </div>
-
-    <!-- MODAL DE ALERTA POMODORO -->
-    <div id="pomodoro-alert" class="hidden" role="alertdialog" aria-modal="true">
-      <div class="alert-content">
-        <i data-lucide="brain-circuit"
-          style="width: 42px; height: 42px; color: var(--primary); margin-bottom: 12px"></i>
-        <h3 style="margin: 0 0 8px 0; color: var(--text-color)">Fim do Ciclo!</h3>
-        <p style="margin: 0 0 20px 0; font-size: 13.5px; color: var(--text-muted)">
-          Excelente foco! Hora de descansar a mente, alongar o corpo e beber água.
-        </p>
-        <div class="alert-buttons">
-          <button id="btn-alert-break" class="btn-primary">
-            <i data-lucide="coffee" style="width: 14px; height: 14px"></i> Pausa (5m)
-          </button>
-          <button id="btn-alert-snooze">
-            <i data-lucide="alarm-clock-plus" style="width: 14px; height: 14px"></i> Soneca (+5m)
-          </button>
-          <button id="btn-alert-reset"
-            style="background: transparent; border: none; font-size: 12px; color: var(--text-muted)">
-            Zerar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- TOOLTIP FLUTUANTE DE GRIFO RÁPIDO COM PALETA DE CORES -->
-    <div id="quick-highlight-tooltip">
-      <div class="color-swatches">
-        <button class="color-swatch-btn color-yellow" data-color="yellow"
-          title="Conceito / Ideia Principal (Amarelo)"></button>
-        <button class="color-swatch-btn color-green" data-color="green" title="Fato / Exemplo (Verde)"></button>
-        <button class="color-swatch-btn color-pink" data-color="pink" title="Dúvida / Refutação (Rosa)"></button>
-        <button class="color-swatch-btn color-blue" data-color="blue" title="Citação / Fonte (Azul)"></button>
-        <button class="color-swatch-btn color-purple" data-color="purple" title="Metodologia / Tese (Roxo)"></button>
-      </div>
-      <div class="tooltip-divider"></div>
-      <button class="tooltip-action-btn" id="btn-tts-from-selection" title="Ouvir a partir daqui">
-        <i data-lucide="volume-2" style="width: 15px; height: 15px"></i>
-      </button>
-    </div>
-
-    <!-- PLAYER DE LEITURA EM VOZ ALTA -->
-    <div id="tts-player" class="tts-player hidden" role="region" aria-label="Leitura em voz alta">
-      <button id="tts-btn-prev" class="tts-btn" title="Frase anterior (Shift + ←)" aria-label="Frase anterior">
-        <i data-lucide="skip-back"></i>
-      </button>
-      <button id="tts-btn-play" class="tts-btn tts-btn-main" title="Pausar / Continuar (R)" aria-label="Pausar">
-        <i data-lucide="pause"></i>
-      </button>
-      <button id="tts-btn-next" class="tts-btn" title="Próxima frase (Shift + →)" aria-label="Próxima frase">
-        <i data-lucide="skip-forward"></i>
-      </button>
-      <div class="tts-divider"></div>
-      <span id="tts-status" class="tts-status" aria-live="polite">Pág. 1 · 1/1</span>
-      <select id="tts-rate" class="tts-select" title="Velocidade da leitura" aria-label="Velocidade da leitura">
-        <option value="0.75">0,75×</option>
-        <option value="0.9">0,9×</option>
-        <option value="1" selected>1×</option>
-        <option value="1.15">1,15×</option>
-        <option value="1.3">1,3×</option>
-        <option value="1.5">1,5×</option>
-        <option value="1.75">1,75×</option>
-        <option value="2">2×</option>
-      </select>
-      <select id="tts-voice" class="tts-select tts-voice-select" title="Voz" aria-label="Voz"></select>
-      <button id="tts-btn-close" class="tts-btn" title="Parar leitura (Esc)" aria-label="Parar leitura">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
-
-    <!-- OVERLAYS, INDICADORES & TOASTS -->
-    <div id="drag-overlay">
-      <i data-lucide="file-up" style="width: 44px; height: 44px"></i>
-      <span>Solte o documento PDF para abrir</span>
-    </div>
-
-    <div id="toast-container"></div>
-
-    <div id="loading-msg">
-      <i data-lucide="loader-2" class="lucide-spin" style="width: 18px; height: 18px"></i>
-      <span id="loading-text">Processando documento...</span>
-    </div>
-
-    <div id="discreet-indicator" role="button" tabindex="0" title="Ir para página (G)" aria-live="polite">Pág. - / -</div>
-
-    <!-- ESTADO VAZIO (EMPTY STATE) -->
-    <div id="empty-state">
-      <div class="icon-wrapper">
-        <i data-lucide="book-open-check" stroke-width="1.75" style="width: 38px; height: 38px"></i>
-      </div>
-      <h2>DiveReader Pro 2.0</h2>
-      <p>
-        Ambiente de leitura profunda e fichamento acadêmico em PDF. Abra ou arraste seu documento para começar seus
-        estudos.
-      </p>
-      <button type="button" id="btn-empty-open" class="btn-primary empty-cta">
-        <i data-lucide="folder-open" style="width: 18px; height: 18px"></i>
-        <span>Escolher Arquivo PDF</span>
-      </button>
-      <span class="empty-drop-hint">ou arraste um PDF para qualquer lugar da janela</span>
-
-      <ul class="empty-features" aria-label="Recursos">
-        <li><i data-lucide="highlighter"></i><span>Grifos coloridos por categoria</span></li>
-        <li><i data-lucide="notebook-pen"></i><span>Síntese por página e fichamento</span></li>
-        <li><i data-lucide="file-down"></i><span>Exportação em Markdown e backup</span></li>
-      </ul>
-
-      <button type="button" id="btn-empty-shortcuts" class="btn-ghost empty-shortcuts-link">
-        <i data-lucide="keyboard" style="width: 14px; height: 14px"></i>
-        <span>Ver atalhos de teclado <kbd>?</kbd></span>
-      </button>
-    </div>
-
-    <!-- BARRA DE FOCO FLUTUANTE -->
-    <div id="floating-focus-bar">
-      <button id="btn-focus-sidebar" title="Meu Caderno">
-        <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
-      </button>
-      <div class="divider-v"></div>
-      <button id="btn-focus-highlight" title="Grifar Seleção">
-        <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
-      </button>
-      <div class="divider-v"></div>
-      <button id="btn-focus-toggle" title="Sair do Modo Foco">
-        <i data-lucide="maximize" style="width: 16px; height: 16px"></i>
-      </button>
-    </div>
-
     <!-- MENU SUPERIOR (TOP BAR) -->
     <header class="controls" id="top-menu">
       <div class="controls-group">
@@ -273,14 +125,14 @@
       <div id="reading-progress-bar-container">
         <div id="reading-progress-bar" style="width: 0%;"></div>
       </div>
-      <div id="book-container" tabindex="-1" style="display: none">
+      <div id="book-container" tabindex="0" role="region" aria-label="Documento PDF" style="display: none">
         <div id="pdf-viewer">
           <!-- Páginas PDF renderizadas dinamicamente -->
         </div>
       </div>
 
       <!-- SIDEBAR: MEU CADERNO DE ESTUDOS -->
-      <aside id="sidebar" class="hidden" style="display: none" aria-label="Caderno de Estudos">
+      <aside id="sidebar" class="hidden" style="display: none" aria-label="Caderno de Estudos" inert>
         <div class="sidebar-header">
           <div class="header-title">
             <i data-lucide="book-marked" style="width: 18px; height: 18px; color: var(--primary)"></i>
@@ -301,13 +153,13 @@
               <i data-lucide="x" style="width: 12px; height: 12px;"></i>
             </button>
           </div>
-          <div class="color-filter-chips" id="color-filter-chips">
-            <button class="color-chip active" data-color="all" title="Todas as cores">Todos</button>
-            <button class="color-chip color-yellow" data-color="yellow" title="🟡 Conceito"></button>
-            <button class="color-chip color-green" data-color="green" title="🟢 Exemplo"></button>
-            <button class="color-chip color-pink" data-color="pink" title="🔴 Dúvida"></button>
-            <button class="color-chip color-blue" data-color="blue" title="🔵 Citação"></button>
-            <button class="color-chip color-purple" data-color="purple" title="🟣 Tese"></button>
+          <div class="color-filter-chips" id="color-filter-chips" role="group" aria-label="Filtrar por cor">
+            <button class="color-chip active" data-color="all" aria-pressed="true" aria-label="Filtrar: Todas as cores" title="Todas as cores">Todos</button>
+            <button class="color-chip color-yellow" data-color="yellow" aria-pressed="false" aria-label="Filtrar: Amarelo: Conceito" title="🟡 Conceito"></button>
+            <button class="color-chip color-green" data-color="green" aria-pressed="false" aria-label="Filtrar: Verde: Exemplo" title="🟢 Exemplo"></button>
+            <button class="color-chip color-pink" data-color="pink" aria-pressed="false" aria-label="Filtrar: Rosa: Dúvida" title="🔴 Dúvida"></button>
+            <button class="color-chip color-blue" data-color="blue" aria-pressed="false" aria-label="Filtrar: Azul: Citação" title="🔵 Citação"></button>
+            <button class="color-chip color-purple" data-color="purple" aria-pressed="false" aria-label="Filtrar: Roxo: Tese" title="🟣 Tese"></button>
           </div>
         </div>
 
@@ -375,8 +227,158 @@
       </aside>
     </main>
 
+    <!-- WIDGET POMODORO -->
+    <div id="pomodoro-container">
+      <!-- Relógio Circular (Cápsula) -->
+      <div id="pomodoro-widget" title="Clique para Iniciar/Pausar o ciclo Pomodoro" role="button" tabindex="0"
+        aria-label="Pomodoro: iniciar ou pausar o ciclo">
+        <div class="clock-face" id="clock-face">
+          <div class="clock-hand" id="clock-hand"></div>
+          <div class="clock-center"></div>
+        </div>
+        <span id="pomodoro-text">20:00</span>
+      </div>
+
+      <!-- Mini Controles Pomodoro -->
+      <div id="pomodoro-controls">
+        <button id="btn-pomodoro-sub5" title="Remover 5 minutos">-5</button>
+        <button id="btn-pomodoro-reset" title="Zerar Pomodoro">
+          <i data-lucide="rotate-ccw" style="width: 12px; height: 12px"></i>
+        </button>
+        <button id="btn-pomodoro-add5" title="Adicionar 5 minutos">+5</button>
+      </div>
+    </div>
+
+    <!-- MODAL DE ALERTA POMODORO -->
+    <div id="pomodoro-alert" class="hidden" role="alertdialog" aria-modal="true" aria-labelledby="pomodoro-alert-title"
+      aria-describedby="pomodoro-alert-desc" inert>
+      <div class="alert-content">
+        <i data-lucide="brain-circuit"
+          style="width: 42px; height: 42px; color: var(--primary); margin-bottom: 12px"></i>
+        <h3 id="pomodoro-alert-title" style="margin: 0 0 8px 0; color: var(--text-color)">Fim do Ciclo!</h3>
+        <p id="pomodoro-alert-desc" style="margin: 0 0 20px 0; font-size: 13.5px; color: var(--text-muted)">
+          Excelente foco! Hora de descansar a mente, alongar o corpo e beber água.
+        </p>
+        <div class="alert-buttons">
+          <button id="btn-alert-break" class="btn-primary">
+            <i data-lucide="coffee" style="width: 14px; height: 14px"></i> Pausa (5m)
+          </button>
+          <button id="btn-alert-snooze">
+            <i data-lucide="alarm-clock-plus" style="width: 14px; height: 14px"></i> Soneca (+5m)
+          </button>
+          <button id="btn-alert-reset"
+            style="background: transparent; border: none; font-size: 12px; color: var(--text-muted)">
+            Zerar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLTIP FLUTUANTE DE GRIFO RÁPIDO COM PALETA DE CORES -->
+    <div id="quick-highlight-tooltip" role="toolbar" aria-label="Grifar seleção">
+      <div class="color-swatches">
+        <button class="color-swatch-btn color-yellow" data-color="yellow" aria-label="Grifar em amarelo: Conceito"
+          title="Conceito / Ideia Principal (Amarelo)"></button>
+        <button class="color-swatch-btn color-green" data-color="green" aria-label="Grifar em verde: Exemplo" title="Fato / Exemplo (Verde)"></button>
+        <button class="color-swatch-btn color-pink" data-color="pink" aria-label="Grifar em rosa: Dúvida" title="Dúvida / Refutação (Rosa)"></button>
+        <button class="color-swatch-btn color-blue" data-color="blue" aria-label="Grifar em azul: Citação" title="Citação / Fonte (Azul)"></button>
+        <button class="color-swatch-btn color-purple" data-color="purple" aria-label="Grifar em roxo: Tese" title="Metodologia / Tese (Roxo)"></button>
+      </div>
+      <div class="tooltip-divider"></div>
+      <button class="tooltip-action-btn" id="btn-tts-from-selection" title="Ouvir a partir daqui">
+        <i data-lucide="volume-2" style="width: 15px; height: 15px"></i>
+      </button>
+    </div>
+
+    <!-- PLAYER DE LEITURA EM VOZ ALTA -->
+    <div id="tts-player" class="tts-player hidden" role="region" aria-label="Leitura em voz alta" inert>
+      <button id="tts-btn-prev" class="tts-btn" title="Frase anterior (Shift + ←)" aria-label="Frase anterior">
+        <i data-lucide="skip-back"></i>
+      </button>
+      <button id="tts-btn-play" class="tts-btn tts-btn-main" title="Pausar / Continuar (R)" aria-label="Pausar">
+        <i data-lucide="pause"></i>
+      </button>
+      <button id="tts-btn-next" class="tts-btn" title="Próxima frase (Shift + →)" aria-label="Próxima frase">
+        <i data-lucide="skip-forward"></i>
+      </button>
+      <div class="tts-divider"></div>
+      <span id="tts-status" class="tts-status" aria-live="polite">Pág. 1 · 1/1</span>
+      <select id="tts-rate" class="tts-select" title="Velocidade da leitura" aria-label="Velocidade da leitura">
+        <option value="0.75">0,75×</option>
+        <option value="0.9">0,9×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.15">1,15×</option>
+        <option value="1.3">1,3×</option>
+        <option value="1.5">1,5×</option>
+        <option value="1.75">1,75×</option>
+        <option value="2">2×</option>
+      </select>
+      <select id="tts-voice" class="tts-select tts-voice-select" title="Voz" aria-label="Voz"></select>
+      <button id="tts-btn-close" class="tts-btn" title="Parar leitura (Esc)" aria-label="Parar leitura">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <!-- OVERLAYS, INDICADORES & TOASTS -->
+    <div id="drag-overlay">
+      <i data-lucide="file-up" style="width: 44px; height: 44px"></i>
+      <span>Solte o documento PDF para abrir</span>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="loading-msg">
+      <i data-lucide="loader-2" class="lucide-spin" style="width: 18px; height: 18px"></i>
+      <span id="loading-text">Processando documento...</span>
+    </div>
+
+    <div id="discreet-indicator" role="button" tabindex="0" title="Ir para página (G)" aria-live="polite">Pág. - / -</div>
+
+    <!-- ESTADO VAZIO (EMPTY STATE) -->
+    <div id="empty-state">
+      <div class="icon-wrapper">
+        <i data-lucide="book-open-check" stroke-width="1.75" style="width: 38px; height: 38px"></i>
+      </div>
+      <h2>DiveReader Pro 2.0</h2>
+      <p>
+        Ambiente de leitura profunda e fichamento acadêmico em PDF. Abra ou arraste seu documento para começar seus
+        estudos.
+      </p>
+      <button type="button" id="btn-empty-open" class="btn-primary empty-cta">
+        <i data-lucide="folder-open" style="width: 18px; height: 18px"></i>
+        <span>Escolher Arquivo PDF</span>
+      </button>
+      <span class="empty-drop-hint">ou arraste um PDF para qualquer lugar da janela</span>
+
+      <ul class="empty-features" aria-label="Recursos">
+        <li><i data-lucide="highlighter"></i><span>Grifos coloridos por categoria</span></li>
+        <li><i data-lucide="notebook-pen"></i><span>Síntese por página e fichamento</span></li>
+        <li><i data-lucide="file-down"></i><span>Exportação em Markdown e backup</span></li>
+      </ul>
+
+      <button type="button" id="btn-empty-shortcuts" class="btn-ghost empty-shortcuts-link">
+        <i data-lucide="keyboard" style="width: 14px; height: 14px"></i>
+        <span>Ver atalhos de teclado <kbd>?</kbd></span>
+      </button>
+    </div>
+
+    <!-- BARRA DE FOCO FLUTUANTE -->
+    <div id="floating-focus-bar">
+      <button id="btn-focus-sidebar" title="Meu Caderno">
+        <i data-lucide="pen-line" style="width: 16px; height: 16px"></i>
+      </button>
+      <div class="divider-v"></div>
+      <button id="btn-focus-highlight" title="Grifar Seleção">
+        <i data-lucide="highlighter" style="width: 16px; height: 16px"></i>
+      </button>
+      <div class="divider-v"></div>
+      <button id="btn-focus-toggle" title="Sair do Modo Foco">
+        <i data-lucide="maximize" style="width: 16px; height: 16px"></i>
+      </button>
+    </div>
+
     <!-- HUD FLUTUANTE DE ZOOM (DESKTOP & MOBILE) -->
-    <div id="zoom-hud" class="zoom-hud hidden" aria-label="Controle de Zoom">
+    <div id="zoom-hud" class="zoom-hud hidden" role="group" aria-label="Controle de Zoom" inert>
       <button id="hud-btn-zoom-out" class="hud-btn" title="Afastar (−)">
         <i data-lucide="minus"></i>
       </button>
@@ -392,7 +394,7 @@
     </div>
 
     <!-- BARRA DE NAVEGAÇÃO INFERIOR PARA MOBILE -->
-    <nav id="mobile-nav-bar" aria-label="Navegação Mobile">
+    <nav id="mobile-nav-bar" aria-label="Navegação inferior">
       <button id="mobile-btn-prev" title="Página Anterior" disabled>
         <i data-lucide="chevron-left"></i>
         <span>Anterior</span>

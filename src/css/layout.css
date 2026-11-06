@@ -293,7 +293,15 @@ input[type="file"] {
   pointer-events: auto;
   transform: scale(1.05);
   background-color: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary);
+}
+
+/* Indicador focado pelo teclado também fica visível */
+#discreet-indicator:focus-visible {
+  opacity: 1 !important;
+  pointer-events: auto;
+  background-color: var(--primary);
+  color: var(--on-primary);
 }
 
 #discreet-indicator:active {
@@ -538,14 +546,14 @@ body.focus-mode .tts-player {
 
 .tts-btn-main {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary);
   width: 38px;
   height: 38px;
 }
 
 .tts-btn-main:hover:not(:disabled) {
   background: var(--primary-hover);
-  color: #ffffff;
+  color: var(--on-primary);
 }
 
 .tts-divider {

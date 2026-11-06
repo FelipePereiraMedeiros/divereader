@@ -493,7 +493,10 @@ export const App = {
       if (el) el.disabled = false;
     });
 
-    if (DOM.zoomHud) DOM.zoomHud.classList.remove('hidden');
+    if (DOM.zoomHud) {
+      DOM.zoomHud.classList.remove('hidden');
+      DOM.zoomHud.inert = false;
+    }
     if (DOM.btnReadAloud) DOM.btnReadAloud.disabled = !TtsService.supported;
 
     if (DOM.loading) DOM.loading.style.display = 'flex';
@@ -567,7 +570,10 @@ export const App = {
       if (!appState.get('pdfDoc')) {
         if (DOM.emptyState) DOM.emptyState.style.display = 'flex';
         if (DOM.bookContainer) DOM.bookContainer.style.display = 'none';
-        if (DOM.zoomHud) DOM.zoomHud.classList.add('hidden');
+        if (DOM.zoomHud) {
+          DOM.zoomHud.classList.add('hidden');
+          DOM.zoomHud.inert = true;
+        }
         document.title = 'DiveReader Pro | O Leitor Definitivo para Estudos';
       }
     } finally {
@@ -1377,7 +1383,14 @@ export const App = {
   updateReadAloudUI(state) {
     const active = state.state !== 'idle';
     document.body.classList.toggle('tts-active', active);
-    DOM.ttsPlayer?.classList.toggle('hidden', !active);
+    if (DOM.ttsPlayer) {
+      DOM.ttsPlayer.classList.toggle('hidden', !active);
+      // Ao fechar o player com o foco dentro dele, devolve o foco à área de leitura
+      if (!active && DOM.ttsPlayer.contains(document.activeElement)) {
+        DOM.bookContainer?.focus({ preventScroll: true });
+      }
+      DOM.ttsPlayer.inert = !active;
+    }
 
     if (DOM.btnReadAloud) {
       DOM.btnReadAloud.classList.toggle('btn-active', active);
@@ -1627,13 +1640,33 @@ export const App = {
   },
 
   /**
+   * Mostra/esconde o alerta do Pomodoro, mantendo-o fora da navegação por teclado quando oculto
+   * e devolvendo o foco para onde o usuário estava.
+   * @param {boolean} open
+   */
+  setPomodoroAlertOpen(open) {
+    const alertEl = DOM.pomodoroAlert;
+    if (!alertEl) return;
+    alertEl.classList.toggle('hidden', !open);
+    alertEl.inert = !open;
+    if (open) {
+      this.focusBeforePomodoroAlert = document.activeElement;
+      refreshIcons(alertEl);
+      document.getElementById('btn-alert-break')?.focus();
+    } else if (alertEl.contains(document.activeElement) || document.activeElement === document.body) {
+      const back = this.focusBeforePomodoroAlert;
+      (back && document.contains(back) ? back : DOM.bookContainer)?.focus?.({ preventScroll: true });
+    }
+  },
+
+  /**
    * Inicializa o Pomodoro e seus ouvintes de UI
    */
   initPomodoro() {
     const updatePomodoroDOM = (state) => {
       if (DOM.pomodoroText) {
         DOM.pomodoroText.textContent = state.text;
-        DOM.pomodoroText.style.opacity = state.isRunning ? '1' : '0.5';
+        DOM.pomodoroText.classList.toggle('is-paused', !state.isRunning);
       }
       if (DOM.pomodoroHand) {
         DOM.pomodoroHand.style.transform = `translateX(-50%) rotate(${state.degrees}deg)`;
@@ -1652,11 +1685,7 @@ export const App = {
 
     appState.on(EVENTS.POMODORO_FINISHED, () => {
       PomodoroService.playChime();
-      if (DOM.pomodoroAlert) {
-        DOM.pomodoroAlert.classList.remove('hidden');
-        refreshIcons(DOM.pomodoroAlert);
-        document.getElementById('btn-alert-break')?.focus();
-      }
+      this.setPomodoroAlertOpen(true);
       showToast('Ciclo Pomodoro finalizado! Hora de descansar.', 'coffee');
     });
 
@@ -1689,7 +1718,7 @@ export const App = {
 
     if (btnAlertBreak) {
       btnAlertBreak.onclick = () => {
-        if (DOM.pomodoroAlert) DOM.pomodoroAlert.classList.add('hidden');
+        this.setPomodoroAlertOpen(false);
         PomodoroService.reset(5);
         PomodoroService.start();
         showToast('Pausa iniciada (5m)!', 'coffee');
@@ -1698,7 +1727,7 @@ export const App = {
 
     if (btnAlertSnooze) {
       btnAlertSnooze.onclick = () => {
-        if (DOM.pomodoroAlert) DOM.pomodoroAlert.classList.add('hidden');
+        this.setPomodoroAlertOpen(false);
         PomodoroService.snooze(5);
         showToast('Soneca de +5 minutos adicionada!', 'alarm-clock-plus');
       };
@@ -1706,7 +1735,7 @@ export const App = {
 
     if (btnAlertReset) {
       btnAlertReset.onclick = () => {
-        if (DOM.pomodoroAlert) DOM.pomodoroAlert.classList.add('hidden');
+        this.setPomodoroAlertOpen(false);
         PomodoroService.reset(20);
       };
     }
@@ -1714,7 +1743,7 @@ export const App = {
     // Esc fecha o alerta do Pomodoro sem alterar o ciclo
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && DOM.pomodoroAlert && !DOM.pomodoroAlert.classList.contains('hidden')) {
-        DOM.pomodoroAlert.classList.add('hidden');
+        this.setPomodoroAlertOpen(false);
       }
     });
 

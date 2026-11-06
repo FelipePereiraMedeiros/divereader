@@ -131,8 +131,12 @@ export const NotebookView = {
         const chip = e.target.closest('.color-chip');
         if (!chip) return;
 
-        filterChipsContainer.querySelectorAll('.color-chip').forEach((c) => c.classList.remove('active'));
+        filterChipsContainer.querySelectorAll('.color-chip').forEach((c) => {
+          c.classList.remove('active');
+          c.setAttribute('aria-pressed', 'false');
+        });
         chip.classList.add('active');
+        chip.setAttribute('aria-pressed', 'true');
 
         const color = chip.dataset.color || 'all';
         appState.set({ activeColorFilter: color });
@@ -237,6 +241,12 @@ export const NotebookView = {
       appState.set({ isSidebarOpen: false });
     }
     document.body.classList.toggle('sidebar-open', shouldBeOpen);
+    // Caderno fechado fica fora da navegação por teclado e de leitores de tela
+    DOM.sidebar.inert = !shouldBeOpen;
+    // No mobile o Caderno ocupa a tela inteira: leva o foco para dentro dele
+    if (shouldBeOpen && typeof window !== 'undefined' && window.innerWidth <= 820) {
+      DOM.btnCloseSidebar?.focus({ preventScroll: true });
+    }
     if (DOM.btnToggleSidebar) DOM.btnToggleSidebar.setAttribute('aria-expanded', String(shouldBeOpen));
   },
 

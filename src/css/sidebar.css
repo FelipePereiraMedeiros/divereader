@@ -724,3 +724,8 @@
   flex-direction: column;
   gap: 2px;
 }
+
+/* Alvo mínimo de 24px (WCAG 2.5.8) */
+.color-chip {
+  min-height: 24px;
+}

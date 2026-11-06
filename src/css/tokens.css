@@ -8,7 +8,7 @@
   --ui-surface: #f8fafc;
   --text-color: #1e293b;
   --text-muted: #64748b;
-  --text-subtle: #94a3b8;
+  --text-subtle: #64748b;
   --border-color: #e2e8f0;
   --border-focus: #0284c7;
 
@@ -18,8 +18,10 @@
   --page-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.16), 0 8px 12px -6px rgba(0, 0, 0, 0.08);
 
   /* Primary Brand */
-  --primary: #0284c7;
-  --primary-hover: #0369a1;
+  /* Azul principal com contraste AA (5,9:1) para texto branco e sobre fundo claro */
+  --primary: #0369a1;
+  --primary-hover: #075985;
+  --on-primary: #ffffff;
   --primary-light: rgba(2, 132, 199, 0.1);
   --primary-focus: rgba(2, 132, 199, 0.25);
 
@@ -58,8 +60,8 @@
   /* Overlays & Feedback */
   --indicator-bg: rgba(15, 23, 42, 0.75);
   --indicator-text: #f8fafc;
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
   --danger-light: rgba(239, 68, 68, 0.1);
   --success: #10b981;
   --pomodoro-accent: #ff8787;
@@ -97,7 +99,7 @@
   --ui-surface: #26262e;
   --text-color: #e2e8f0;
   --text-muted: #94a3b8;
-  --text-subtle: #64748b;
+  --text-subtle: #94a3b8;
   --border-color: #33333f;
   --border-focus: #38bdf8;
 
@@ -107,6 +109,8 @@
 
   --primary: #38bdf8;
   --primary-hover: #7dd3fc;
+  /* Texto escuro sobre o azul claro do tema noturno (8,2:1) */
+  --on-primary: #0c1a2b;
   --primary-light: rgba(56, 189, 248, 0.15);
 
   --highlight-color: rgba(253, 224, 71, 0.32);
@@ -148,7 +152,7 @@
   --ui-surface: #eae0c8;
   --text-color: #2c2115;
   --text-muted: #705b42;
-  --text-subtle: #947e64;
+  --text-subtle: #705b42;
   --border-color: #d6c6a4;
   --border-focus: #b45309;
 
@@ -156,8 +160,9 @@
   --page-bg: #f8f1e3;
   --page-shadow: 0 10px 25px -4px rgba(78, 60, 34, 0.18);
 
-  --primary: #b45309;
-  --primary-hover: #92400e;
+  --primary: #92400e;
+  --primary-hover: #78350f;
+  --on-primary: #ffffff;
   --primary-light: rgba(180, 83, 9, 0.12);
 
   --highlight-color: rgba(245, 185, 10, 0.42);

@@ -88,14 +88,14 @@ button:disabled {
 
 .btn-primary {
   background-color: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary);
   border-color: var(--primary);
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--primary-hover);
   border-color: var(--primary-hover);
-  color: #ffffff;
+  color: var(--on-primary);
 }
 
 .btn-icon {
@@ -210,4 +210,43 @@ kbd {
 /* Elementos exclusivos do layout mobile (exibidos via mobile.css) */
 .show-on-mobile {
   display: none !important;
+}
+
+/* ========================================================= */
+/* ACESSIBILIDADE: foco, alvos de toque e estados            */
+/* ========================================================= */
+
+/* Área do documento: anel de foco discreto só na navegação por teclado */
+#book-container:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: -2px;
+}
+
+/* Alvos mínimos de 24px (WCAG 2.5.8) */
+.color-chip {
+  min-height: 24px;
+}
+
+.color-chip:not([data-color="all"]) {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px;
+}
+
+#page-input {
+  min-height: 28px;
+}
+
+.search-input-wrapper input {
+  min-height: 28px;
+}
+
+/* Texto do Pomodoro pausado: cor atenuada com contraste suficiente (em vez de opacidade) */
+#pomodoro-text.is-paused {
+  color: var(--text-muted);
+}
+
+/* Elementos inertes nunca capturam cliques */
+[inert] {
+  pointer-events: none;
 }
