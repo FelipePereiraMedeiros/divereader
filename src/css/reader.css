@@ -327,3 +327,32 @@ body.zoomed-mode #pdf-viewer.mode-continuous {
 .highlight-rect.highlight-pink { --highlight-pulse: var(--hl-pink-pulse); }
 .highlight-rect.highlight-blue { --highlight-pulse: var(--hl-blue-pulse); }
 .highlight-rect.highlight-purple { --highlight-pulse: var(--hl-purple-pulse); }
+
+/* ========================================================= */
+/* LEITURA EM VOZ ALTA: destaque da frase atual              */
+/* ========================================================= */
+
+.tts-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tts-rect {
+  position: absolute;
+  background: rgba(2, 132, 199, 0.16);
+  border-bottom: 2px solid var(--primary);
+  border-radius: 2px;
+  mix-blend-mode: multiply;
+  transition: top 0.18s ease, left 0.18s ease, width 0.18s ease;
+}
+
+.theme-sepia .tts-rect {
+  background: rgba(180, 83, 9, 0.16);
+}
+
+.theme-dark .tts-rect {
+  background: rgba(56, 189, 248, 0.22);
+  mix-blend-mode: screen;
+}

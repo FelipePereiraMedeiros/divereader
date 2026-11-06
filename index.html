@@ -81,6 +81,39 @@
         <button class="color-swatch-btn color-blue" data-color="blue" title="Citação / Fonte (Azul)"></button>
         <button class="color-swatch-btn color-purple" data-color="purple" title="Metodologia / Tese (Roxo)"></button>
       </div>
+      <div class="tooltip-divider"></div>
+      <button class="tooltip-action-btn" id="btn-tts-from-selection" title="Ouvir a partir daqui">
+        <i data-lucide="volume-2" style="width: 15px; height: 15px"></i>
+      </button>
+    </div>
+
+    <!-- PLAYER DE LEITURA EM VOZ ALTA -->
+    <div id="tts-player" class="tts-player hidden" role="region" aria-label="Leitura em voz alta">
+      <button id="tts-btn-prev" class="tts-btn" title="Frase anterior (Shift + ←)" aria-label="Frase anterior">
+        <i data-lucide="skip-back"></i>
+      </button>
+      <button id="tts-btn-play" class="tts-btn tts-btn-main" title="Pausar / Continuar (R)" aria-label="Pausar">
+        <i data-lucide="pause"></i>
+      </button>
+      <button id="tts-btn-next" class="tts-btn" title="Próxima frase (Shift + →)" aria-label="Próxima frase">
+        <i data-lucide="skip-forward"></i>
+      </button>
+      <div class="tts-divider"></div>
+      <span id="tts-status" class="tts-status" aria-live="polite">Pág. 1 · 1/1</span>
+      <select id="tts-rate" class="tts-select" title="Velocidade da leitura" aria-label="Velocidade da leitura">
+        <option value="0.75">0,75×</option>
+        <option value="0.9">0,9×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.15">1,15×</option>
+        <option value="1.3">1,3×</option>
+        <option value="1.5">1,5×</option>
+        <option value="1.75">1,75×</option>
+        <option value="2">2×</option>
+      </select>
+      <select id="tts-voice" class="tts-select tts-voice-select" title="Voz" aria-label="Voz"></select>
+      <button id="tts-btn-close" class="tts-btn" title="Parar leitura (Esc)" aria-label="Parar leitura">
+        <i data-lucide="x"></i>
+      </button>
     </div>
 
     <!-- OVERLAYS, INDICADORES & TOASTS -->
@@ -172,6 +205,11 @@
         <button id="btn-theme-cycle" class="btn-ghost btn-icon show-on-mobile" title="Alternar tema (Claro / Sépia / Noturno)"
           aria-label="Alternar tema">
           <i data-lucide="sun-moon" style="width: 16px; height: 16px"></i>
+        </button>
+
+        <button id="btn-read-aloud" title="Ouvir a página em voz alta (R)" disabled>
+          <i data-lucide="volume-2" style="width: 16px; height: 16px"></i>
+          <span class="btn-text">Ouvir</span>
         </button>
 
         <select id="theme-selector" title="Tema de Visualização" aria-label="Tema de Visualização">
@@ -483,7 +521,9 @@
             <dl>
               <div><dt><kbd>C</kbd></dt><dd>Abrir / fechar Caderno</dd></div>
               <div><dt><kbd>F</kbd></dt><dd>Modo Foco</dd></div>
-              <div><dt><kbd>Esc</kbd></dt><dd>Fechar Caderno / sair do Foco</dd></div>
+              <div><dt><kbd>R</kbd></dt><dd>Ouvir / pausar leitura em voz alta</dd></div>
+              <div><dt><kbd>Shift</kbd> + <kbd>←</kbd> / <kbd>→</kbd></dt><dd>Frase anterior / próxima (ouvindo)</dd></div>
+              <div><dt><kbd>Esc</kbd></dt><dd>Parar leitura / fechar Caderno / sair do Foco</dd></div>
               <div><dt>Duplo clique no grifo</dt><dd>Excluir grifo</dd></div>
               <div><dt><kbd>?</kbd></dt><dd>Mostrar este painel</dd></div>
             </dl>

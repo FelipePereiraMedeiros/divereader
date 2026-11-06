@@ -475,3 +475,140 @@ body.is-panning * {
     bottom: 80px;
   }
 }
+
+/* Botão de alternância ativo (ex.: Ouvir) */
+button.btn-active {
+  background-color: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ========================================================= */
+/* PLAYER DE LEITURA EM VOZ ALTA                             */
+/* ========================================================= */
+
+.tts-player {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 260;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  max-width: calc(100vw - 24px);
+  background: var(--ui-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-xl);
+  transition: opacity var(--transition-normal), transform var(--transition-normal);
+}
+
+.tts-player.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(16px);
+}
+
+body.focus-mode .tts-player {
+  bottom: 80px;
+}
+
+.tts-btn {
+  border: none;
+  background: transparent;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--text-color);
+}
+
+.tts-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tts-btn:hover:not(:disabled) {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.tts-btn-main {
+  background: var(--primary);
+  color: #ffffff;
+  width: 38px;
+  height: 38px;
+}
+
+.tts-btn-main:hover:not(:disabled) {
+  background: var(--primary-hover);
+  color: #ffffff;
+}
+
+.tts-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border-color);
+  margin: 0 4px;
+}
+
+.tts-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 82px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tts-select {
+  font-size: 12px;
+  padding: 4px 6px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  background: var(--ui-surface);
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.tts-voice-select {
+  max-width: 190px;
+}
+
+/* Tooltip de seleção: separador e ação "ouvir daqui" */
+#quick-highlight-tooltip .tooltip-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+}
+
+#quick-highlight-tooltip .tooltip-action-btn {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+#quick-highlight-tooltip .tooltip-action-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+@media (min-width: 821px) {
+  body.sidebar-open .tts-player {
+    left: calc((100% - 360px) / 2);
+  }
+
+  body.tts-active #toast-container {
+    bottom: 140px;
+  }
+}

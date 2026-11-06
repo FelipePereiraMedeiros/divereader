@@ -9,6 +9,7 @@ import { HighlightService } from './services/highlightService.js';
 import { NoteService } from './services/noteService.js';
 import { PomodoroService } from './services/pomodoroService.js';
 import { BackupService } from './services/backupService.js';
+import { TtsService, scoreVoice } from './services/ttsService.js';
 import { NotebookView } from './ui/notebookView.js';
 import { QuickHighlightTooltip } from './ui/quickHighlight.js';
 import { showToast } from './ui/toast.js';
@@ -47,7 +48,10 @@ export const App = {
     NotebookView.init({
       onNavigatePage: (pageNum) => this.goToPage(pageNum, true),
     });
-    QuickHighlightTooltip.init();
+    QuickHighlightTooltip.init({
+      onReadFromSelection: ({ pageNum, point }) => this.startReadAloud({ pageNum, point }),
+    });
+    this.initReadAloud();
 
     // Listener global para navegação direta de página via eventos
     appState.on('NAVIGATE_PAGE', (pageNum) => {
@@ -62,6 +66,7 @@ export const App = {
     window.app = this;
 
     this.setupResizeHandling();
+    this.setupContinuousPageTracking();
 
     console.log('DiveReader Pro 2.0 inicializado com sucesso.');
 
@@ -74,6 +79,47 @@ export const App = {
     } catch (err) {
       console.warn('Não foi possível restaurar sessão anterior do IndexedDB:', err);
     }
+  },
+
+  /**
+   * Modo contínuo: define a página atual pela posição de rolagem (linha de referência a 35% da
+   * altura visível). O IntersectionObserver sozinho falha com páginas mais altas que a tela.
+   */
+  setupContinuousPageTracking() {
+    const container = DOM.bookContainer;
+    if (!container) return;
+    let ticking = false;
+    container.addEventListener(
+      'scroll',
+      () => {
+        if (ticking || appState.get('readingMode') !== READING_MODES.CONTINUOUS) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          ticking = false;
+          const c = container.getBoundingClientRect();
+          const refY = c.top + c.height * 0.35;
+          const wrappers = DOM.pdfViewer?.querySelectorAll('.page-wrapper') || [];
+          // Busca binária: primeira página cujo rodapé está abaixo da linha de referência
+          let lo = 0;
+          let hi = wrappers.length - 1;
+          let found = -1;
+          while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            if (wrappers[mid].getBoundingClientRect().bottom >= refY) {
+              found = mid;
+              hi = mid - 1;
+            } else {
+              lo = mid + 1;
+            }
+          }
+          if (found >= 0) {
+            const pageNum = parseInt(wrappers[found].dataset.page, 10);
+            if (!isNaN(pageNum)) this.onContinuousPageVisible(pageNum);
+          }
+        });
+      },
+      { passive: true },
+    );
   },
 
   /**
@@ -338,6 +384,9 @@ export const App = {
       onOpenPageJump: () => this.openPageJumpDialog(),
       onShowShortcuts: () => this.openShortcutsDialog(),
       onEscape: () => this.handleEscape(),
+      onToggleReadAloud: () => this.startReadAloud(),
+      onTtsSkip: (delta) => TtsService.skip(delta),
+      isTtsActive: () => TtsService.isActive(),
     });
 
     setupMouseEvents({
@@ -399,6 +448,7 @@ export const App = {
     const fileKey = Storage.generateFileKey(fileName, fileSize);
 
     NotebookView.flushPendingSynthesis();
+    TtsService.reset();
     appState.set({
       fileName,
       fileKey,
@@ -444,6 +494,7 @@ export const App = {
     });
 
     if (DOM.zoomHud) DOM.zoomHud.classList.remove('hidden');
+    if (DOM.btnReadAloud) DOM.btnReadAloud.disabled = !TtsService.supported;
 
     if (DOM.loading) DOM.loading.style.display = 'flex';
 
@@ -652,6 +703,11 @@ export const App = {
     NotebookView.render();
     this.updateZoomUI();
 
+    // Leitura em voz alta: acompanha navegação manual e redesenha o destaque da frase
+    const visiblePages = singlePage ? [leftPageNum] : [leftPageNum, leftPageNum + 1].filter((p) => p <= totalPages);
+    TtsService.handleUserNavigation(visiblePages);
+    TtsService.refreshHighlight();
+
     // Pré-carregamento em background da próxima página para transição imediata
     this.schedulePrefetch(leftPageNum + (singlePage ? 1 : 2), totalPages);
   },
@@ -691,6 +747,7 @@ export const App = {
       if (targetWrapper) {
         targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+      TtsService.handleUserNavigation([targetPage]);
       this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
       NotebookView.render();
       this.updateZoomUI();
@@ -755,6 +812,7 @@ export const App = {
 
       await Promise.all(updatePromises);
       if (this.renderToken !== currentToken) return;
+      TtsService.refreshHighlight();
 
       this.updatePageProgressUI(String(targetPage), targetPage, totalPages);
       NotebookView.render();
@@ -777,6 +835,7 @@ export const App = {
     }
 
     this.setupContinuousObserver();
+    TtsService.refreshHighlight();
 
     // Rola até a página solicitada na primeira montagem
     const targetWrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${targetPage}"]`);
@@ -825,6 +884,7 @@ export const App = {
                     pageNum,
                     (p, layer) => HighlightService.drawPageHighlights(p, layer),
                   );
+                  if (TtsService.pageNum === pageNum) TtsService.refreshHighlight();
                 } catch (e) {
                   console.warn('Erro ao carregar página contínua:', pageNum, e);
                 }
@@ -1241,6 +1301,144 @@ export const App = {
   },
 
   /**
+   * Configura o serviço e o player de leitura em voz alta
+   */
+  initReadAloud() {
+    if (!TtsService.supported) {
+      if (DOM.btnReadAloud) {
+        DOM.btnReadAloud.title = 'Leitura em voz alta não é suportada neste navegador';
+      }
+      DOM.btnTtsFromSelection?.remove();
+      return;
+    }
+
+    TtsService.init({
+      getPdfDoc: () => appState.get('pdfDoc'),
+      getTotalPages: () => appState.get('totalPages') || 0,
+      isPageRendered: (p) => {
+        if (appState.get('readingMode') === READING_MODES.CONTINUOUS) return true;
+        return Boolean(DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${p}"]`));
+      },
+      navigateToPage: (p) => this.goToPage(p, false),
+      getScrollContainer: () => DOM.bookContainer,
+      onStateChange: (state) => this.updateReadAloudUI(state),
+      notify: (msg, icon) => showToast(msg, icon, 4500),
+    });
+
+    if (DOM.btnReadAloud) DOM.btnReadAloud.onclick = () => this.startReadAloud();
+    if (DOM.ttsBtnPlay) DOM.ttsBtnPlay.onclick = () => TtsService.toggle();
+    if (DOM.ttsBtnPrev) DOM.ttsBtnPrev.onclick = () => TtsService.skip(-1);
+    if (DOM.ttsBtnNext) DOM.ttsBtnNext.onclick = () => TtsService.skip(1);
+    if (DOM.ttsBtnClose) DOM.ttsBtnClose.onclick = () => TtsService.stop();
+    if (DOM.ttsRate) {
+      DOM.ttsRate.onchange = (e) => TtsService.setRate(parseFloat(e.target.value));
+    }
+    if (DOM.ttsVoice) {
+      DOM.ttsVoice.onchange = (e) => TtsService.setVoice(e.target.value);
+    }
+    this.updateReadAloudUI(TtsService.getState());
+  },
+
+  /**
+   * Inicia a leitura (ou pausa/continua se já estiver ativa).
+   * Sem ponto explícito, começa na primeira frase visível da página atual.
+   * @param {{ pageNum?: number, point?: { x: number, y: number } }} [from]
+   */
+  startReadAloud(from = {}) {
+    if (!TtsService.supported || !appState.get('pdfDoc')) return;
+
+    if (!from.point && TtsService.isActive()) {
+      TtsService.toggle();
+      return;
+    }
+
+    let pageNum = from.pageNum || appState.get('pageNum') || 1;
+    let point = from.point || null;
+
+    if (!point) {
+      // Começa do trecho visível (útil com zoom ou rolagem dentro da página)
+      const container = DOM.bookContainer;
+      const wrapper = DOM.pdfViewer?.querySelector(`.page-wrapper[data-page="${pageNum}"]`);
+      if (container && wrapper) {
+        const c = container.getBoundingClientRect();
+        const w = wrapper.getBoundingClientRect();
+        if (w.top < c.top && w.height > 0) {
+          point = { x: 0, y: Math.min(0.98, (c.top - w.top) / w.height) };
+        }
+      }
+    }
+
+    if (!TtsService.hasPortugueseVoice() && TtsService.voices.length) {
+      showToast('Nenhuma voz em português encontrada no sistema. Escolha uma voz no player.', 'alert-circle', 5000);
+    }
+    TtsService.start({ pageNum, point });
+  },
+
+  updateReadAloudUI(state) {
+    const active = state.state !== 'idle';
+    document.body.classList.toggle('tts-active', active);
+    DOM.ttsPlayer?.classList.toggle('hidden', !active);
+
+    if (DOM.btnReadAloud) {
+      DOM.btnReadAloud.classList.toggle('btn-active', active);
+      DOM.btnReadAloud.setAttribute('aria-pressed', String(active));
+    }
+
+    if (DOM.ttsBtnPlay) {
+      const isPlaying = state.state === 'playing';
+      const label = isPlaying ? 'Pausar' : 'Continuar';
+      DOM.ttsBtnPlay.setAttribute('aria-label', label);
+      DOM.ttsBtnPlay.title = `${label} (R)`;
+      const icon = isPlaying ? 'pause' : 'play';
+      if (DOM.ttsBtnPlay.dataset.icon !== icon) {
+        DOM.ttsBtnPlay.dataset.icon = icon;
+        DOM.ttsBtnPlay.innerHTML = `<i data-lucide="${icon}"></i>`;
+        refreshIcons(DOM.ttsBtnPlay);
+      }
+    }
+
+    if (DOM.ttsStatus) {
+      DOM.ttsStatus.textContent = state.sentenceCount
+        ? `Pág. ${state.pageNum} · ${state.sentenceIdx + 1}/${state.sentenceCount}`
+        : `Pág. ${state.pageNum}`;
+    }
+
+    if (DOM.ttsRate) {
+      const closest = Array.from(DOM.ttsRate.options).reduce((best, opt) =>
+        Math.abs(parseFloat(opt.value) - state.rate) < Math.abs(parseFloat(best.value) - state.rate) ? opt : best,
+      );
+      DOM.ttsRate.value = closest.value;
+    }
+
+    if (DOM.ttsVoice) {
+      const voices = TtsService.getVoiceOptions();
+      if (DOM.ttsVoice.options.length !== voices.length) {
+        DOM.ttsVoice.replaceChildren();
+        const pt = document.createElement('optgroup');
+        pt.label = 'Português';
+        const others = document.createElement('optgroup');
+        others.label = 'Outros idiomas';
+        voices.forEach((v) => {
+          const opt = document.createElement('option');
+          opt.value = v.name;
+          const isPt = scoreVoice(v) > 0;
+          const shortName = v.name
+            .replace(/^Microsoft\s+/i, '')
+            .replace(/\s+-\s+.*$/, '')
+            .replace(/\s+Online\b/i, '')
+            .trim();
+          opt.textContent = isPt && v.lang.toLowerCase() === 'pt-br' ? shortName : `${shortName} (${v.lang})`;
+          opt.title = v.name;
+          (isPt ? pt : others).appendChild(opt);
+        });
+        if (pt.children.length) DOM.ttsVoice.appendChild(pt);
+        if (others.children.length) DOM.ttsVoice.appendChild(others);
+      }
+      if (state.voiceName) DOM.ttsVoice.value = state.voiceName;
+    }
+  },
+
+  /**
    * Abre o painel de atalhos de teclado
    */
   openShortcutsDialog() {
@@ -1253,6 +1451,10 @@ export const App = {
    * Esc: fecha o Caderno ou sai do Modo Foco, nesta ordem
    */
   handleEscape() {
+    if (TtsService.isActive()) {
+      TtsService.stop();
+      return;
+    }
     if (appState.get('isSidebarOpen')) {
       NotebookView.toggleSidebar(false);
       DOM.bookContainer?.focus({ preventScroll: true });

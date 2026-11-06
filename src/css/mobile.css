@@ -587,3 +587,63 @@
     display: none !important;
   }
 }
+
+@media (max-width: 820px) {
+  .tts-player {
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+    gap: 2px;
+    padding: 4px 6px;
+  }
+
+  body.focus-mode .tts-player {
+    bottom: 64px;
+  }
+
+  .tts-divider {
+    display: none;
+  }
+
+  .tts-status {
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .tts-voice-select {
+    max-width: 96px;
+  }
+
+  body.tts-active #toast-container {
+    bottom: calc(176px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 820px) {
+  /* Barra superior compacta: botões de modo de leitura e "Ouvir" viram só ícone */
+  #reading-mode-label {
+    display: none;
+  }
+
+  #btn-reading-mode,
+  #btn-read-aloud {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    justify-content: center;
+  }
+
+  #btn-zoom-preset {
+    padding: 2px 4px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .tts-status {
+    display: none;
+  }
+
+  .tts-voice-select {
+    max-width: 110px;
+  }
+}

@@ -14,7 +14,13 @@ export const QuickHighlightTooltip = {
   savedRange: null,
   savedText: '',
 
-  init() {
+  /** Callback opcional: ({ pageNum, point }) => void para "Ouvir a partir daqui" */
+  onReadFromSelection: null,
+
+  init(options = {}) {
+    if (typeof options.onReadFromSelection === 'function') {
+      this.onReadFromSelection = options.onReadFromSelection;
+    }
     this.tooltipEl = DOM.quickHighlightTooltip;
     if (!this.tooltipEl) return;
 
@@ -25,6 +31,12 @@ export const QuickHighlightTooltip = {
 
     // Trata clique nas amostras de cores
     this.tooltipEl.addEventListener('click', (e) => {
+      if (e.target.closest('#btn-tts-from-selection')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.readFromSelection();
+        return;
+      }
       const swatchBtn = e.target.closest('.color-swatch-btn');
       if (swatchBtn) {
         e.preventDefault();
@@ -120,6 +132,30 @@ export const QuickHighlightTooltip = {
     this.lastSelectionRect = null;
     if (!this.tooltipEl) return;
     this.tooltipEl.style.display = 'none';
+  },
+
+  /**
+   * Localiza o início da seleção na página (coordenadas normalizadas) e inicia a leitura dali
+   */
+  readFromSelection() {
+    const sel = window.getSelection();
+    const range = sel && sel.rangeCount > 0 && !sel.isCollapsed ? sel.getRangeAt(0) : this.savedRange;
+    this.hide();
+    if (!range || typeof this.onReadFromSelection !== 'function') return;
+
+    let node = range.startContainer;
+    if (node && node.nodeType === 3) node = node.parentNode;
+    const wrapper = node?.closest?.('.page-wrapper');
+    const firstRect = range.getClientRects?.()[0];
+    if (!wrapper || !firstRect) return;
+
+    const wr = wrapper.getBoundingClientRect();
+    const point = {
+      x: (firstRect.left - wr.left + 1) / wr.width,
+      y: (firstRect.top - wr.top + firstRect.height / 2) / wr.height,
+    };
+    window.getSelection()?.removeAllRanges();
+    this.onReadFromSelection({ pageNum: parseInt(wrapper.dataset.page, 10), point });
   },
 
   executeHighlight(color = 'yellow') {
